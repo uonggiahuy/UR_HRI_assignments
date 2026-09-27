@@ -7,8 +7,9 @@ import os
 from typing import Iterable, Sequence
 
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from moveit_msgs.msg import (
+    AttachedCollisionObject,
     CollisionObject,
     ObjectColor,
     PlanningScene,
@@ -16,8 +17,11 @@ from moveit_msgs.msg import (
 )
 from moveit_msgs.srv import ApplyPlanningScene, GetPlanningScene
 import rclpy
+from rclpy.duration import Duration
 from rclpy.node import Node
 from shape_msgs.msg import SolidPrimitive
+from tf2_geometry_msgs import do_transform_pose
+from tf2_ros import Buffer, TransformListener
 
 from ur3_llm_control.workcell_scene import BoxModel, iter_models, load_scene
 
@@ -183,13 +187,32 @@ def scene_matches(actual: PlanningScene, expected: PlanningScene) -> tuple[bool,
 class PlanningSceneManager:
     """Small service-based interface to MoveIt's authoritative scene monitor."""
 
-    def __init__(self, node: Node, scene: dict[str, object]) -> None:
+    def __init__(
+        self,
+        node: Node,
+        scene: dict[str, object],
+        *,
+        attachment_link: str = "gripper_tcp",
+        touch_links: Sequence[str] = (
+            "gripper_base",
+            "left_finger_link",
+            "right_finger_link",
+        ),
+    ) -> None:
         self._node = node
         self._expected = planning_scene_diff(scene)
+        self._world_frame = str(scene["robot"]["world_frame"])
+        self._models = {model.name: model for model in collision_models(scene)}
+        self.attachment_link = attachment_link
+        self.touch_links = tuple(touch_links)
+        if not self.attachment_link or not self.touch_links:
+            raise ValueError("attachment link and touch links must be non-empty")
         self._apply_client = node.create_client(
             ApplyPlanningScene, "/apply_planning_scene"
         )
         self._get_client = node.create_client(GetPlanningScene, "/get_planning_scene")
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, node)
 
     @property
     def object_ids(self) -> tuple[str, ...]:
@@ -212,6 +235,7 @@ class PlanningSceneManager:
         request.components.components = (
             PlanningSceneComponents.WORLD_OBJECT_GEOMETRY
             | PlanningSceneComponents.OBJECT_COLORS
+            | PlanningSceneComponents.ROBOT_STATE_ATTACHED_OBJECTS
         )
         response = self._call(self._get_client, request, timeout)
         return None if response is None else response.scene
@@ -222,9 +246,135 @@ class PlanningSceneManager:
             return False, "no response from /get_planning_scene"
         return scene_matches(actual, self._expected)
 
+    def attach_object(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> bool:
+        """Move one YAML-backed movable object from WORLD to the gripper.
+
+        The object pose is taken from MoveIt's current world object, then
+        transformed to ``attachment_link``.  This preserves the actual grasp
+        transform while retaining canonical YAML geometry.
+        """
+        model = self._movable_model(object_name)
+        if model is None:
+            return False
+        scene = self.get(timeout)
+        if scene is None:
+            return False
+        world_objects = {item.id: item for item in scene.world.collision_objects}
+        attached_ids = {
+            item.object.id for item in scene.robot_state.attached_collision_objects
+        }
+        if object_name not in world_objects or object_name in attached_ids:
+            self._node.get_logger().error(
+                f"Cannot attach {object_name}: object is not exclusively in WORLD"
+            )
+            return False
+
+        relative_pose = self._pose_in_attachment_frame(
+            world_objects[object_name].pose, timeout
+        )
+        if relative_pose is None:
+            return False
+        attached = AttachedCollisionObject()
+        attached.link_name = self.attachment_link
+        attached.touch_links = list(self.touch_links)
+        attached.object = collision_object(model, self.attachment_link)
+        attached.object.pose = relative_pose
+        attached.object.operation = CollisionObject.ADD
+
+        diff = PlanningScene()
+        diff.is_diff = True
+        diff.robot_state.is_diff = True
+        diff.robot_state.attached_collision_objects = [attached]
+        removal = CollisionObject()
+        removal.header.frame_id = self._world_frame
+        removal.id = object_name
+        removal.operation = CollisionObject.REMOVE
+        diff.world.collision_objects = [removal]
+        return self._apply_diff(diff, timeout)
+
+    def detach_object(
+        self,
+        object_name: str,
+        world_pose: PoseStamped,
+        timeout: float = SERVICE_TIMEOUT,
+    ) -> bool:
+        """Remove one attached object and restore its YAML geometry in WORLD."""
+        model = self._movable_model(object_name)
+        if model is None:
+            return False
+        if world_pose.header.frame_id != self._world_frame:
+            self._node.get_logger().error(
+                f"Detach pose for {object_name} must use {self._world_frame}"
+            )
+            return False
+        scene = self.get(timeout)
+        if scene is None:
+            return False
+        attached_ids = {
+            item.object.id for item in scene.robot_state.attached_collision_objects
+        }
+        if object_name not in attached_ids:
+            self._node.get_logger().error(
+                f"Cannot detach {object_name}: object is not attached"
+            )
+            return False
+
+        removal = AttachedCollisionObject()
+        removal.link_name = self.attachment_link
+        removal.object.id = object_name
+        removal.object.operation = CollisionObject.REMOVE
+        world_object = collision_object(model, self._world_frame)
+        world_object.pose = world_pose.pose
+
+        diff = PlanningScene()
+        diff.is_diff = True
+        diff.robot_state.is_diff = True
+        diff.robot_state.attached_collision_objects = [removal]
+        diff.world.collision_objects = [world_object]
+        diff.object_colors = [object_color(model)]
+        return self._apply_diff(diff, timeout)
+
     def destroy(self) -> None:
         self._node.destroy_client(self._apply_client)
         self._node.destroy_client(self._get_client)
+
+    def _movable_model(self, object_name: str) -> BoxModel | None:
+        model = self._models.get(object_name)
+        if model is None or model.static:
+            self._node.get_logger().error(
+                f"{object_name} is not a movable collision object from scene.yaml"
+            )
+            return None
+        return model
+
+    def _pose_in_attachment_frame(
+        self, world_pose: Pose, timeout: float
+    ) -> Pose | None:
+        source = PoseStamped()
+        source.header.frame_id = self._world_frame
+        source.pose = world_pose
+        try:
+            transform = self._tf_buffer.lookup_transform(
+                self.attachment_link,
+                self._world_frame,
+                rclpy.time.Time(),
+                timeout=Duration(seconds=timeout),
+            )
+            return do_transform_pose(source, transform).pose
+        except Exception as exc:
+            self._node.get_logger().error(
+                f"Cannot transform WORLD object to {self.attachment_link}: {exc}"
+            )
+            return None
+
+    def _apply_diff(self, diff: PlanningScene, timeout: float) -> bool:
+        if not self._apply_client.wait_for_service(timeout_sec=timeout):
+            self._node.get_logger().error("/apply_planning_scene is unavailable")
+            return False
+        request = ApplyPlanningScene.Request()
+        request.scene = diff
+        response = self._call(self._apply_client, request, timeout)
+        return response is not None and response.success
 
     def _call(self, client, request, timeout: float):
         future = client.call_async(request)

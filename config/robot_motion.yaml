@@ -9,6 +9,16 @@ acceleration_scaling: 0.05
 planning_time: 5.0
 planning_attempts: 5
 
+# M6 manipulation primitives.  The target XY/Z comes exclusively from
+# config/scene.yaml; these values are offsets applied to gripper_tcp poses.
+manipulation:
+  orientation_xyzw: [-0.70710678, 0.70710678, 0.0, 0.0]
+  approach_clearance: 0.100
+  grasp_z_offset: 0.000
+  retreat_clearance: 0.120
+  attachment_link: gripper_tcp
+  touch_links: [gripper_base, left_finger_link, right_finger_link]
+
 # A collision-checked, bent-elbow, top-down posture. Keeping the elbow away
 # from zero avoids the singular straight-arm branch used by the stock "up"
 # posture. The gripper TCP is approximately (0.299, 0.131, 0.223) in base_link.

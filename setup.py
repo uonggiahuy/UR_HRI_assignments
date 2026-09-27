@@ -36,6 +36,7 @@ setup(
             "moveit_test = ur3_llm_control.moveit_test:main",
             "planning_scene = ur3_llm_control.planning_scene:main",
             "planning_scene_test = ur3_llm_control.planning_scene_test:main",
+            "motion_primitives_test = ur3_llm_control.motion_primitives_test:main",
         ],
     },
 )
