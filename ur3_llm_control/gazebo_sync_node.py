@@ -11,6 +11,7 @@ import rclpy
 from rclpy.node import Node
 
 from ur3_llm_control.gazebo_sync import GazeboAttachmentSynchronizer
+from ur3_llm_control.workcell_scene import iter_models, load_scene
 
 
 class GazeboAttachmentSyncNode(Node):
@@ -21,8 +22,18 @@ class GazeboAttachmentSyncNode(Node):
         self.declare_parameter("object_name", "red_cube")
         self.declare_parameter("world_frame", "world")
         self._object_name = str(self.get_parameter("object_name").value)
+        scene_path = os.path.join(
+            get_package_share_directory("ur3_llm_control"), "config", "scene.yaml"
+        )
+        scene = load_scene(scene_path)
+        model = next(
+            candidate for candidate in iter_models(scene)
+            if candidate.name == self._object_name
+        )
         self._sync = GazeboAttachmentSynchronizer(
-            self, world_frame=str(self.get_parameter("world_frame").value)
+            self,
+            world_frame=str(self.get_parameter("world_frame").value),
+            model=model,
         )
         self._client = self.create_client(GetPlanningScene, "/get_planning_scene")
         self._future = None

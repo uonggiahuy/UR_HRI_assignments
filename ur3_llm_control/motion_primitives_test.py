@@ -19,7 +19,7 @@ from ur3_llm_control.moveit_interface import (
     MoveItArmInterface,
 )
 from ur3_llm_control.planning_scene import PlanningSceneManager
-from ur3_llm_control.workcell_scene import load_scene
+from ur3_llm_control.workcell_scene import iter_models, load_scene
 
 
 TIMEOUT = 30.0
@@ -115,7 +115,10 @@ def main(args=None) -> None:
             attachment_link=str(settings["attachment_link"]),
             touch_links=tuple(str(link) for link in settings["touch_links"]),
         )
-        gazebo_sync = GazeboAttachmentSynchronizer(node)
+        gazebo_model = next(
+            model for model in iter_models(scene) if model.name == OBJECT_NAME
+        )
+        gazebo_sync = GazeboAttachmentSynchronizer(node, model=gazebo_model)
         interface = MoveItArmInterface(
             node,
             planning_group=str(motion["planning_group"]),

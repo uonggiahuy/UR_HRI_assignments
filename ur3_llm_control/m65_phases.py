@@ -22,13 +22,14 @@ from ur3_llm_control.gripper import ParallelJawGripper
 from ur3_llm_control.motion_primitives import ManipulationMotionPrimitives
 from ur3_llm_control.moveit_interface import ARM_JOINTS, MotionResult, MoveItArmInterface
 from ur3_llm_control.planning_scene import PlanningSceneManager
-from ur3_llm_control.workcell_scene import load_scene
+from ur3_llm_control.workcell_scene import BoxModel, iter_models, load_scene
 
 
 OBJECT = "red_cube"
 OTHER_OBJECTS = ("yellow_cube", "blue_cube")
 TIMEOUT = 10.0
 POSE_TOLERANCE = 0.012
+HOLD_DURATION = 4.0
 
 
 def _package_file(relative_path: str) -> str:
@@ -38,6 +39,11 @@ def _package_file(relative_path: str) -> str:
 def _yaml(relative_path: str) -> dict:
     with open(_package_file(relative_path), encoding="utf-8") as stream:
         return yaml.safe_load(stream)
+
+
+def _model_for(scene: dict, object_name: str) -> BoxModel:
+    """Return the canonical Gazebo model used for one scene object."""
+    return next(model for model in iter_models(scene) if model.name == object_name)
 
 
 def _same_pose(left: Pose, right: Pose, tolerance: float = 1e-5) -> bool:
@@ -145,6 +151,42 @@ def _wait_for_gazebo_pose(
     raise RuntimeError("Gazebo cube pose did not converge to the gripper transform")
 
 
+def _hold_attached_pose(
+    node: Node,
+    manager: PlanningSceneManager,
+    sync: GazeboAttachmentSynchronizer,
+    item,
+    label: str,
+) -> None:
+    """Measure a deliberate stationary hold, not just a successful pose write."""
+    deadline = time.monotonic() + HOLD_DURATION
+    errors: list[float] = []
+    vertical_residuals: list[float] = []
+    while time.monotonic() < deadline:
+        transform = _world_from_link(node, manager, item.link_name)
+        expected = do_transform_pose(item.object.pose, transform)
+        actual = sync.model_pose(OBJECT, timeout=1.0)
+        if actual is not None:
+            error = math.sqrt(
+                (actual.position.x - expected.position.x) ** 2
+                + (actual.position.y - expected.position.y) ** 2
+                + (actual.position.z - expected.position.z) ** 2
+            )
+            errors.append(error)
+            vertical_residuals.append(actual.position.z - expected.position.z)
+        rclpy.spin_once(node, timeout_sec=0.02)
+    if not errors:
+        raise RuntimeError(f"{label}: no Gazebo red_cube pose samples")
+    residual_span = max(vertical_residuals) - min(vertical_residuals)
+    maximum = max(errors)
+    node.get_logger().info(
+        f"{label}: samples={len(errors)} max_pose_error={maximum:.6f} m "
+        f"vertical_residual_span={residual_span:.6f} m"
+    )
+    if maximum > POSE_TOLERANCE or residual_span > POSE_TOLERANCE:
+        raise RuntimeError(f"{label}: Gazebo attached cube oscillated or left its grasp pose")
+
+
 def _world_from_link(node: Node, manager: PlanningSceneManager, link_name: str):
     deadline = time.monotonic() + TIMEOUT
     while time.monotonic() < deadline:
@@ -179,9 +221,9 @@ def _phase_a(node: Node) -> None:
 
 
 def _phase_b(node: Node) -> None:
-    _, _, manager, interface, primitives = _context(node)
+    workcell, _, manager, interface, primitives = _context(node)
     gripper = ParallelJawGripper(node)
-    sync = GazeboAttachmentSynchronizer(node)
+    sync = GazeboAttachmentSynchronizer(node, model=_model_for(workcell, OBJECT))
     try:
         _controllers(node)
         initial = manager.get(TIMEOUT)
@@ -226,14 +268,17 @@ def _phase_b(node: Node) -> None:
             raise RuntimeError("attached grasp offset changed during retreat")
         transform = _world_from_link(node, manager, item.link_name)
         _wait_for_gazebo_pose(node, sync, do_transform_pose(relative, transform))
+        _hold_attached_pose(node, manager, sync, item, "stationary attached hold")
+        _require("lateral move with attached cube", primitives.move_above("yellow_cube"))
+        _hold_attached_pose(node, manager, sync, item, "lateral attached hold")
         node.get_logger().info("M6.5 Phase B PASS")
     finally:
         sync.destroy(); gripper.destroy(); interface.destroy(); manager.destroy()
 
 
 def _phase_c_move(node: Node) -> None:
-    _, _, manager, interface, primitives = _context(node)
-    sync = GazeboAttachmentSynchronizer(node)
+    workcell, _, manager, interface, primitives = _context(node)
+    sync = GazeboAttachmentSynchronizer(node, model=_model_for(workcell, OBJECT))
     try:
         _controllers(node); _, _, attached = _scene_state(manager, "ATTACHED")
         item = attached[OBJECT]
@@ -249,9 +294,9 @@ def _phase_c_move(node: Node) -> None:
 
 
 def _phase_c_finish(node: Node) -> None:
-    _, motion, manager, interface, primitives = _context(node)
+    workcell, motion, manager, interface, primitives = _context(node)
     gripper = ParallelJawGripper(node)
-    sync = GazeboAttachmentSynchronizer(node)
+    sync = GazeboAttachmentSynchronizer(node, model=_model_for(workcell, OBJECT))
     try:
         _controllers(node)
         scene, _, attached = _scene_state(manager, "ATTACHED")
