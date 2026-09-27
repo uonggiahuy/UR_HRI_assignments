@@ -50,6 +50,18 @@ class ManipulationMotionPrimitives:
             self._target_pose(target, self._grasp_z_offset)
         )
 
+    def descend_to_placement(self, object_name: str, zone_name: str) -> MotionResult:
+        """Descend to the YAML-derived cube placement height above a zone."""
+        self._last_target = zone_name
+        placement = self.placement_world_pose(object_name, zone_name)
+        return self._interface.move_to_pose(
+            self._pose_for_world_coordinates(
+                placement.pose.position.x,
+                placement.pose.position.y,
+                placement.pose.position.z + self._grasp_z_offset,
+            )
+        )
+
     def retreat(self, target: str | None = None) -> MotionResult:
         """Collision-plan upward from the last target or an explicit named target."""
         target = target or self._last_target
@@ -69,16 +81,40 @@ class ManipulationMotionPrimitives:
         pose.pose.orientation.w = 1.0
         return pose
 
+    def placement_world_pose(self, object_name: str, zone_name: str) -> PoseStamped:
+        """Return a cube-center pose resting on the top face of a YAML zone."""
+        object_data = self._entry("objects", object_name)
+        zone_data = self._entry("zones", zone_name)
+        object_size = self._mapping(object_data.get("size"), f"{object_name}.size")
+        zone_pose = self._mapping(zone_data.get("pose"), f"{zone_name}.pose")
+        zone_size = self._mapping(zone_data.get("size"), f"{zone_name}.size")
+        pose = PoseStamped()
+        pose.header.frame_id = str(self._mapping(self._scene["robot"], "robot")["world_frame"])
+        pose.pose.position.x = self._number(zone_pose["x"], f"{zone_name}.pose.x")
+        pose.pose.position.y = self._number(zone_pose["y"], f"{zone_name}.pose.y")
+        pose.pose.position.z = (
+            self._number(zone_pose["z"], f"{zone_name}.pose.z")
+            + self._number(zone_size["z"], f"{zone_name}.size.z") / 2.0
+            + self._number(object_size["z"], f"{object_name}.size.z") / 2.0
+        )
+        pose.pose.orientation.w = 1.0
+        return pose
+
     def _target_pose(self, target: str, world_z_offset: float) -> PoseStamped:
         model = self._target(target)
+        return self._pose_for_world_coordinates(model[0], model[1], model[2] + world_z_offset)
+
+    def _pose_for_world_coordinates(
+        self, x: float, y: float, z: float
+    ) -> PoseStamped:
         robot = self._mapping(self._scene["robot"], "robot")
         mount = self._mapping(robot["mount_pose"], "robot.mount_pose")
         pose = PoseStamped()
         pose.header.frame_id = self._interface.planning_frame
-        pose.pose.position.x = model[0] - self._number(mount["x"], "robot.mount_pose.x")
-        pose.pose.position.y = model[1] - self._number(mount["y"], "robot.mount_pose.y")
+        pose.pose.position.x = x - self._number(mount["x"], "robot.mount_pose.x")
+        pose.pose.position.y = y - self._number(mount["y"], "robot.mount_pose.y")
         mount_z = self._number(mount["z"], "robot.mount_pose.z")
-        pose.pose.position.z = model[2] + world_z_offset - mount_z
+        pose.pose.position.z = z - mount_z
         (
             pose.pose.orientation.x,
             pose.pose.orientation.y,
@@ -89,16 +125,24 @@ class ManipulationMotionPrimitives:
 
     def _target(self, target: str) -> tuple[float, float, float]:
         for group in ("objects", "zones"):
-            entries = self._mapping(self._scene.get(group), group)
-            candidate = entries.get(target)
-            if candidate is not None:
-                target_data = self._mapping(candidate, target)
+            try:
+                target_data = self._entry(group, target)
+            except ValueError:
+                continue
+            else:
                 pose = self._mapping(target_data.get("pose"), f"{target}.pose")
                 return tuple(
                     self._number(pose[name], f"{target}.pose.{name}")
                     for name in ("x", "y", "z")
                 )
         raise ValueError(f"Unknown scene.yaml target: {target}")
+
+    def _entry(self, group: str, name: str) -> Mapping[str, object]:
+        entries = self._mapping(self._scene.get(group), group)
+        candidate = entries.get(name)
+        if candidate is None:
+            raise ValueError(f"Unknown scene.yaml {group} entry: {name}")
+        return self._mapping(candidate, name)
 
     @staticmethod
     def _mapping(value: object, label: str) -> Mapping[str, object]:

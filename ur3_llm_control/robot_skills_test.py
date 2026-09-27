@@ -149,7 +149,9 @@ def main(args=None) -> None:
         _require("final home", skills.home())
 
         world_after, attached_after = _scene_objects(manager)
-        expected = ManipulationMotionPrimitives(interface, scene, motion).target_world_pose(ZONE)
+        expected = ManipulationMotionPrimitives(
+            interface, scene, motion
+        ).placement_world_pose(OBJECT, ZONE)
         if attached_after or not _same_pose(world_after[OBJECT].pose, expected.pose, 1e-5):
             raise RuntimeError("red_cube did not finish WORLD-only at zone_b")
         for name, pose in unchanged_before.items():

@@ -109,13 +109,15 @@ class RobotSkills:
         status = self._motion(self._primitives.move_above(zone_name))
         if status != SkillStatus.SUCCESS:
             return status
-        status = self._motion(self._primitives.descend(zone_name))
+        status = self._motion(
+            self._primitives.descend_to_placement(object_name, zone_name)
+        )
         if status != SkillStatus.SUCCESS:
             return status
 
-        # The placement pose comes from scene.yaml through the validated M6
-        # target API; it is fetched only after the successful descent.
-        placement_pose = self._primitives.target_world_pose(zone_name)
+        # The placement pose comes from the zone top and cube geometry in
+        # scene.yaml; it is fetched only after the successful descent.
+        placement_pose = self._primitives.placement_world_pose(object_name, zone_name)
         if not self._gazebo_sync.release(placement_pose):
             return SkillStatus.FAILED
         if not self._scene_call(

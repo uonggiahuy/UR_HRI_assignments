@@ -20,9 +20,9 @@ Public API:
   attach, Gazebo attachment synchronization, and retreat.
 - `place(object_name, zone_name) -> SkillStatus`: accepts those objects and
   only `zone_a`, `zone_b`, or `zone_c`; refreshes the authoritative attachment,
-  moves above and descends to the YAML zone target, releases/detaches at the
-  YAML world pose, opens, retreats, performs the final Gazebo pose write, and
-  clears the temporary target-only contact exception.
+  moves above the YAML zone target and descends to the YAML-derived top-of-zone
+  cube pose, releases/detaches there, opens, retreats, performs the final
+  Gazebo pose write, and clears the temporary target-only contact exception.
 
 Statuses are `SUCCESS`, `FAILED`, `INVALID_OBJECT`, `INVALID_ZONE`,
 `PLANNING_FAILED`, and `EXECUTION_FAILED`. Every arm call consumes a new M4
