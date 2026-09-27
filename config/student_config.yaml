@@ -1,0 +1,5 @@
+# Default/fallback student identity for package configuration.
+# M9 will support a runtime override. The final submission must replace the
+# empty student_id with the real student's ID.
+student_name: "Gia Huy"
+student_id: ""

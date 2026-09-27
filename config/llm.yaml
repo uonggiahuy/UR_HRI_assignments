@@ -1,0 +1,8 @@
+# Configuration metadata only; M1 does not contact 9Router.
+base_url_env: NINEROUTER_BASE_URL
+api_key_env: NINEROUTER_API_KEY
+model_env: NINEROUTER_MODEL
+
+default_base_url: http://127.0.0.1:20128/v1
+timeout_sec: 60
+temperature: 0.0

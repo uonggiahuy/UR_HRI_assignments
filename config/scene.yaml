@@ -1,0 +1,175 @@
+# Canonical M2.5 workcell description. All values use SI units.
+# Poses are expressed in the Gazebo `world` frame as named XYZ/RPY fields.
+# Pose Z is the geometric center of each box, not a support-surface height.
+# Dynamic cube poses are initial spawn poses 1 mm above the tabletop; physics
+# settles them onto the table at z = 0.3225 m.
+schema_version: 2
+
+robot:
+  ur_type: ur3e
+  world_frame: world
+  # The UR base_link mounting plane is coincident with the pedestal top.
+  mount_pose:
+    x: 0.0
+    y: 0.0
+    z: 0.30
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+
+pedestal:
+  name: robot_pedestal
+  pose:
+    x: 0.0
+    y: 0.0
+    z: 0.15
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  size:
+    x: 0.25
+    y: 0.25
+    z: 0.30
+  color:
+    r: 0.18
+    g: 0.25
+    b: 0.32
+    a: 1.0
+
+table:
+  name: manipulation_table
+  pose:
+    x: 0.0
+    y: 0.38
+    z: 0.15
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  size:
+    x: 0.60
+    y: 0.40
+    z: 0.30
+  color:
+    r: 0.45
+    g: 0.38
+    b: 0.28
+    a: 1.0
+
+objects:
+  red_cube:
+    name: red_cube
+    pose:
+      x: -0.12
+      y: 0.33
+      z: 0.3235
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.045
+      y: 0.045
+      z: 0.045
+    mass: 0.08
+    color:
+      r: 0.90
+      g: 0.05
+      b: 0.05
+      a: 1.0
+
+  yellow_cube:
+    name: yellow_cube
+    pose:
+      x: 0.0
+      y: 0.33
+      z: 0.3235
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.045
+      y: 0.045
+      z: 0.045
+    mass: 0.08
+    color:
+      r: 0.95
+      g: 0.80
+      b: 0.05
+      a: 1.0
+
+  blue_cube:
+    name: blue_cube
+    pose:
+      x: 0.12
+      y: 0.33
+      z: 0.3235
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.045
+      y: 0.045
+      z: 0.045
+    mass: 0.08
+    color:
+      r: 0.05
+      g: 0.15
+      b: 0.90
+      a: 1.0
+
+zones:
+  zone_a:
+    name: zone_a
+    pose:
+      x: -0.12
+      y: 0.24
+      z: 0.301
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.080
+      y: 0.080
+      z: 0.002
+    color:
+      r: 0.00
+      g: 0.75
+      b: 1.00
+      a: 1.0
+
+  zone_b:
+    name: zone_b
+    pose:
+      x: 0.0
+      y: 0.24
+      z: 0.301
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.080
+      y: 0.080
+      z: 0.002
+    color:
+      r: 0.90
+      g: 0.15
+      b: 0.80
+      a: 1.0
+
+  zone_c:
+    name: zone_c
+    pose:
+      x: 0.12
+      y: 0.24
+      z: 0.301
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.080
+      y: 0.080
+      z: 0.002
+    color:
+      r: 0.20
+      g: 0.90
+      b: 0.25
+      a: 1.0

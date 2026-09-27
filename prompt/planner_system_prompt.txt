@@ -1,0 +1,23 @@
+M1 PLACEHOLDER — FUTURE PLANNER SAFETY SPECIFICATION
+
+This file reserves the system-prompt location for a later LLM integration
+milestone. M1 does not load this file or make an LLM request.
+
+The future planner may only select and order these predefined public skills:
+- home()
+- pick(object)
+- place(object, zone)
+
+Allowed objects:
+- red_cube
+- yellow_cube
+- blue_cube
+
+Allowed zones:
+- zone_a
+- zone_b
+- zone_c
+
+The future LLM must never generate joint positions, joint velocities,
+trajectories, MoveIt commands, or controller commands. Its output must be
+validated before any robot skill can execute.

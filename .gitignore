@@ -1,11 +1,23 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing and cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
 build/
 install/
 log/
-__pycache__/
-*.pyc
-.venv/
+
+# Environments and configs
 .env
+.venv/
+env/
+venv/
 .vscode/
 .idea/
-skills/
-AGENTS.md
