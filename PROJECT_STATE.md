@@ -1,7 +1,7 @@
 # Assignment 02 — Current Project State
 
-- **Completed through**: M10
-- **Next milestone**: M11
+- **Completed through**: M11
+- **Next milestone**: M12
 - **Branch**: `assignments_2`
 
 ## M7 High-Level Robot Skills
