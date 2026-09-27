@@ -56,10 +56,19 @@ class RobotSkills:
         return self._motion(self._interface.move_to_joint_configuration(self._home_configuration))
 
     def pick(self, object_name: str) -> SkillStatus:
-        """Pick one configured cube through the M4--M6 APIs."""
+        """Pick one configured cube through the M4--M6 APIs.
+
+        A fresh simulator starts in the stock straight-elbow posture, from
+        which the approach planner can choose an invalid arm/gripper transit.
+        Enter the configured, collision-checked HOME posture before every
+        approach so callers never need to expose this transit as a task step.
+        """
         if object_name not in self.VALID_OBJECTS:
             return SkillStatus.INVALID_OBJECT
 
+        status = self.home()
+        if status != SkillStatus.SUCCESS:
+            return status
         status = self._gripper_command(self._gripper.open)
         if status != SkillStatus.SUCCESS:
             return status

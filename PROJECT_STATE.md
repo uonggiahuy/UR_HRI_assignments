@@ -64,3 +64,17 @@ state-update-after-success-only, and stale-plan rejection.
 validates and executes pick(red_cube), place(red_cube, zone_b), home(), then
 checks final MoveIt, Gazebo, WorldState, and controller state. It requires the
 already-running M7 simulation/MoveIt stack.
+
+`RobotSkills.pick()` first enters the configured collision-checked `home`
+configuration internally. This is a task-internal transit, not an additional
+LLM/M8 plan step: a fresh workcell starts with a straight elbow, for which the
+approach planner can generate an invalid upper-arm/gripper collision. The M8
+plan therefore remains exactly `pick`, `place`, `home` and is valid from a
+clean workcell.
+
+`m8_transition_diagnostic` compares the startup and HOME transitions using
+the existing M7 `pick` skill. Live validation confirmed startup pick planning
+fails from the stock straight-elbow posture, while HOME-to-pick completes the
+Planning Scene `WORLD -> ATTACHED` transition. The full M8 live plan then
+completed `WORLD -> ATTACHED -> WORLD`, with the Gazebo cube at `zone_b` and
+all controllers active.

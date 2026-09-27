@@ -42,6 +42,7 @@ setup(
             "robot_skills_test = ur3_llm_control.robot_skills_test:main",
             "m8_validator_test = ur3_llm_control.m8_validator_test:main",
             "m8_plan_test = ur3_llm_control.m8_plan_test:main",
+            "m8_transition_diagnostic = ur3_llm_control.m8_transition_diagnostic:main",
         ],
     },
 )
