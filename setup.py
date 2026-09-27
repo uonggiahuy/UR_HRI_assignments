@@ -44,6 +44,7 @@ setup(
             "m8_plan_test = ur3_llm_control.m8_plan_test:main",
             "m8_transition_diagnostic = ur3_llm_control.m8_transition_diagnostic:main",
             "student_task_test = ur3_llm_control.student_task_test:main",
+            "llm_planner_test = ur3_llm_control.llm_planner_test:main",
         ],
     },
 )

@@ -138,3 +138,40 @@ part of the M2 workcell launch.
 M5 does not implement attachment, detachment, Gazebo-to-MoveIt object-state
 updates, robot skills, pick/place, validation/execution orchestration, student
 mapping, or LLM/9Router execution. Those belong to later milestones.
+
+## M10 LLM planner boundary
+
+`LLMPlanner` converts natural-language requests into an untrusted JSON
+candidate through 9Router's OpenAI-compatible Chat Completions endpoint, then
+passes that unchanged candidate to M8 `TaskValidator`. It never imports or
+calls RobotSkills, MoveIt, the gripper, or controllers, and it never executes
+the validated plan. A failed response never reuses an earlier plan.
+
+The non-secret endpoint may default to `config/llm.yaml`; the API key and model
+are required environment variables and are never stored in this repository:
+
+```bash
+export NINEROUTER_BASE_URL=http://127.0.0.1:20128/v1
+export NINEROUTER_API_KEY='...'
+export NINEROUTER_MODEL='...'
+```
+
+Install the OpenAI SDK only inside the ROS 2 Humble development container:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+Run static mocked boundary tests without a network request:
+
+```bash
+ros2 run ur3_llm_control llm_planner_test
+```
+
+With valid environment variables in that container, explicitly run the three
+real M10 planner checks (Vietnamese, English, and home); this validates plans
+only and performs no robot motion:
+
+```bash
+ros2 run ur3_llm_control llm_planner_test --live
+```

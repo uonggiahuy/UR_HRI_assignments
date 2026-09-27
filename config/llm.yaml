@@ -1,4 +1,4 @@
-# Configuration metadata only; M1 does not contact 9Router.
+# M10 OpenAI-compatible 9Router planner configuration. Secrets stay in env.
 base_url_env: NINEROUTER_BASE_URL
 api_key_env: NINEROUTER_API_KEY
 model_env: NINEROUTER_MODEL
