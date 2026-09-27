@@ -1,7 +1,7 @@
 # Assignment 02 — Current Project State
 
-- **Completed through**: M8
-- **Next milestone**: M9
+- **Completed through**: M9
+- **Next milestone**: M10
 - **Branch**: `assignments_2`
 
 ## M7 High-Level Robot Skills
@@ -78,3 +78,25 @@ fails from the stock straight-elbow posture, while HOME-to-pick completes the
 Planning Scene `WORLD -> ATTACHED` transition. The full M8 live plan then
 completed `WORLD -> ATTACHED -> WORLD`, with the Gazebo cube at `zone_b` and
 all controllers active.
+
+## M9 Student-ID Personalization
+
+`ur3_llm_control.student_task` provides local, deterministic assignment
+personalization without ROS, LLM, 9Router, MoveIt, or robot execution.
+
+- `parse_student_id(student_id)` accepts only a non-empty ASCII digit string
+  with at least two digits, preserving leading zeros, and returns the final
+  two digits as `XX`.
+- `compute_variant(student_id)` deterministically computes `P = XX mod 6`.
+- `get_assignment_mapping(student_id)` returns the specified zone-to-object
+  mapping. `get_object_zone_mapping(student_id)` provides its inverse for
+  later planning.
+- `resolve_student_task(runtime_student_id=None, config_path=None)` resolves
+  identity with strict priority: a provided runtime ID, then
+  `config/student_config.yaml`, then an explicit configuration error. A bad
+  runtime ID never falls back silently. `student_name` is metadata only and
+  never influences `P` or the mapping.
+
+`student_task_test` is a static no-ROS/no-LLM executable covering all six
+variants, runtime-over-config precedence, configuration fallback, malformed
+and missing IDs, repeatability, and the inverse mapping.
