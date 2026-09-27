@@ -1,7 +1,7 @@
 # Assignment 02 — Current Project State
 
-- **Completed through**: M9
-- **Next milestone**: M10
+- **Completed through**: M10
+- **Next milestone**: M11
 - **Branch**: `assignments_2`
 
 ## M7 High-Level Robot Skills
@@ -100,3 +100,25 @@ personalization without ROS, LLM, 9Router, MoveIt, or robot execution.
 `student_task_test` is a static no-ROS/no-LLM executable covering all six
 variants, runtime-over-config precedence, configuration fallback, malformed
 and missing IDs, repeatability, and the inverse mapping.
+
+## M10 9Router LLM Planner Integration
+
+`ur3_llm_control.llm_planner.LLMPlanner` is the isolated natural-language
+planning boundary. `LLMPlanner.from_environment()` reads the non-secret
+endpoint fallback, timeout, and temperature from `config/llm.yaml`; it requires
+`NINEROUTER_API_KEY` and `NINEROUTER_MODEL` from the environment, with no
+defaults. It uses the OpenAI-compatible Chat Completions API at the configured
+9Router endpoint and never logs credentials.
+
+`plan(request, world_state) -> PlannerResult` sends the constrained system
+prompt, accepts only one JSON-object response (raw or a single JSON fence), and
+passes it unchanged to M8 `TaskValidator`. It returns an explicit status for
+configuration, client/API, malformed-response, and validation failures; it
+does not retain or reuse a prior plan. It has no dependency on RobotSkills,
+MoveIt, gripper, controllers, SkillExecutor, or robot execution.
+
+`llm_planner_test` covers the Vietnamese red-to-zone-B request, English
+blue-to-zone-A request, home request, malformed/low-level rejection, missing
+credential fail-closed behavior, configured-model use, and stale-plan
+non-reuse. Its `--live` mode performs the three authenticated planner checks
+against 9Router and validates them with M8 only; it performs no robot motion.

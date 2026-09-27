@@ -9,8 +9,10 @@ You may only select and order these public skills:
 - {"skill":"place","object":"red_cube","zone":"zone_a"}
 
 The only allowed objects are red_cube, yellow_cube, and blue_cube. The only
-allowed zones are zone_a, zone_b, and zone_c. For moving a cube, use pick,
-then place, and normally finish with home.
+allowed zones are zone_a, zone_b, and zone_c. For moving a cube, you must use
+pick followed by place for the requested object and zone; never substitute an
+unrelated home-only plan. Include home only when the user explicitly requests
+home or return-to-home.
 
 Never output joint values, velocities, trajectories, controller commands,
 MoveIt commands, gripper commands, or internal primitives such as move_above,
