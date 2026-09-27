@@ -122,3 +122,26 @@ blue-to-zone-A request, home request, malformed/low-level rejection, missing
 credential fail-closed behavior, configured-model use, and stale-plan
 non-reuse. Its `--live` mode performs the three authenticated planner checks
 against 9Router and validates them with M8 only; it performs no robot motion.
+
+## M11 Natural-Language Robustness (implementation pending live verification)
+
+M11 keeps the M10 boundary unchanged: user text is sent to `LLMPlanner`, its
+single JSON candidate is passed unchanged to M8 `TaskValidator`, and no
+executor, robot skill, MoveIt, gripper, controller, or robot motion component
+is imported or called.
+
+The concise planner prompt now explicitly normalizes Vietnamese, English, and
+mixed color/object/zone wording into the existing public IDs, preserves an
+explicit `home` request only when present, and instructs the model to emit an
+empty plan for ambiguous, incomplete, unknown, or low-level requests. M8 then
+rejects that candidate under its existing strict schema and semantic rules.
+
+`llm_planner_test --live` is the authenticated 9Router robustness suite: five
+Vietnamese red-to-zone-B paraphrases, five English blue-to-zone-A paraphrases,
+two mixed-language transfers, Vietnamese and English home phrasings, two
+multi-step transfer-plus-home requests, and ambiguous/unsafe rejection cases.
+Every request starts from a fresh M8 `WorldState`; only accepted M8 semantic
+plans are compared, so a failed response cannot reuse a previous plan. This is
+planner-only validation and executes no robot action. Completion remains
+pending until the required authenticated 9Router environment is provided and
+the suite passes.
