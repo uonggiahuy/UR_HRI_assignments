@@ -1,7 +1,7 @@
 # Assignment 02 — Current Project State
 
-- **Completed through**: M7
-- **Next milestone**: M8
+- **Completed through**: M8
+- **Next milestone**: M9
 - **Branch**: `assignments_2`
 
 ## M7 High-Level Robot Skills
@@ -33,3 +33,34 @@ continues with a stale result.
 `home()`, `pick(red_cube)`, `place(red_cube, zone_b)`, and `home()`. It checks
 the MoveIt WORLD -> ATTACHED -> WORLD lifecycle, final zone pose, Gazebo final
 pose, unchanged non-target cubes, and active controllers.
+
+## M8 World State, Validation, and Execution
+
+M8 adds no LLM or natural-language interface. It accepts only structured JSON
+plans and calls the existing M7 `RobotSkills` public API.
+
+Public APIs:
+
+- `WorldState.from_scene_file(scene_file) -> WorldState` reads the configured
+  cube poses from `config/scene.yaml`, initializes all cubes as `table`
+  objects, and tracks `held_object`, `object_locations`, and `zone_occupancy`.
+  Its `record_pick_success()` and `record_place_success()` transitions are
+  called only after an M7 skill reports `SUCCESS`.
+- `TaskValidator.validate(plan_input, world_state) -> ValidationResult`
+  accepts a JSON string/bytes or dictionary. It requires the exact top-level
+  `{"plan"}` schema, exact per-skill arguments, and only `home`, `pick`, and
+  `place` over the configured M8 objects/zones. It simulates the supplied
+  `WorldState` snapshot to reject obvious semantic errors before execution.
+- `SkillExecutor(skills, world_state).execute(validation) -> ExecutionResult`
+  accepts only an accepted validation result for the unchanged state revision,
+  calls only `RobotSkills.home()`, `.pick()`, and `.place()`, stops at the first
+  failing skill, and applies a world-state transition only on success.
+
+`m8_validator_test` is a static, no-ROS/no-LLM executable covering strict
+schema checks, low-level command rejection, semantic rejection, stop-on-failure,
+state-update-after-success-only, and stale-plan rejection.
+
+`m8_plan_test` is the live hard-coded M8 JSON integration executable. It
+validates and executes pick(red_cube), place(red_cube, zone_b), home(), then
+checks final MoveIt, Gazebo, WorldState, and controller state. It requires the
+already-running M7 simulation/MoveIt stack.
