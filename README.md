@@ -2,8 +2,8 @@
 
 Assignment 02 — UR3/UR3e Control using LLM + Skill-Based Planning.
 
-M4 adds an assignment-local MoveIt launch and reusable Python arm-motion
-interface while retaining the M3 workcell and parallel-jaw gripper. The launch
+M5 adds an assignment-local MoveIt Planning Scene manager while retaining the
+M4 motion interface and M3 workcell and parallel-jaw gripper. The launch
 composes the official
 `ur_simulation_gz/ur_sim_control.launch.py` launch file with assignment-local
 pedestal, table, cube, and placement-zone entities. An assignment-local Xacro
@@ -17,6 +17,24 @@ opening spans 0--80 mm by joint limits; `close()` and `open()` command 4 mm and
 45 mm cube. The
 fixed `gripper_tcp` frame is translated `(0, 0, 0.080) m` from `tool0` with no
 rotation and lies at the intended grasp center between the fingers.
+
+## M5 Planning Scene
+
+`planning_scene.py` reads the same `config/scene.yaml` used by Gazebo, converts
+the pedestal, table, and three cubes to MoveIt box collision objects, and
+applies them through `/apply_planning_scene`. It verifies names, dimensions,
+frames, and poses against `/get_planning_scene` at startup. Placement zones are
+intentionally omitted because they are visual/semantic markers rather than
+obstacles.
+
+The acceptance executable also verifies that MoveIt's robot description still
+contains the gripper and `gripper_tcp`, executes one safe collision-checked
+target, and confirms that a YAML-derived target inside the table is rejected
+without arm motion:
+
+```bash
+ros2 run ur3_llm_control planning_scene_test
+```
 
 ## M4 arm motion
 
@@ -97,7 +115,7 @@ export ROS_LOCALHOST_ONLY=1
 ros2 run ur3_llm_control moveit_test
 ```
 
-The sequence is current state -> HOME -> nearby `gripper_tcp` pose -> HOME,
+The M4 sequence is current state -> HOME -> nearby `gripper_tcp` pose -> HOME,
 followed by an unreachable target that must fail without moving the arm.
 
 Headless launch:
@@ -117,6 +135,6 @@ part of the M2 workcell launch.
 
 ## Scope boundary
 
-M4 does not implement workcell collision-object injection, Planning Scene
-attachment, robot skills, pick/place, or LLM/9Router execution. Those belong to
-later milestones.
+M5 does not implement attachment, detachment, Gazebo-to-MoveIt object-state
+updates, robot skills, pick/place, validation/execution orchestration, student
+mapping, or LLM/9Router execution. Those belong to later milestones.

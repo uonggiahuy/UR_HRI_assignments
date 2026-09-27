@@ -25,8 +25,10 @@
   <exec_depend>moveit_ros_visualization</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
   <exec_depend>ur_simulation_gz</exec_depend>
   <exec_depend>ur_description</exec_depend>
   <exec_depend>xacro</exec_depend>

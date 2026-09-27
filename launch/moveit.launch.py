@@ -146,6 +146,13 @@ def _launch_setup(context):
         output="screen",
         parameters=common_parameters,
     )
+    planning_scene = Node(
+        package="ur3_llm_control",
+        executable="planning_scene",
+        name="workcell_planning_scene",
+        output="screen",
+        parameters=[{"scene_config": LaunchConfiguration("scene_config")}],
+    )
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -160,7 +167,7 @@ def _launch_setup(context):
         ],
         parameters=common_parameters,
     )
-    return [move_group, rviz]
+    return [move_group, planning_scene, rviz]
 
 
 def generate_launch_description():

@@ -34,6 +34,8 @@ setup(
             "command_node = ur3_llm_control.command_node:main",
             "gripper_test = ur3_llm_control.gripper_test:main",
             "moveit_test = ur3_llm_control.moveit_test:main",
+            "planning_scene = ur3_llm_control.planning_scene:main",
+            "planning_scene_test = ur3_llm_control.planning_scene_test:main",
         ],
     },
 )

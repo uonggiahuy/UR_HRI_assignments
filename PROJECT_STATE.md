@@ -1,59 +1,57 @@
 # Assignment 02 — Project State
 
 ## Status
-- **Current Milestone**: Completed through M4
-- **Next Milestone**: M5 (MoveIt Planning Scene)
 
-## Robot & Environment
-- **Robot Model**: UR3e (configurable `ur_type`)
-- **ROS Distro**: ROS 2 Humble
-- **Simulation**: Gazebo Fortress / Ignition 6 (`IGN_IP=127.0.0.1`, `ROS_LOCALHOST_ONLY=1`)
+- **Completed through**: M5 (MoveIt Planning Scene)
+- **Next milestone**: M6
+- **Branch**: `assignments_2`
 
-## Workcell Geometry
-- **Pedestal**: Center `(0, 0, 0.15)`, size `(0.25, 0.25, 0.30)`
-- **Robot Mounting**: `(0, 0, 0.30)` atop pedestal
-- **Table**: Center `(0, 0.38, 0.15)`, size `(0.60, 0.40, 0.30)`, tabletop at `z=0.30`
-- **Objects**: `red_cube`, `yellow_cube`, `blue_cube` (cube size `0.045 m`)
-- **Drop Zones**: `zone_a`, `zone_b`, `zone_c` (visual-only, no collision)
+## Robot and Runtime
 
-## Gripper Configuration
-- **Type**: Assignment-local parallel-jaw gripper
-- **TCP Link**: `gripper_tcp` (`tool0 -> gripper_tcp` with translation `(0, 0, 0.080)` and identity rotation)
-- **Finger Joints**: `left_finger_joint`, `right_finger_joint`
-- **Stroke Limits**: Mechanical max `80 mm`, commanded open `75 mm`, commanded closed `4 mm`
-- **Controller**: `gripper_controller`
+- ROS 2 Humble in the `ros2_workspace` environment
+- UR3e by default (`ur_type` remains configurable for UR3)
+- Gazebo Fortress / Ignition 6
+- MoveIt planning group `ur_manipulator`, planning frame `base_link`, planning
+  tip `tool0`, application tip `gripper_tcp`
+- Assignment-local M3 parallel-jaw gripper and fixed `gripper_tcp` remain in
+  the MoveIt robot model
+- Active motion controllers: `joint_trajectory_controller` and
+  `gripper_controller`
 
-## MoveIt 2 Motion Planning
-- **Implementation**: Pure `rclpy` + `moveit_msgs` (no `moveit_py`, `pymoveit2`, or `moveit_commander`)
-- **Planning Group**: `ur_manipulator`
-- **Base Frame**: `base_link`
-- **MoveIt Planning Tip**: `tool0`
-- **Application Target**: `gripper_tcp` (offset converted in `moveit_interface.py`)
+## Planning Scene Architecture and API
 
-## HOME Configuration
-- **Joint Values (rad)**:
-  - `shoulder_pan_joint`: `0.0`
-  - `shoulder_lift_joint`: `-1.5708`
-  - `elbow_joint`: `1.5708`
-  - `wrist_1_joint`: `-1.5708`
-  - `wrist_2_joint`: `-1.5708`
-  - `wrist_3_joint`: `0.0`
-- **Scaling**: Velocity scaling `0.05`, acceleration scaling `0.05`
+- `config/scene.yaml` is the single source of truth for Gazebo and MoveIt
+  workcell names, dimensions, poses, and colors.
+- `ur3_llm_control/planning_scene.py` converts collidable YAML box models to
+  `moveit_msgs/CollisionObject` messages in the YAML `world` frame.
+- `PlanningSceneManager` applies one scene diff through
+  `/apply_planning_scene` and reads the authoritative scene through
+  `/get_planning_scene`.
+- The manager verifies returned object IDs, box dimensions, frames, and poses
+  against the generated YAML-backed scene at startup.
+- `moveit.launch.py` starts the manager with the selected `scene_config`.
 
-## Active Controllers
-- `joint_state_broadcaster`
-- `joint_trajectory_controller`
-- `gripper_controller`
+## Collision Objects Currently Managed
 
-## 9Router LLM Interface
-- **Endpoint**: `http://127.0.0.1:20128/v1`
-- **Environment Variables**:
-  - `NINEROUTER_BASE_URL`
-  - `NINEROUTER_API_KEY` (never commit keys)
-  - `NINEROUTER_MODEL`
+- `robot_pedestal`
+- `manipulation_table`
+- `red_cube`
+- `yellow_cube`
+- `blue_cube`
 
-## Vendor Repositories Policy
-Upstream vendor packages must not be modified:
-- `Universal_Robots_ROS2_Description`
-- `Universal_Robots_ROS2_Driver`
-- `Universal_Robots_ROS2_GZ_Simulation`
+`zone_a`, `zone_b`, and `zone_c` remain Gazebo visual/semantic markers and are
+not MoveIt collision objects.
+
+## Verified M5 Behavior
+
+- A safe `gripper_tcp` target plans and executes with the Planning Scene active.
+- A target derived from `scene.yaml` and placed inside the table is rejected by
+  collision-aware MoveIt IK without trajectory execution or arm motion.
+- RViz displays the pedestal, table, and three colored cubes in the Planning
+  Scene.
+
+## Current Limitation
+
+M5 represents cube poses from their initial values in `scene.yaml`; it does not
+synchronize later Gazebo physics motion or implement attach/detach or world-state
+updates. Those behaviors remain outside M5.

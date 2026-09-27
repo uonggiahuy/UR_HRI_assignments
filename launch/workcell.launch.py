@@ -7,6 +7,7 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
     SetEnvironmentVariable,
+    TimerAction,
 )
 from launch.event_handlers import OnProcessExit
 from launch.conditions import IfCondition
@@ -127,7 +128,10 @@ def _launch_setup(context):
         scene_environment,
         ur_simulation,
         moveit,
-        gripper_controller_spawner,
+        # RViz plus the M5 scene manager can briefly consume the remaining
+        # CycloneDDS participant slots. Start this short-lived spawner after
+        # the upstream controller spawners have normally exited.
+        TimerAction(period=3.0, actions=[gripper_controller_spawner]),
         *spawn_sequence,
         spawners[0],
     ]
