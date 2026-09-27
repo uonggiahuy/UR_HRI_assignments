@@ -9,6 +9,7 @@ from typing import Iterable, Sequence
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Pose, PoseStamped
 from moveit_msgs.msg import (
+    AllowedCollisionEntry,
     AttachedCollisionObject,
     CollisionObject,
     ObjectColor,
@@ -236,9 +237,40 @@ class PlanningSceneManager:
             PlanningSceneComponents.WORLD_OBJECT_GEOMETRY
             | PlanningSceneComponents.OBJECT_COLORS
             | PlanningSceneComponents.ROBOT_STATE_ATTACHED_OBJECTS
+            | PlanningSceneComponents.ALLOWED_COLLISION_MATRIX
         )
         response = self._call(self._get_client, request, timeout)
         return None if response is None else response.scene
+
+    def allow_grasp_contact(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> bool:
+        """Permit only target-cube contact with its configured gripper links.
+
+        This is a temporary pre-attachment exception, required for a physical
+        closing grasp.  All other collision pairs remain unchanged.
+        """
+        scene = self.get(timeout)
+        if scene is None or self._movable_model(object_name) is None:
+            return False
+        diff = PlanningScene()
+        diff.is_diff = True
+        diff.robot_state.is_diff = True
+        diff.allowed_collision_matrix = self._grasp_contact_matrix(
+            scene, object_name, True
+        )
+        return self._apply_diff(diff, timeout)
+
+    def clear_grasp_contact(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> bool:
+        """Remove the target-only gripper contact exception."""
+        scene = self.get(timeout)
+        if scene is None or self._movable_model(object_name) is None:
+            return False
+        diff = PlanningScene()
+        diff.is_diff = True
+        diff.robot_state.is_diff = True
+        diff.allowed_collision_matrix = self._grasp_contact_matrix(
+            scene, object_name, False
+        )
+        return self._apply_diff(diff, timeout)
 
     def verify(self, timeout: float = SERVICE_TIMEOUT) -> tuple[bool, str]:
         actual = self.get(timeout)
@@ -290,7 +322,26 @@ class PlanningSceneManager:
         removal.id = object_name
         removal.operation = CollisionObject.REMOVE
         diff.world.collision_objects = [removal]
-        return self._apply_diff(diff, timeout)
+        # Some Humble MoveIt builds report ``success=false`` for this combined
+        # WORLD-remove/Attached-add diff even after applying it. Query the
+        # authoritative scene rather than relying on that response alone.
+        self._apply_diff(diff, timeout)
+        updated = self.get(timeout)
+        attached_now = updated is not None and any(
+            item.object.id == object_name
+            for item in updated.robot_state.attached_collision_objects
+        )
+        return attached_now and self.clear_grasp_contact(object_name, timeout)
+
+    def attached_pose(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> Pose | None:
+        """Return the currently authoritative attachment-frame object pose."""
+        scene = self.get(timeout)
+        if scene is None:
+            return None
+        for item in scene.robot_state.attached_collision_objects:
+            if item.object.id == object_name and item.link_name == self.attachment_link:
+                return item.object.pose
+        return None
 
     def detach_object(
         self,
@@ -332,7 +383,12 @@ class PlanningSceneManager:
         diff.robot_state.attached_collision_objects = [removal]
         diff.world.collision_objects = [world_object]
         diff.object_colors = [object_color(model)]
-        return self._apply_diff(diff, timeout)
+        if not self._apply_diff(diff, timeout):
+            return False
+        # The physical cube is initially still between the fingers. Preserve
+        # only its narrow contact exception until the caller retreats, then
+        # clear it with ``clear_grasp_contact``.
+        return self.allow_grasp_contact(object_name, timeout)
 
     def destroy(self) -> None:
         self._node.destroy_client(self._apply_client)
@@ -350,9 +406,6 @@ class PlanningSceneManager:
     def _pose_in_attachment_frame(
         self, world_pose: Pose, timeout: float
     ) -> Pose | None:
-        source = PoseStamped()
-        source.header.frame_id = self._world_frame
-        source.pose = world_pose
         try:
             transform = self._tf_buffer.lookup_transform(
                 self.attachment_link,
@@ -360,12 +413,37 @@ class PlanningSceneManager:
                 rclpy.time.Time(),
                 timeout=Duration(seconds=timeout),
             )
-            return do_transform_pose(source, transform).pose
+            return do_transform_pose(world_pose, transform)
         except Exception as exc:
             self._node.get_logger().error(
                 f"Cannot transform WORLD object to {self.attachment_link}: {exc}"
             )
             return None
+
+    def _grasp_contact_matrix(
+        self, scene: PlanningScene, object_name: str, enabled: bool
+    ):
+        """Copy the ACM and alter only object/touch-link symmetric entries."""
+        matrix = scene.allowed_collision_matrix
+        names = list(matrix.entry_names)
+        rows = [list(row.enabled) for row in matrix.entry_values]
+        for name in (object_name, *self.touch_links):
+            if name not in names:
+                names.append(name)
+                for row in rows:
+                    row.append(False)
+                rows.append([False] * len(names))
+        for link in self.touch_links:
+            left, right = names.index(object_name), names.index(link)
+            rows[left][right] = enabled
+            rows[right][left] = enabled
+        matrix.entry_names = names
+        matrix.entry_values = []
+        for row in rows:
+            entry = AllowedCollisionEntry()
+            entry.enabled = row
+            matrix.entry_values.append(entry)
+        return matrix
 
     def _apply_diff(self, diff: PlanningScene, timeout: float) -> bool:
         if not self._apply_client.wait_for_service(timeout_sec=timeout):
@@ -374,7 +452,10 @@ class PlanningSceneManager:
         request = ApplyPlanningScene.Request()
         request.scene = diff
         response = self._call(self._apply_client, request, timeout)
-        return response is not None and response.success
+        if response is None or not response.success:
+            self._node.get_logger().error("MoveIt rejected Planning Scene diff")
+            return False
+        return True
 
     def _call(self, client, request, timeout: float):
         future = client.call_async(request)

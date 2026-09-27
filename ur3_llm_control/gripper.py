@@ -12,7 +12,9 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 
 GRIPPER_ACTION = "/gripper_controller/follow_joint_trajectory"
 FINGER_JOINTS = ("left_finger_joint", "right_finger_joint")
-CLOSED_POSITION = 0.002
+# The 45 mm assignment cubes require a 45 mm or wider jaw gap.  This leaves a
+# 2 mm total clearance while MoveIt's attachment owns the grasp constraint.
+CLOSED_POSITION = 0.0235
 OPEN_POSITION = 0.0375
 
 
@@ -39,7 +41,7 @@ class ParallelJawGripper:
         self._command((OPEN_POSITION, OPEN_POSITION), "open")
 
     def close(self) -> None:
-        """Close both fingers to the 4 mm clear-width configuration."""
+        """Close both fingers to the cube-safe 47 mm clear-width configuration."""
         self._command((CLOSED_POSITION, CLOSED_POSITION), "close")
 
     def destroy(self) -> None:

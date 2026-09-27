@@ -12,7 +12,7 @@ the vendor simulation stack and robot geometry are not copied or modified.
 
 The gripper mounts directly to `tool0`, extends along tool0 `+Z`, and closes
 symmetrically along tool0 `+/-X` using two explicit prismatic joints. Its clear
-opening spans 0--80 mm by joint limits; `close()` and `open()` command 4 mm and
+opening spans 0--80 mm by joint limits; `close()` and `open()` command 47 mm and
 75 mm respectively to preserve limit margins while comfortably clearing each
 45 mm cube. The
 fixed `gripper_tcp` frame is translated `(0, 0, 0.080) m` from `tool0` with no

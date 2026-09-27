@@ -50,12 +50,13 @@ class ManipulationMotionPrimitives:
             self._target_pose(target, self._grasp_z_offset)
         )
 
-    def retreat(self) -> MotionResult:
-        """Collision-plan upward from the most recently named target."""
-        if self._last_target is None:
+    def retreat(self, target: str | None = None) -> MotionResult:
+        """Collision-plan upward from the last target or an explicit named target."""
+        target = target or self._last_target
+        if target is None:
             raise RuntimeError("retreat requires a preceding move_above or descend")
         return self._interface.move_to_pose(
-            self._target_pose(self._last_target, self._retreat_clearance)
+            self._target_pose(target, self._retreat_clearance)
         )
 
     def target_world_pose(self, target: str) -> PoseStamped:

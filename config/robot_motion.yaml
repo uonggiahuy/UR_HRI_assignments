@@ -3,7 +3,7 @@ planning_group: ur_manipulator
 planning_frame: base_link
 planning_tip: tool0
 application_tip: gripper_tcp
-tool0_to_tcp_z: 0.080
+tool0_to_tcp_z: 0.060
 velocity_scaling: 0.05
 acceleration_scaling: 0.05
 planning_time: 5.0

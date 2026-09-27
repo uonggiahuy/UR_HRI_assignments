@@ -40,13 +40,13 @@
                  iyy="0.000027267" iyz="0" izz="0.000003204"/>
       </inertial>
       <visual>
-        <origin xyz="0 0 0.040" rpy="0 0 0"/>
-        <geometry><box size="0.012 0.025 0.080"/></geometry>
+        <origin xyz="0 0 0.019" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.025 0.038"/></geometry>
         <material name="left_finger_blue"><color rgba="0.10 0.45 0.85 1"/></material>
       </visual>
       <collision>
-        <origin xyz="0 0 0.040" rpy="0 0 0"/>
-        <geometry><box size="0.012 0.025 0.080"/></geometry>
+        <origin xyz="0 0 0.019" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.025 0.038"/></geometry>
       </collision>
     </link>
 
@@ -68,13 +68,13 @@
                  iyy="0.000027267" iyz="0" izz="0.000003204"/>
       </inertial>
       <visual>
-        <origin xyz="0 0 0.040" rpy="0 0 0"/>
-        <geometry><box size="0.012 0.025 0.080"/></geometry>
+        <origin xyz="0 0 0.019" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.025 0.038"/></geometry>
         <material name="right_finger_blue"><color rgba="0.10 0.45 0.85 1"/></material>
       </visual>
       <collision>
-        <origin xyz="0 0 0.040" rpy="0 0 0"/>
-        <geometry><box size="0.012 0.025 0.080"/></geometry>
+        <origin xyz="0 0 0.019" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.025 0.038"/></geometry>
       </collision>
     </link>
 
@@ -88,12 +88,12 @@
       <dynamics damping="0.2" friction="0.0"/>
     </joint>
 
-    <!-- Intended grasp center: 80 mm along tool0 +Z, between the fingers. -->
+    <!-- Intended grasp center: 60 mm along tool0 +Z, between the fingers. -->
     <link name="gripper_tcp"/>
     <joint name="gripper_base-gripper_tcp" type="fixed">
       <parent link="gripper_base"/>
       <child link="gripper_tcp"/>
-      <origin xyz="0 0 0.060" rpy="0 0 0"/>
+      <origin xyz="0 0 0.040" rpy="0 0 0"/>
     </joint>
 
     <xacro:if value="${sim_ignition}">

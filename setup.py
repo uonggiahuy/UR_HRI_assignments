@@ -37,6 +37,8 @@ setup(
             "planning_scene = ur3_llm_control.planning_scene:main",
             "planning_scene_test = ur3_llm_control.planning_scene_test:main",
             "motion_primitives_test = ur3_llm_control.motion_primitives_test:main",
+            "gazebo_attachment_sync = ur3_llm_control.gazebo_sync_node:main",
+            "m65_phase = ur3_llm_control.m65_phases:main",
         ],
     },
 )

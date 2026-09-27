@@ -11,6 +11,7 @@ from rclpy.node import Node
 import yaml
 
 from ur3_llm_control.gripper import ParallelJawGripper
+from ur3_llm_control.gazebo_sync import GazeboAttachmentSynchronizer
 from ur3_llm_control.motion_primitives import ManipulationMotionPrimitives
 from ur3_llm_control.moveit_interface import (
     ARM_JOINTS,
@@ -103,6 +104,7 @@ def main(args=None) -> None:
     interface = None
     gripper = None
     manager = None
+    gazebo_sync = None
     try:
         scene = load_scene(_package_file("config/scene.yaml"))
         motion = _load_yaml("config/robot_motion.yaml")
@@ -113,6 +115,7 @@ def main(args=None) -> None:
             attachment_link=str(settings["attachment_link"]),
             touch_links=tuple(str(link) for link in settings["touch_links"]),
         )
+        gazebo_sync = GazeboAttachmentSynchronizer(node)
         interface = MoveItArmInterface(
             node,
             planning_group=str(motion["planning_group"]),
@@ -132,17 +135,26 @@ def main(args=None) -> None:
             raise ValueError("HOME must define exactly the six UR arm joints")
         if not interface.wait_until_ready():
             raise RuntimeError("MoveIt interface did not become ready")
+        if not gazebo_sync.wait_until_ready():
+            raise RuntimeError("Gazebo set-pose bridge did not become ready")
         _verify_controllers(node)
         _verify_lifecycle(node, manager, "WORLD")
 
         _require_success(node, "HOME", interface.move_to_joint_configuration(home))
         gripper.open()
         _require_success(node, "move_above", primitives.move_above(OBJECT_NAME))
+        if not manager.allow_grasp_contact(OBJECT_NAME):
+            raise RuntimeError("Could not allow scoped target/gripper grasp contact")
         _require_success(node, "descend", primitives.descend(OBJECT_NAME))
         gripper.close()
         if not manager.attach_object(OBJECT_NAME):
             raise RuntimeError("attach_object failed")
         _verify_lifecycle(node, manager, "ATTACHED")
+        relative_pose = manager.attached_pose(OBJECT_NAME)
+        if relative_pose is None or not gazebo_sync.attach(
+            OBJECT_NAME, manager.attachment_link, relative_pose
+        ):
+            raise RuntimeError("Gazebo attachment synchronization did not start")
         _require_success(node, "retreat with attached cube", primitives.retreat())
 
         _require_success(
@@ -154,13 +166,18 @@ def main(args=None) -> None:
             node, "move_above placement", primitives.move_above(OBJECT_NAME)
         )
         _require_success(node, "descend placement", primitives.descend(OBJECT_NAME))
-        if not manager.detach_object(
-            OBJECT_NAME, primitives.target_world_pose(OBJECT_NAME)
-        ):
+        release_pose = primitives.target_world_pose(OBJECT_NAME)
+        if not gazebo_sync.release(release_pose):
+            raise RuntimeError("Gazebo attachment synchronization did not release")
+        if not manager.detach_object(OBJECT_NAME, release_pose):
             raise RuntimeError("detach_object failed")
         _verify_lifecycle(node, manager, "WORLD")
         gripper.open()
         _require_success(node, "retreat after detach", primitives.retreat())
+        if not gazebo_sync.set_world_pose(OBJECT_NAME, release_pose):
+            raise RuntimeError("Gazebo final release pose update failed")
+        if not manager.clear_grasp_contact(OBJECT_NAME):
+            raise RuntimeError("Could not clear temporary post-release contact")
         _require_success(
             node, "return HOME", interface.move_to_joint_configuration(home)
         )
@@ -176,6 +193,8 @@ def main(args=None) -> None:
             interface.destroy()
         if manager is not None:
             manager.destroy()
+        if gazebo_sync is not None:
+            gazebo_sync.destroy()
         node.destroy_node()
         rclpy.shutdown()
 
