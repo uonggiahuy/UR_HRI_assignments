@@ -39,6 +39,7 @@ setup(
             "motion_primitives_test = ur3_llm_control.motion_primitives_test:main",
             "gazebo_attachment_sync = ur3_llm_control.gazebo_sync_node:main",
             "m65_phase = ur3_llm_control.m65_phases:main",
+            "robot_skills_test = ur3_llm_control.robot_skills_test:main",
         ],
     },
 )
