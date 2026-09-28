@@ -1,177 +1,203 @@
 # ur3_llm_control
 
-Assignment 02 — UR3/UR3e Control using LLM + Skill-Based Planning.
+Bài tập 02: workcell UR3e Gazebo trên ROS 2 Humble với giao diện tác vụ ngôn
+ngữ tự nhiên hoạt động theo nguyên tắc fail-closed. Toàn bộ mã đặc thù của bài
+tập nằm trong package này; các repository Universal Robots được dùng như hạ
+tầng upstream và không bị chỉnh sửa.
 
-M5 adds an assignment-local MoveIt Planning Scene manager while retaining the
-M4 motion interface and M3 workcell and parallel-jaw gripper. The launch
-composes the official
-`ur_simulation_gz/ur_sim_control.launch.py` launch file with assignment-local
-pedestal, table, cube, and placement-zone entities. An assignment-local Xacro
-wrapper invokes the vendor UR macro with the mounting pose from `scene.yaml`;
-the vendor simulation stack and robot geometry are not copied or modified.
+## Kiến trúc và ranh giới an toàn
 
-The gripper mounts directly to `tool0`, extends along tool0 `+Z`, and closes
-symmetrically along tool0 `+/-X` using two explicit prismatic joints. Its clear
-opening spans 0--80 mm by joint limits; `close()` and `open()` command 47 mm and
-75 mm respectively to preserve limit margins while comfortably clearing each
-45 mm cube. The
-fixed `gripper_tcp` frame is translated `(0, 0, 0.080) m` from `tool0` with no
-rotation and lies at the intended grasp center between the fingers.
-
-## M5 Planning Scene
-
-`planning_scene.py` reads the same `config/scene.yaml` used by Gazebo, converts
-the pedestal, table, and three cubes to MoveIt box collision objects, and
-applies them through `/apply_planning_scene`. It verifies names, dimensions,
-frames, and poses against `/get_planning_scene` at startup. Placement zones are
-intentionally omitted because they are visual/semantic markers rather than
-obstacles.
-
-The acceptance executable also verifies that MoveIt's robot description still
-contains the gripper and `gripper_tcp`, executes one safe collision-checked
-target, and confirms that a YAML-derived target inside the table is rejected
-without arm motion:
-
-```bash
-ros2 run ur3_llm_control planning_scene_test
+```text
+Yêu cầu ngôn ngữ tự nhiên
+  -> LLMPlanner / 9Router
+  -> JSON ứng viên không đáng tin cậy
+  -> TaskValidator
+  -> SkillExecutor
+  -> RobotSkills
+  -> MoveIt 2 + gripper controller
+  -> Gazebo UR3e workcell
 ```
 
-## M4 arm motion
+LLM chỉ đóng vai trò lập kế hoạch. Nó có thể chọn các skill công khai cấp cao,
+nhưng không bao giờ gửi giá trị khớp, quỹ đạo, tọa độ Cartesian, lệnh
+controller, lệnh gripper hoặc primitive cấp thấp. Mọi JSON ứng viên đều được
+kiểm tra trước khi `SkillExecutor` được phép gọi robot skill. Các kế hoạch
+không hợp lệ, không được hỗ trợ, mơ hồ, sai định dạng hoặc cũ sẽ fail-closed và
+không thực thi robot.
 
-`MoveItArmInterface` accepts joint targets and `gripper_tcp` poses in
-`base_link`. Pose requests are converted through the fixed 80 mm TCP offset,
-checked with collision-aware IK and state validity, planned by MoveIt, and only
-then sent to MoveIt's `ExecuteTrajectory` action. The interface never publishes
-hand-written arm trajectories. It reports explicit planning, execution,
-invalid-target, cancellation, and readiness results and exposes `stop()`.
+Các robot skill công khai duy nhất là:
 
-`config/robot_motion.yaml` defines a collision-checked, bent-elbow HOME posture,
-5% velocity/acceleration scaling, and the small Cartesian acceptance target.
-The bent elbow avoids the singular straight-arm stock `up` posture. M4 targets
-only the six arm joints, and the acceptance test verifies both gripper joints
-remain unchanged.
+- `pick(red_cube|yellow_cube|blue_cube)`
+- `place(red_cube|yellow_cube|blue_cube, zone_a|zone_b|zone_c)`
+- `home()`
 
-## M2.5 workcell
+MoveIt là nguồn thẩm quyền cho lập kế hoạch có kiểm tra va chạm và thực thi
+quỹ đạo. `config/scene.yaml` là scene workcell chuẩn. Trong lúc gắp, vòng đời
+của vật thể được xác minh là MoveIt WORLD -> ATTACHED -> WORLD; Gazebo chỉ cho
+vật thể đi theo gripper trong trạng thái attached và khôi phục model động, có
+va chạm khi thả.
 
-`config/scene.yaml` is the canonical source for the robot mounting transform
-and all workcell dimensions, initial poses, masses, and colors. Values use metres, radians, and kilograms.
-Poses are XYZ/RPY in Gazebo's `world` frame, and pose Z means the geometric
-center of the box.
+## Gói cài đặt bắt buộc
 
-- One static, collidable `robot_pedestal`: 0.25 × 0.25 × 0.30 m, centered at
-  `(0, 0, 0.15)`. Its top and the UR `base_link` mounting plane are both at
-  `z=0.30 m`.
-- One static, collidable `manipulation_table`: 0.60 × 0.40 × 0.30 m, centered
-  at `(0, 0.38, 0.15)`, with tabletop height 0.30 m. The robot is centered on
-  the near table edge. The 0.055 m pedestal-to-table gap and approximately
-  0.116 m UR base-mesh-to-table clearance avoid intersection.
-- Three dynamic 0.045 m cubes (`red_cube`, `yellow_cube`, `blue_cube`), each
-  with 0.08 kg mass, box collision geometry, and solid-box inertia. They spawn
-  1 mm above the tabletop and settle under physics.
-- Three static, visual-only 0.080 × 0.080 × 0.002 m placement markers
-  (`zone_a`, `zone_b`, `zone_c`). They have no collision geometry and therefore
-  are semantic targets rather than obstacles.
+- Môi trường Ubuntu/ROS 2 Humble đã có source workspace và các phụ thuộc ROS.
+- Các package mô phỏng UR chính thức có trong workspace: `ur_description`,
+  `ur_robot_driver` và `ur_simulation_gz`.
+- Cài đặt các phụ thuộc Python trong môi trường ROS Humble:
 
-The cubes and zones occupy separate rows and are spaced 0.12 m apart. This
-leaves 0.075 m clear between adjacent 0.045 m cubes. Their straight-line
-distances from `base_link` are 0.331–0.352 m for cubes and 0.240–0.268 m for
-zones, within the UR3e's nominal 0.50 m reach as a geometric sanity check.
-Collision-aware preliminary M2.5 checks also succeeded for `tool0` poses
-0.10 m above all six targets with a vertical-down orientation. M3 itself does
-not command the UR arm.
+  ```bash
+  python3 -m pip install -r src/ur3_llm_control/requirements.txt
+  ```
+
+- Có endpoint 9Router tương thích OpenAI và thông tin xác thực được cấp qua
+  biến môi trường. Thông tin xác thực chủ ý không được lưu trong repository.
 
 ## Build
 
+Chạy tại thư mục gốc của ROS 2 workspace:
+
 ```bash
-cd /root/ros2_ws
 source /opt/ros/humble/setup.bash
 colcon build --symlink-install --packages-select ur3_llm_control
 source install/setup.bash
 ```
 
-## Launch the workcell
+## Chạy workcell
 
-The verified local runtime currently requires loopback discovery variables.
-They are intentionally not embedded in source code:
-
-```bash
-export IGN_IP=127.0.0.1
-export ROS_LOCALHOST_ONLY=1
-ros2 launch ur3_llm_control workcell.launch.py
-```
-
-After launch, run the completion-aware gripper acceptance sequence:
-
-```bash
-ros2 run ur3_llm_control gripper_test
-```
-
-Run the M4 motion and invalid-target acceptance sequence in a second terminal:
+Thiết lập các biến môi trường runtime cục bộ bắt buộc trong mỗi terminal ROS:
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /root/ros2_ws/install/setup.bash
+source install/setup.bash
 export ROS_LOCALHOST_ONLY=1
-ros2 run ur3_llm_control moveit_test
+export IGN_IP=127.0.0.1
 ```
 
-The M4 sequence is current state -> HOME -> nearby `gripper_tcp` pose -> HOME,
-followed by an unreachable target that must fail without moving the arm.
-
-Headless launch:
+Khởi động toàn bộ workcell bằng lệnh launch duy nhất được hỗ trợ:
 
 ```bash
-ros2 launch ur3_llm_control workcell.launch.py gazebo_gui:=false
+ros2 launch ur3_llm_control workcell.launch.py
 ```
 
-Select the UR3 instead of the default UR3e:
+`workcell.launch.py` khởi động mô phỏng UR, Planning Scene của bài tập,
+gripper controller và đúng một tiến trình MoveIt `move_group`. **Không** chạy
+riêng `moveit.launch.py`.
+
+Chạy không giao diện:
 
 ```bash
-ros2 launch ur3_llm_control workcell.launch.py ur_type:=ur3
+ros2 launch ur3_llm_control workcell.launch.py gazebo_gui:=false launch_rviz:=false
 ```
 
-The M1 node-only launch remains available as `llm_robot.launch.py`; it is not
-part of the M2 workcell launch.
+## Cấu hình 9Router
 
-## Scope boundary
-
-M5 does not implement attachment, detachment, Gazebo-to-MoveIt object-state
-updates, robot skills, pick/place, validation/execution orchestration, student
-mapping, or LLM/9Router execution. Those belong to later milestones.
-
-## M10 LLM planner boundary
-
-`LLMPlanner` converts natural-language requests into an untrusted JSON
-candidate through 9Router's OpenAI-compatible Chat Completions endpoint, then
-passes that unchanged candidate to M8 `TaskValidator`. It never imports or
-calls RobotSkills, MoveIt, the gripper, or controllers, and it never executes
-the validated plan. A failed response never reuses an earlier plan.
-
-The non-secret endpoint may default to `config/llm.yaml`; the API key and model
-are required environment variables and are never stored in this repository:
+Trong terminal chạy lệnh ngôn ngữ tự nhiên, cung cấp đủ ba biến môi
+trường. Placeholder API key dưới đây phải được thay thế trong shell hoặc file
+môi trường riêng của người dùng; không commit key.
 
 ```bash
-export NINEROUTER_BASE_URL=http://127.0.0.1:20128/v1
-export NINEROUTER_API_KEY='...'
-export NINEROUTER_MODEL='...'
+export NINEROUTER_BASE_URL='http://127.0.0.1:20128/v1'
+export NINEROUTER_API_KEY='<private-key>'
+export NINEROUTER_MODEL='<configured-model>'
 ```
 
-Install the OpenAI SDK only inside the ROS 2 Humble development container:
+Dùng file môi trường phát triển riêng, chỉ source file đó trong chính shell
+trước khi chạy lệnh:
 
 ```bash
-python3 -m pip install -r requirements.txt
+source /path/to/private/9router.env
 ```
 
-Run static mocked boundary tests without a network request:
+## Demo ngôn ngữ tự nhiên 
+
+Chạy các lệnh sau trong terminal thứ hai sau khi workcell sẵn sàng và môi
+trường ROS/9Router ở trên đã được cấu hình.
+
+Yêu cầu pick/place cơ bản:
 
 ```bash
-ros2 run ur3_llm_control llm_planner_test
+ros2 run ur3_llm_control m12_demo \
+  --command "Đặt khối đỏ vào vùng B rồi về home."
 ```
 
-With valid environment variables in that container, explicitly run the three
-real M10 planner checks (Vietnamese, English, and home); this validates plans
-only and performs no robot motion:
+Kế hoạch skill hợp lệ dự kiến:
+
+```text
+pick(red_cube)
+place(red_cube, zone_b)
+home()
+```
+
+Sắp xếp theo mã số sinh viên một cách tất định, dùng cấu hình nộp bài:
 
 ```bash
-ros2 run ur3_llm_control llm_planner_test --live
+ros2 run ur3_llm_control m12_demo \
+  --command "Arrange all objects according to my student ID."
 ```
+
+Mã số sinh viên (23020746) trong cấu hình nộp bài cho biến thể P4. Ánh xạ bắt buộc là:
+
+```text
+zone_a <- blue_cube
+zone_b <- red_cube
+zone_c <- yellow_cube
+```
+
+Ngoài mã số sinh viên được cấu hình, chương trình đọc mã số dưới dạng chuỗi, dùng hai chữ số cuối, tính `P = int(XX) % 6` và xác định ánh xạ này. Có thể truyền mã kiểm thử tạm thời ở
+runtime mà không sửa cấu hình:
+
+```bash
+ros2 run ur3_llm_control m12_demo \
+  --student-id "12345600" \
+  --command "Arrange all objects according to my student ID."
+```
+
+Với mọi biến thể mã số sinh viên, áp dụng thứ tự chuyển vật thể tất định bằng Python trước
+khi thực thi. Điều này không thay đổi ánh xạ mã số sinh viên và không cho phép
+LLM chọn routing hình học hoặc tạo tọa độ.
+
+Một yêu cầu cấp thấp không được hỗ trợ dùng để minh họa hành vi fail-closed:
+
+```bash
+ros2 run ur3_llm_control m12_demo \
+  --command "Move joint 2 to 30 degrees."
+```
+
+Lệnh này phải bị từ chối trước khi bất kỳ RobotSkills action nào bắt đầu.
+
+## Kiểm thử và công cụ chẩn đoán hữu ích
+
+Chạy các kiểm thử tĩnh/unit tại thư mục gốc workspace:
+
+```bash
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+python3 -m unittest discover \
+  -s src/ur3_llm_control/ur3_llm_control \
+  -p '*_test.py'
+```
+
+`m12_ordering_diagnostic` được giữ lại một cách chủ ý. Đây là công cụ giới
+hạn, không dùng LLM, để tái hiện việc khảo sát thứ tự chuyển vật thể M12 trong
+một tiến trình ROS liên tục. Nó không cần thiết cho demo thông thường:
+
+```bash
+ros2 run ur3_llm_control m12_ordering_diagnostic --case A
+ros2 run ur3_llm_control m12_ordering_diagnostic --case B
+ros2 run ur3_llm_control m12_ordering_diagnostic --case C
+```
+
+## Khắc phục sự cố
+
+Nếu các planning service bị trùng hoặc không thể thực thi trajectory, hãy dừng
+các tiến trình launch trùng lặp và chỉ khởi động `workcell.launch.py`. Xác nhận
+có đúng một server cho mỗi action và mọi controller đang active:
+
+```bash
+ros2 action list | grep -E '^/(move_action|execute_trajectory)$'
+ros2 control list_controllers
+```
+
+Các controller bắt buộc ở trạng thái active là `joint_state_broadcaster`,
+`joint_trajectory_controller` và `gripper_controller`. Không khởi động một
+`moveit.launch.py` riêng để khôi phục hệ thống; hãy dùng workcell launch của
+bài tập và chẩn đoán việc khởi động controller trước.
