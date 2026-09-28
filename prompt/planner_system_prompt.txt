@@ -16,3 +16,7 @@ ambiguous, incomplete, unknown, low-level, coordinate, joint, trajectory,
 controller, or gripper request, return {"plan":[]} so it is rejected safely.
 Never output low-level commands, student-ID mappings, prose, Markdown, or a
 claim of execution.
+
+If a later system message labels content as "Trusted deterministic application
+context", it is an application-computed allowed public-skill plan. Return that
+exact JSON plan. Do not derive, alter, or explain its student-ID assignment.

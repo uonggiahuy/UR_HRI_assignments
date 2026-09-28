@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import Protocol
 
 from ur3_llm_control.task_validator import TaskStatus, ValidationResult
 from ur3_llm_control.world_state import TABLE, WorldState
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class RobotSkillsProtocol(Protocol):
@@ -35,13 +39,19 @@ class SkillExecutor:
         if validation.world_revision != self._world_state.revision:
             return ExecutionResult(TaskStatus.INVALID_PLAN, "stale plan rejected", 0)
 
+        total_steps = len(validation.steps)
+        LOGGER.info("VALIDATED PLAN LENGTH = %d", total_steps)
         for index, step in enumerate(validation.steps, start=1):
+            LOGGER.info("START step %d/%d: %s", index, total_steps, step)
             precondition = self._runtime_precondition(step)
             if precondition is not None:
+                LOGGER.info("STOP step %d/%d: %s", index, total_steps, precondition.value)
                 return ExecutionResult(precondition, f"step {index} semantic precondition failed", index - 1)
             result = self._call_skill(step)
             if self._status_value(result) != TaskStatus.SUCCESS.value:
+                LOGGER.info("RESULT step %d/%d: %s; STOP", index, total_steps, self._status_value(result))
                 return ExecutionResult(TaskStatus.SKILL_FAILED, f"step {index} skill failed", index - 1)
+            LOGGER.info("RESULT step %d/%d: SUCCESS; CONTINUE", index, total_steps)
             self._record_success(step)
         return ExecutionResult(TaskStatus.SUCCESS, "TASK SUCCESS", len(validation.steps))
 

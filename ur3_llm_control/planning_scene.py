@@ -295,9 +295,23 @@ class PlanningSceneManager:
         attached_ids = {
             item.object.id for item in scene.robot_state.attached_collision_objects
         }
+        world_ids = sorted(world_objects)
+        self._node.get_logger().info(
+            f"Pre-attach {object_name}: WORLD={world_ids}; ATTACHED={sorted(attached_ids)}"
+        )
+        if object_name in world_objects:
+            position = world_objects[object_name].pose.position
+            self._node.get_logger().info(
+                f"Pre-attach {object_name} WORLD pose: "
+                f"({position.x:.4f}, {position.y:.4f}, {position.z:.4f})"
+            )
         if object_name not in world_objects or object_name in attached_ids:
+            state = (
+                "BOTH" if object_name in world_objects and object_name in attached_ids else
+                "ATTACHED-only" if object_name in attached_ids else "MISSING"
+            )
             self._node.get_logger().error(
-                f"Cannot attach {object_name}: object is not exclusively in WORLD"
+                f"Cannot attach {object_name}: state={state}, object is not exclusively in WORLD"
             )
             return False
 
@@ -325,13 +339,20 @@ class PlanningSceneManager:
         # Some Humble MoveIt builds report ``success=false`` for this combined
         # WORLD-remove/Attached-add diff even after applying it. Query the
         # authoritative scene rather than relying on that response alone.
-        self._apply_diff(diff, timeout)
+        response_accepted = self._apply_diff(diff, timeout, verify_after_failure=True)
         updated = self.get(timeout)
         attached_now = updated is not None and any(
             item.object.id == object_name
             for item in updated.robot_state.attached_collision_objects
         )
-        return attached_now and self.clear_grasp_contact(object_name, timeout)
+        if not attached_now:
+            return False
+        if not response_accepted:
+            self._node.get_logger().warning(
+                f"Attach diff for {object_name} reported unsuccessful, but authoritative "
+                "Planning Scene confirms the WORLD-to-ATTACHED transition"
+            )
+        return self.clear_grasp_contact(object_name, timeout)
 
     def attached_pose(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> Pose | None:
         """Return the currently authoritative attachment-frame object pose."""
@@ -445,7 +466,7 @@ class PlanningSceneManager:
             matrix.entry_values.append(entry)
         return matrix
 
-    def _apply_diff(self, diff: PlanningScene, timeout: float) -> bool:
+    def _apply_diff(self, diff: PlanningScene, timeout: float, *, verify_after_failure: bool = False) -> bool:
         if not self._apply_client.wait_for_service(timeout_sec=timeout):
             self._node.get_logger().error("/apply_planning_scene is unavailable")
             return False
@@ -453,7 +474,12 @@ class PlanningSceneManager:
         request.scene = diff
         response = self._call(self._apply_client, request, timeout)
         if response is None or not response.success:
-            self._node.get_logger().error("MoveIt rejected Planning Scene diff")
+            if verify_after_failure:
+                self._node.get_logger().warning(
+                    "MoveIt reported unsuccessful combined attach diff; verifying authoritative scene"
+                )
+            else:
+                self._node.get_logger().error("MoveIt rejected Planning Scene diff")
             return False
         return True
 

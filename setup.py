@@ -45,6 +45,9 @@ setup(
             "m8_transition_diagnostic = ur3_llm_control.m8_transition_diagnostic:main",
             "student_task_test = ur3_llm_control.student_task_test:main",
             "llm_planner_test = ur3_llm_control.llm_planner_test:main",
+            "m12_demo = ur3_llm_control.m12_demo:main",
+            "m12_runtime_test = ur3_llm_control.m12_runtime_test:main",
+            "m12_ordering_diagnostic = ur3_llm_control.m12_ordering_diagnostic:main",
         ],
     },
 )

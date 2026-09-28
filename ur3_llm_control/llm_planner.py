@@ -78,7 +78,12 @@ class LLMPlanner:
             client_factory=client_factory,
         )
 
-    def plan(self, request: str, world_state: WorldState) -> PlannerResult:
+    def plan(
+        self,
+        request: str,
+        world_state: WorldState,
+        planning_context: str | None = None,
+    ) -> PlannerResult:
         """Return a new validated plan or a failure; no previous plan is retained."""
         if not isinstance(request, str) or not request.strip():
             return PlannerResult(PlannerStatus.INVALID_REQUEST, "natural-language request must be non-empty")
@@ -93,12 +98,21 @@ class LLMPlanner:
             return PlannerResult(PlannerStatus.CLIENT_ERROR, "9Router client is unavailable")
 
         try:
+            system_prompt = self._system_prompt
+            if planning_context is not None:
+                if not isinstance(planning_context, str) or not planning_context.strip():
+                    return PlannerResult(PlannerStatus.INVALID_REQUEST, "planning context must be non-empty text")
+                # This context is supplied by deterministic application logic,
+                # never by the model.  It contains only allowed public-skill
+                # assignments, not robot coordinates or low-level commands.
+                system_prompt = f"{system_prompt}\n\n{planning_context}"
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request},
+            ]
             response = client.chat.completions.create(
                 model=self._config.model,
-                messages=(
-                    {"role": "system", "content": self._system_prompt},
-                    {"role": "user", "content": request},
-                ),
+                messages=messages,
                 temperature=self._config.temperature,
                 timeout=self._config.timeout_sec,
             )

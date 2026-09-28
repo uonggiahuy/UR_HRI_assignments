@@ -1,7 +1,7 @@
 # Assignment 02 — Current Project State
 
-- **Completed through**: M11
-- **Next milestone**: M12
+- **Completed through**: M12
+- **Next milestone**: M13 submission readiness
 - **Branch**: `assignments_2`
 
 ## M7 High-Level Robot Skills
@@ -123,7 +123,7 @@ credential fail-closed behavior, configured-model use, and stale-plan
 non-reuse. Its `--live` mode performs the three authenticated planner checks
 against 9Router and validates them with M8 only; it performs no robot motion.
 
-## M11 Natural-Language Robustness (implementation pending live verification)
+## M11 Natural-Language Robustness
 
 M11 keeps the M10 boundary unchanged: user text is sent to `LLMPlanner`, its
 single JSON candidate is passed unchanged to M8 `TaskValidator`, and no
@@ -142,6 +142,28 @@ two mixed-language transfers, Vietnamese and English home phrasings, two
 multi-step transfer-plus-home requests, and ambiguous/unsafe rejection cases.
 Every request starts from a fresh M8 `WorldState`; only accepted M8 semantic
 plans are compared, so a failed response cannot reuse a previous plan. This is
-planner-only validation and executes no robot action. Completion remains
-pending until the required authenticated 9Router environment is provided and
-the suite passes.
+planner-only validation and executes no robot action.
+
+## M12 End-to-End Natural-Language Execution
+
+M12 is live accepted. `m12_demo` is the narrow runtime orchestration boundary:
+it obtains a single 9Router planner candidate, validates it with M8 before any
+robot action, and executes only the existing public M7 skills. Planner failure
+or validation failure starts no RobotSkills action and cannot reuse a prior
+plan.
+
+Advanced student arrangement remains deterministic Python logic. M9 resolves
+the runtime/configured student ID, computes its variant and object-to-zone
+mapping, and M12 supplies that resolved context to planning while checking the
+returned plan against the trusted assignment. A fixed assignment-local transfer
+order clears the front-row source before occupying it; it changes no M9 mapping
+or robot primitive.
+
+Live acceptance completed the P4 seven-step arrangement (`yellow -> zone_c`,
+`red -> zone_b`, `blue -> zone_a`, `home`) with final WORLD-only collision
+objects, no remaining attachment, matching WorldState/MoveIt/Gazebo state, and
+healthy controllers. The deterministic multi-candidate pose IK fallback passed
+five clean yellow approach regressions; one run selected a later candidate
+after earlier candidates were transit-unplannable. The final Vietnamese basic
+command completed `pick(red_cube)`, `place(red_cube, zone_b)`, `home`; the
+unsupported joint command was rejected before execution.

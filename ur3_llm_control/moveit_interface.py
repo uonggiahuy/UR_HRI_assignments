@@ -190,41 +190,70 @@ class MoveItArmInterface:
             return MotionResult.NOT_READY
 
         tool0_pose = self._gripper_tcp_to_tool0(normalized)
-        request = GetPositionIK.Request()
-        request.ik_request.group_name = self.planning_group
-        request.ik_request.robot_state = state
-        request.ik_request.avoid_collisions = True
-        request.ik_request.ik_link_name = self.planning_tip
-        request.ik_request.pose_stamped = tool0_pose
-        request.ik_request.timeout = Duration(seconds=2.0).to_msg()
-        response = self._call_service(
-            self._ik_client, request, "collision-aware IK"
-        )
-        if (
-            response is None
-            or response.error_code.val != MoveItErrorCodes.SUCCESS
-        ):
-            code = response.error_code.val if response is not None else "no response"
-            self._node.get_logger().warning(
-                f"gripper_tcp target rejected by IK (MoveIt code {code})"
-            )
-            return MotionResult.INVALID_TARGET
-
-        solution = dict(
-            zip(
-                response.solution.joint_state.name,
-                response.solution.joint_state.position,
-            )
-        )
-        if not all(name in solution for name in ARM_JOINTS):
-            self._node.get_logger().error("IK response omitted one or more arm joints")
-            return MotionResult.INVALID_TARGET
-        arm_solution = {name: solution[name] for name in ARM_JOINTS}
+        current = dict(zip(state.joint_state.name, state.joint_state.position))
         self._node.get_logger().info(
-            "IK arm solution: "
-            + ", ".join(f"{name}={arm_solution[name]:.4f}" for name in ARM_JOINTS)
+            "IK seed arm state: " + ", ".join(f"{name}={current[name]:.4f}" for name in ARM_JOINTS)
         )
-        return self._plan_and_execute(arm_solution, "gripper_tcp pose")
+        candidates: list[tuple[float, dict[str, float]]] = []
+        seen: set[tuple[int, ...]] = set()
+        seeds = self._ik_seed_positions(current)
+        for index, seed in enumerate(seeds, 1):
+            self._node.get_logger().info(f"IK seed {index}/{len(seeds)}: " + ", ".join(f"{n}={seed[n]:.3f}" for n in ARM_JOINTS))
+            seed_state = self._state_with_arm_positions(state, seed)
+            if seed_state is None:
+                continue
+            request = GetPositionIK.Request(); request.ik_request.group_name = self.planning_group
+            request.ik_request.robot_state = seed_state; request.ik_request.avoid_collisions = True
+            request.ik_request.ik_link_name = self.planning_tip; request.ik_request.pose_stamped = tool0_pose
+            request.ik_request.timeout = Duration(seconds=2.0).to_msg()
+            response = self._call_service(self._ik_client, request, "collision-aware IK")
+            if response is None or response.error_code.val != MoveItErrorCodes.SUCCESS:
+                continue
+            solution = dict(zip(response.solution.joint_state.name, response.solution.joint_state.position))
+            if not all(name in solution for name in ARM_JOINTS):
+                continue
+            candidate = {n: self._nearest_equivalent_revolute(solution[n], current[n]) for n in ARM_JOINTS}
+            key = tuple(round(candidate[n] * 10000) for n in ARM_JOINTS)
+            if key in seen:
+                continue
+            seen.add(key)
+            target = self._state_with_arm_positions(state, candidate)
+            if target is None or not self._state_is_valid(target, "gripper_tcp pose"):
+                self._node.get_logger().info(f"IK candidate {index}: state validity INVALID")
+                continue
+            distance = self._joint_distance(candidate, current)
+            self._node.get_logger().info(f"IK candidate {index}: state validity VALID; distance={distance:.4f}")
+            candidates.append((distance, candidate))
+        if not candidates:
+            return MotionResult.INVALID_TARGET
+        for index, (_, candidate) in enumerate(sorted(candidates, key=lambda item: item[0]), 1):
+            result, trajectory = self._plan(state, candidate, f"gripper_tcp pose candidate {index}")
+            self._node.get_logger().info(f"planning candidate {index}: {'SUCCESS' if result == MotionResult.SUCCESS else 'FAIL'}")
+            if result == MotionResult.SUCCESS and trajectory is not None:
+                self._node.get_logger().info(f"selected candidate: {index}")
+                return self._execute(trajectory, "gripper_tcp pose")
+        return MotionResult.PLANNING_FAILED
+
+    @staticmethod
+    def _nearest_equivalent_revolute(value: float, reference: float) -> float:
+        """Represent an equivalent revolute target nearest the measured state."""
+        return value + (2.0 * math.pi) * round((reference - value) / (2.0 * math.pi))
+
+    @staticmethod
+    def _joint_distance(left: Mapping[str, float], right: Mapping[str, float]) -> float:
+        return math.sqrt(sum((left[name] - right[name]) ** 2 for name in ARM_JOINTS))
+
+    @staticmethod
+    def _ik_seed_positions(current: Mapping[str, float]) -> tuple[dict[str, float], ...]:
+        """Deterministic bounded UR seeds: current first, then elbow/shoulder/wrist flips."""
+        offsets = ((), (("elbow_joint", math.pi),), (("shoulder_pan_joint", math.pi),), (("wrist_1_joint", math.pi),))
+        result = []
+        for changes in offsets:
+            seed = dict(current)
+            for name, offset in changes:
+                seed[name] = max(-2.0 * math.pi, min(2.0 * math.pi, seed[name] + offset))
+            result.append(seed)
+        return tuple(result)
 
     def stop(self) -> bool:
         """Request cancellation of any active planning or execution goal."""
