@@ -71,6 +71,11 @@ class ManipulationMotionPrimitives:
     def retreat_from_world_pose(self, center: PoseStamped) -> MotionResult:
         return self._interface.move_to_pose(self._offset_world_pose(center, self._retreat_clearance))
 
+    def placement_planning_poses(self, center: PoseStamped) -> tuple[PoseStamped, PoseStamped]:
+        """Return the accepted M8 approach and tabletop placement TCP poses."""
+        return (self._offset_world_pose(center, self._approach_clearance),
+                self._offset_world_pose(center, self._grasp_z_offset))
+
     def _offset_world_pose(self, center: PoseStamped, offset: float) -> PoseStamped:
         world_frame = str(self._mapping(self._scene["robot"], "robot")["world_frame"])
         if center.header.frame_id != world_frame:

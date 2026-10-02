@@ -16,6 +16,7 @@ from moveit_msgs.msg import (
     Constraints,
     JointConstraint,
     MoveItErrorCodes,
+    PlanningScene,
     RobotState,
     RobotTrajectory,
 )
@@ -188,6 +189,50 @@ class MoveItArmInterface:
         state = self._current_robot_state()
         if state is None:
             return MotionResult.NOT_READY
+        result, trajectory = self._plan_pose_target(normalized, state)
+        if result != MotionResult.SUCCESS or trajectory is None:
+            return result
+        return self._execute(trajectory, "gripper_tcp pose")
+
+    def plan_pose_sequence(self, poses: Sequence[PoseStamped], *,
+                           start_joint_positions: Mapping[str, float] | None = None,
+                           scene_diff: PlanningScene | None = None) -> MotionResult:
+        """Validate consecutive pose plans without sending an execution goal.
+
+        A caller may supply a local scene diff for hypothetical attached-object
+        checks. It is sent only with each plan-only MoveGroup goal; the
+        authoritative Planning Scene is never mutated by this method.
+        """
+        if not poses:
+            return MotionResult.INVALID_TARGET
+        if not self.wait_until_ready():
+            return MotionResult.NOT_READY
+        state = self._current_robot_state()
+        if state is None:
+            return MotionResult.NOT_READY
+        if start_joint_positions is not None:
+            if set(start_joint_positions) != set(ARM_JOINTS):
+                return MotionResult.INVALID_TARGET
+            state = self._state_with_arm_positions(state, start_joint_positions)
+            if state is None or not self._state_is_valid(state, "hypothetical start"):
+                return MotionResult.INVALID_TARGET
+        for pose in poses:
+            result, trajectory = self._plan_pose_target(pose, state, scene_diff)
+            if result != MotionResult.SUCCESS or trajectory is None:
+                return result
+            names = trajectory.joint_trajectory.joint_names
+            endpoint = trajectory.joint_trajectory.points[-1].positions
+            state = self._state_with_arm_positions(state, dict(zip(names, endpoint)))
+            if state is None:
+                return MotionResult.PLANNING_FAILED
+        return MotionResult.SUCCESS
+
+    def _plan_pose_target(self, gripper_tcp_pose: PoseStamped, state: RobotState,
+                          scene_diff: PlanningScene | None = None
+                          ) -> tuple[MotionResult, RobotTrajectory | None]:
+        normalized = self._validated_pose(gripper_tcp_pose)
+        if normalized is None:
+            return MotionResult.INVALID_TARGET, None
 
         tool0_pose = self._gripper_tcp_to_tool0(normalized)
         current = dict(zip(state.joint_state.name, state.joint_state.position))
@@ -225,14 +270,16 @@ class MoveItArmInterface:
             self._node.get_logger().info(f"IK candidate {index}: state validity VALID; distance={distance:.4f}")
             candidates.append((distance, candidate))
         if not candidates:
-            return MotionResult.INVALID_TARGET
+            return MotionResult.INVALID_TARGET, None
         for index, (_, candidate) in enumerate(sorted(candidates, key=lambda item: item[0]), 1):
-            result, trajectory = self._plan(state, candidate, f"gripper_tcp pose candidate {index}")
+            result, trajectory = self._plan(state, candidate,
+                                            f"gripper_tcp pose candidate {index}",
+                                            scene_diff=scene_diff)
             self._node.get_logger().info(f"planning candidate {index}: {'SUCCESS' if result == MotionResult.SUCCESS else 'FAIL'}")
             if result == MotionResult.SUCCESS and trajectory is not None:
                 self._node.get_logger().info(f"selected candidate: {index}")
-                return self._execute(trajectory, "gripper_tcp pose")
-        return MotionResult.PLANNING_FAILED
+                return MotionResult.SUCCESS, trajectory
+        return MotionResult.PLANNING_FAILED, None
 
     @staticmethod
     def _nearest_equivalent_revolute(value: float, reference: float) -> float:
@@ -303,6 +350,8 @@ class MoveItArmInterface:
         start_state: RobotState,
         joint_positions: Mapping[str, float],
         label: str,
+        *,
+        scene_diff: PlanningScene | None = None,
     ) -> Tuple[MotionResult, Optional[RobotTrajectory]]:
         goal = MoveGroup.Goal()
         goal.request.group_name = self.planning_group
@@ -315,8 +364,11 @@ class MoveItArmInterface:
         goal.planning_options.plan_only = True
         goal.planning_options.look_around = False
         goal.planning_options.replan = False
-        goal.planning_options.planning_scene_diff.is_diff = True
-        goal.planning_options.planning_scene_diff.robot_state.is_diff = True
+        if scene_diff is None:
+            goal.planning_options.planning_scene_diff.is_diff = True
+            goal.planning_options.planning_scene_diff.robot_state.is_diff = True
+        else:
+            goal.planning_options.planning_scene_diff = deepcopy(scene_diff)
 
         send_future = self._move_client.send_goal_async(goal)
         if not self._wait_for_future(send_future, self.operation_timeout):
