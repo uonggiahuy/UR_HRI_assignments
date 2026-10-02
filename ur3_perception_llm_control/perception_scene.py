@@ -55,7 +55,6 @@ class PerceptionPlanningSceneSynchronizer:
         self.static = {name: model for name, model in models.items()
                        if model.static and model.collision}
         self.table_top_z = models["manipulation_table"].pose[2] + models["manipulation_table"].size[2] / 2
-        self.zone_top_z = {name: models[name].pose[2] + models[name].size[2] / 2 for name in ZONES}
         if set(self.static) != {"robot_pedestal", "manipulation_table"}:
             raise SceneSyncError("unexpected static collision geometry")
         for name, model in self.cubes.items():
@@ -98,9 +97,8 @@ class PerceptionPlanningSceneSynchronizer:
         for name in BLOCKS:
             model = self.cubes[name]
             x, y = snapshot.object_world_xy[name]
-            location = snapshot.object_locations[name]
-            support_top = self.table_top_z if location == TABLE else self.zone_top_z[location]
-            z = support_top + model.size[2] / 2
+            # Zones are visual task regions. Every settled cube rests on the table.
+            z = self.table_top_z + model.size[2] / 2
             # Construct a fresh model: the scene's movable spawn XYZ is never
             # copied into a runtime MoveIt request.
             observed = BoxModel(name, (float(x), float(y), z, 0.0, 0.0, 0.0),

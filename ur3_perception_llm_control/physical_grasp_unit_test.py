@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 
 from ur3_perception_llm_control.gripper import CLOSED_POSITION, FINGER_JOINTS
 from ur3_perception_llm_control.physical_grasp import CUBES, PhysicalGraspManager
@@ -51,6 +51,14 @@ class PhysicalGraspUnitTest(unittest.TestCase):
         self.assertFalse(self.grasp.release("red_cube"))
         self.grasp._transition.assert_not_called()
 
+    def test_initial_reset_is_required_before_pick(self):
+        self.assertTrue(self.grasp.ready_for_pick())
+        self.grasp._ready = False
+        self.assertFalse(self.grasp.ready_for_pick())
+        self.grasp._ready = True
+        self.grasp._state["purple_cube"] = "attached"
+        self.assertFalse(self.grasp.ready_for_pick())
+
     def test_measured_fingers_must_both_be_closed(self):
         original = PhysicalGraspManager._closed.__get__(self.grasp)
         self.grasp._joints = {FINGER_JOINTS[0]: CLOSED_POSITION}
@@ -83,7 +91,7 @@ class RobotSkillsPhysicalUnitTest(unittest.TestCase):
         self.skills._primitives = Mock()
 
     def test_moveit_attach_failure_rolls_back_physics_without_retreat(self):
-        status = self.skills._physical_pick_attachment("red_cube")
+        status = self.skills._physical_pick_attachment("red_cube", PoseStamped())
         self.assertEqual(status, SkillStatus.FAILED)
         self.physical.release.assert_called_once_with("red_cube")
         self.skills._primitives.retreat.assert_not_called()
@@ -92,7 +100,7 @@ class RobotSkillsPhysicalUnitTest(unittest.TestCase):
     def test_physical_attach_failure_does_not_attach_moveit_or_retreat(self):
         self.physical.attach.return_value = False
         self.physical.is_attached.return_value = False
-        status = self.skills._physical_pick_attachment("red_cube")
+        status = self.skills._physical_pick_attachment("red_cube", PoseStamped())
         self.assertEqual(status, SkillStatus.FAILED)
         self.scene.attach_object.assert_not_called()
         self.skills._primitives.retreat.assert_not_called()
@@ -101,7 +109,7 @@ class RobotSkillsPhysicalUnitTest(unittest.TestCase):
         self.skills._gazebo_sync = Mock()
         self.physical.attach.return_value = False
         self.physical.is_attached.return_value = False
-        self.skills._physical_pick_attachment("red_cube")
+        self.skills._physical_pick_attachment("red_cube", PoseStamped())
         self.skills._gazebo_sync.attach.assert_not_called()
         self.skills._gazebo_sync.set_world_pose.assert_not_called()
 
@@ -110,7 +118,7 @@ class RobotSkillsPhysicalUnitTest(unittest.TestCase):
             SimpleNamespace(object=SimpleNamespace(id="red_cube"))
         ]
         self.assertEqual(
-            self.skills._physical_pick_attachment("red_cube"), SkillStatus.FAILED
+            self.skills._physical_pick_attachment("red_cube", PoseStamped()), SkillStatus.FAILED
         )
         self.physical.attach.assert_not_called()
 

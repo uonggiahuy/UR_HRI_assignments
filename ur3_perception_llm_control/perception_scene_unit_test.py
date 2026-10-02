@@ -87,11 +87,11 @@ class PerceptionSceneTest(unittest.TestCase):
         self.assertEqual(report.max_sync_error_m, 0.0)
         self.assertFalse(report.attached_ids)
 
-    def test_zone_support_z_dimensions_and_spawn_xy_independence(self):
+    def test_zone_is_visual_and_spawn_xy_is_ignored(self):
         manager, sync = self.setup_sync()
         report = sync.apply_snapshot(snapshot(B, self.geometry), 10.1)
-        self.assertEqual(report.requested_xyz["green_cube"], (0.12, 0.24, 0.3245))
-        self.assertEqual(report.requested_xyz["purple_cube"], (0.0, 0.24, 0.3245))
+        self.assertEqual(report.requested_xyz["green_cube"], (0.12, 0.24, 0.3225))
+        self.assertEqual(report.requested_xyz["purple_cube"], (0.0, 0.24, 0.3225))
         for name in ("red_cube", "yellow_cube", "blue_cube"):
             self.assertAlmostEqual(report.requested_xyz[name][2], 0.3225)
         self.assertNotEqual(report.requested_xyz["green_cube"][:2],
@@ -102,6 +102,15 @@ class PerceptionSceneTest(unittest.TestCase):
                 self.assertEqual(list(item.primitives[0].dimensions), [0.045, 0.045, 0.045])
                 self.assertEqual((item.pose.orientation.x, item.pose.orientation.y,
                                   item.pose.orientation.z, item.pose.orientation.w), (0.0, 0.0, 0.0, 1.0))
+
+    def test_all_three_visual_zones_keep_tabletop_support(self):
+        _, sync = self.setup_sync()
+        positions = dict(B, red_cube=(-0.12, 0.24))
+        report = sync.apply_snapshot(snapshot(positions, self.geometry), 10.1)
+        table_z = self.scene["table"]["pose"]["z"] + self.scene["table"]["size"]["z"] / 2
+        for name in ("red_cube", "purple_cube", "green_cube"):
+            expected_z = table_z + self.scene["objects"][name]["size"]["z"] / 2
+            self.assertAlmostEqual(report.requested_xyz[name][2], expected_z)
 
     def test_stale_and_invalid_snapshot_cause_zero_mutation(self):
         manager, sync = self.setup_sync()

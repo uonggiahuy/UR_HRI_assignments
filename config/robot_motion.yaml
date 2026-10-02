@@ -9,8 +9,8 @@ acceleration_scaling: 0.05
 planning_time: 5.0
 planning_attempts: 5
 
-# M6 manipulation primitives.  The target XY/Z comes exclusively from
-# config/scene.yaml; these values are offsets applied to gripper_tcp poses.
+# Gripper TCP offsets. Physical picks use camera XY and tabletop/cube Z;
+# fixed zone placement XY and physical dimensions come from scene.yaml.
 manipulation:
   orientation_xyzw: [-0.70710678, 0.70710678, 0.0, 0.0]
   approach_clearance: 0.100

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Mapping
+from typing import Callable, Mapping
 
 from geometry_msgs.msg import PoseStamped
 
@@ -13,7 +13,9 @@ from ur3_perception_llm_control.motion_primitives import ManipulationMotionPrimi
 from ur3_perception_llm_control.moveit_interface import MotionResult, MoveItArmInterface
 from ur3_perception_llm_control.planning_scene import PlanningSceneManager
 from ur3_perception_llm_control.physical_grasp import PhysicalGraspManager
-from ur3_perception_llm_control.world_state import LEGACY_STUDENT_OBJECTS
+from ur3_perception_llm_control.perception_scene import PerceptionPlanningSceneSynchronizer, SceneSyncError
+from ur3_perception_llm_control.perception_state import PerceptionSnapshot
+from ur3_perception_llm_control.world_state import BLOCKS, LEGACY_STUDENT_OBJECTS
 
 
 class SkillStatus(str, Enum):
@@ -47,16 +49,26 @@ class RobotSkills:
         scene_manager: PlanningSceneManager,
         gazebo_sync: GazeboAttachmentSynchronizer | None = None,
         physical_grasp: PhysicalGraspManager | None = None,
+        snapshot_source: Callable[[], PerceptionSnapshot] | None = None,
+        scene_synchronizer: PerceptionPlanningSceneSynchronizer | None = None,
+        now_sec: Callable[[], float] | None = None,
         home_configuration: Mapping[str, float],
     ) -> None:
         if (gazebo_sync is None) == (physical_grasp is None):
             raise ValueError("Provide exactly one Gazebo grasp backend")
+        if physical_grasp is not None and any(value is None for value in
+                                             (snapshot_source, scene_synchronizer, now_sec)):
+            raise ValueError("Physical grasp requires camera snapshots, scene sync, and a clock")
         self._interface = interface
         self._gripper = gripper
         self._primitives = primitives
         self._scene_manager = scene_manager
         self._gazebo_sync = gazebo_sync
         self._physical_grasp = physical_grasp
+        self._snapshot_source = snapshot_source
+        self._scene_synchronizer = scene_synchronizer
+        self._now_sec = now_sec
+        self._last_observation_sec: float | None = None
         self._home_configuration = dict(home_configuration)
 
     def home(self) -> SkillStatus:
@@ -71,8 +83,16 @@ class RobotSkills:
         Enter the configured, collision-checked HOME posture before every
         approach so callers never need to expose this transit as a task step.
         """
-        if object_name not in self.VALID_OBJECTS:
+        if object_name not in (BLOCKS if self._physical_grasp is not None else self.VALID_OBJECTS):
             return SkillStatus.INVALID_OBJECT
+
+        observed_pose = None
+        if self._physical_grasp is not None:
+            if not self._physical_grasp.ready_for_pick():
+                return SkillStatus.FAILED
+            observed_pose = self._synchronize_observation(object_name)
+            if observed_pose is None:
+                return SkillStatus.FAILED
 
         status = self.home()
         if status != SkillStatus.SUCCESS:
@@ -80,19 +100,21 @@ class RobotSkills:
         status = self._gripper_command(self._gripper.open)
         if status != SkillStatus.SUCCESS:
             return status
-        status = self._motion(self._primitives.move_above(object_name))
+        status = self._motion(self._primitives.move_above_world_pose(observed_pose)
+                              if observed_pose is not None else self._primitives.move_above(object_name))
         if status != SkillStatus.SUCCESS:
             return status
         if not self._scene_call(self._scene_manager.allow_grasp_contact, object_name):
             return SkillStatus.FAILED
-        status = self._motion(self._primitives.descend(object_name))
+        status = self._motion(self._primitives.descend_to_world_pose(observed_pose)
+                              if observed_pose is not None else self._primitives.descend(object_name))
         if status != SkillStatus.SUCCESS:
             return status
         status = self._gripper_command(self._gripper.close)
         if status != SkillStatus.SUCCESS:
             return status
         if self._physical_grasp is not None:
-            return self._physical_pick_attachment(object_name)
+            return self._physical_pick_attachment(object_name, observed_pose)
         if not self._scene_call(self._scene_manager.attach_object, object_name):
             return SkillStatus.FAILED
 
@@ -109,7 +131,7 @@ class RobotSkills:
 
     def place(self, object_name: str, zone_name: str) -> SkillStatus:
         """Place an attached configured cube at the configured zone pose."""
-        if object_name not in self.VALID_OBJECTS:
+        if object_name not in (BLOCKS if self._physical_grasp is not None else self.VALID_OBJECTS):
             return SkillStatus.INVALID_OBJECT
         if zone_name not in self.VALID_ZONES:
             return SkillStatus.INVALID_ZONE
@@ -168,7 +190,31 @@ class RobotSkills:
             (True, False) if expected == "WORLD" else (False, True)
         )
 
-    def _physical_pick_attachment(self, name: str) -> SkillStatus:
+    def _synchronize_observation(self, name: str) -> PoseStamped | None:
+        """Use one fresh RGB frame for both the verified scene and pick pose."""
+        assert self._snapshot_source and self._scene_synchronizer and self._now_sec
+        try:
+            snapshot = self._snapshot_source()
+            if not isinstance(snapshot, PerceptionSnapshot):
+                return None
+            report = self._scene_synchronizer.apply_snapshot(snapshot, self._now_sec())
+            if report.attached_ids or name not in report.authoritative_xyz:
+                return None
+            snapshot.require_fresh(self._now_sec())
+            xyz = report.requested_xyz[name]
+            if tuple(snapshot.object_world_xy[name]) != tuple(xyz[:2]):
+                return None
+            pose = PoseStamped()
+            pose.header.frame_id = self._scene_synchronizer.frame_id
+            pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = xyz
+            pose.pose.orientation.w = 1.0
+            self._last_observation_sec = snapshot.observation_timestamp_sec
+            return pose
+        except (SceneSyncError, ValueError, TypeError, KeyError, RuntimeError) as exc:
+            self._interface._node.get_logger().error(f"Pick observation/scene sync failed: {exc}")
+            return None
+
+    def _physical_pick_attachment(self, name: str, observed_pose: PoseStamped) -> SkillStatus:
         """Commit Gazebo then MoveIt, or release and restore before retreat."""
         physical = self._physical_grasp
         assert physical is not None
@@ -199,10 +245,10 @@ class RobotSkills:
             self._scene_call(self._scene_manager.detach_object, name, original)
             self._interface.stop()
             return SkillStatus.FAILED
-        return self._motion(self._primitives.retreat(name))
+        return self._motion(self._primitives.retreat_from_world_pose(observed_pose))
 
     def _physical_place(self, name: str, zone_name: str) -> SkillStatus:
-        """At rest, move MoveIt to WORLD, release joint, then open jaws.
+        """At rest, move MoveIt to WORLD, release joint, then lift and open.
 
         If physical release fails, restore the MoveIt attachment while the
         wrist is stationary. No retreat occurs in an inconsistent state.
@@ -211,8 +257,9 @@ class RobotSkills:
         assert physical is not None
         if not physical.is_attached(name) or not self._exclusive_state(name, "ATTACHED"):
             return SkillStatus.FAILED
+        placement = self._primitives.placement_world_pose(name, zone_name)
         for operation in (
-            lambda: self._primitives.move_above(zone_name),
+            lambda: self._primitives.move_above_world_pose(placement),
             lambda: self._primitives.descend_to_placement(name, zone_name),
         ):
             status = self._motion(operation())
@@ -221,26 +268,48 @@ class RobotSkills:
             if not physical.is_attached(name):
                 self._interface.stop()
                 return SkillStatus.FAILED
-        placement = self._primitives.placement_world_pose(name, zone_name)
         detached = self._scene_call(self._scene_manager.detach_object, name, placement)
         if not detached or not self._exclusive_state(name, "WORLD"):
+            self._interface._node.get_logger().error("Physical place: MoveIt WORLD transition failed")
             if self._exclusive_state(name, "WORLD"):
                 self._scene_call(self._scene_manager.attach_object, name)
             self._interface.stop()
             return SkillStatus.FAILED
         release_ok = physical.release(name)
         if not release_ok or physical.is_attached(name):
+            self._interface._node.get_logger().error("Physical place: Gazebo detach verification failed")
             if physical.is_attached(name):
                 self._scene_call(self._scene_manager.attach_object, name)
             self._interface.stop()
             return SkillStatus.FAILED
+        status = self._motion(self._primitives.retreat_from_world_pose(placement))
+        if status != SkillStatus.SUCCESS:
+            return status
         status = self._gripper_command(self._gripper.open)
         if status != SkillStatus.SUCCESS:
             return status
-        status = self._motion(self._primitives.retreat(zone_name))
+        if not self._scene_call(self._scene_manager.clear_grasp_contact, name):
+            self._interface._node.get_logger().error("Physical place: grasp contact reset failed")
+            return SkillStatus.FAILED
+        # The overhead camera cannot see the released cube while the wrist is
+        # still over its zone. Move to the verified HOME posture before RGB.
+        status = self.home()
         if status != SkillStatus.SUCCESS:
             return status
-        if not self._scene_call(self._scene_manager.clear_grasp_contact, name):
+        # The cube settles under Gazebo physics; refresh from a later RGB frame.
+        assert self._snapshot_source and self._scene_synchronizer and self._now_sec
+        try:
+            snapshot = self._snapshot_source()
+            if (not isinstance(snapshot, PerceptionSnapshot)
+                    or self._last_observation_sec is None
+                    or snapshot.observation_timestamp_sec <= self._last_observation_sec):
+                return SkillStatus.FAILED
+            report = self._scene_synchronizer.apply_snapshot(snapshot, self._now_sec())
+            if name in report.attached_ids:
+                return SkillStatus.FAILED
+            self._last_observation_sec = snapshot.observation_timestamp_sec
+        except (SceneSyncError, ValueError, TypeError, KeyError, RuntimeError) as exc:
+            self._interface._node.get_logger().error(f"Post-release observation/scene sync failed: {exc}")
             return SkillStatus.FAILED
         return SkillStatus.SUCCESS
 
@@ -259,7 +328,8 @@ class RobotSkills:
     def _gripper_command(self, command) -> SkillStatus:
         try:
             command()
-        except Exception:
+        except Exception as exc:
+            self._interface._node.get_logger().error(f"Gripper command failed: {exc}")
             self._interface.stop()
             return SkillStatus.FAILED
         return SkillStatus.SUCCESS

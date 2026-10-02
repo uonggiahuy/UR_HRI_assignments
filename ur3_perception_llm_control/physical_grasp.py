@@ -112,6 +112,10 @@ class PhysicalGraspManager:
     def is_attached(self, object_name: str) -> bool:
         return self._ready and self._state.get(object_name) == "attached"
 
+    def ready_for_pick(self) -> bool:
+        """Require the initial joint reset and no stale physical attachment."""
+        return self._ready and all(state == "detached" for state in self._state.values())
+
     def attach(self, object_name: str, timeout: float = 8.0) -> bool:
         if not self._ready or object_name not in CUBES:
             return False

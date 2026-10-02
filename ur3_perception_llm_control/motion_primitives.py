@@ -62,6 +62,25 @@ class ManipulationMotionPrimitives:
             )
         )
 
+    def move_above_world_pose(self, center: PoseStamped) -> MotionResult:
+        return self._interface.move_to_pose(self._offset_world_pose(center, self._approach_clearance))
+
+    def descend_to_world_pose(self, center: PoseStamped) -> MotionResult:
+        return self._interface.move_to_pose(self._offset_world_pose(center, self._grasp_z_offset))
+
+    def retreat_from_world_pose(self, center: PoseStamped) -> MotionResult:
+        return self._interface.move_to_pose(self._offset_world_pose(center, self._retreat_clearance))
+
+    def _offset_world_pose(self, center: PoseStamped, offset: float) -> PoseStamped:
+        world_frame = str(self._mapping(self._scene["robot"], "robot")["world_frame"])
+        if center.header.frame_id != world_frame:
+            raise ValueError("runtime target must use the configured world frame")
+        point = center.pose.position
+        return self._pose_for_world_coordinates(
+            self._number(point.x, "target.x"), self._number(point.y, "target.y"),
+            self._number(point.z, "target.z") + offset,
+        )
+
     def retreat(self, target: str | None = None) -> MotionResult:
         """Collision-plan upward from the last target or an explicit named target."""
         target = target or self._last_target
@@ -82,19 +101,21 @@ class ManipulationMotionPrimitives:
         return pose
 
     def placement_world_pose(self, object_name: str, zone_name: str) -> PoseStamped:
-        """Return a cube-center pose resting on the top face of a YAML zone."""
+        """Return a cube-center pose at fixed zone XY, resting on the table."""
         object_data = self._entry("objects", object_name)
         zone_data = self._entry("zones", zone_name)
         object_size = self._mapping(object_data.get("size"), f"{object_name}.size")
         zone_pose = self._mapping(zone_data.get("pose"), f"{zone_name}.pose")
-        zone_size = self._mapping(zone_data.get("size"), f"{zone_name}.size")
+        table_data = self._mapping(self._scene.get("table"), "table")
+        table_pose = self._mapping(table_data.get("pose"), "table.pose")
+        table_size = self._mapping(table_data.get("size"), "table.size")
         pose = PoseStamped()
         pose.header.frame_id = str(self._mapping(self._scene["robot"], "robot")["world_frame"])
         pose.pose.position.x = self._number(zone_pose["x"], f"{zone_name}.pose.x")
         pose.pose.position.y = self._number(zone_pose["y"], f"{zone_name}.pose.y")
         pose.pose.position.z = (
-            self._number(zone_pose["z"], f"{zone_name}.pose.z")
-            + self._number(zone_size["z"], f"{zone_name}.size.z") / 2.0
+            self._number(table_pose["z"], "table.pose.z")
+            + self._number(table_size["z"], "table.size.z") / 2.0
             + self._number(object_size["z"], f"{object_name}.size.z") / 2.0
         )
         pose.pose.orientation.w = 1.0
