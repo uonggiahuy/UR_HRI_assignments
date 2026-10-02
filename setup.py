@@ -4,7 +4,7 @@ from os.path import join
 from setuptools import find_packages, setup
 
 
-PACKAGE_NAME = "ur3_llm_control"
+PACKAGE_NAME = "ur3_perception_llm_control"
 
 
 setup(
@@ -22,6 +22,8 @@ setup(
         (join("share", PACKAGE_NAME, "prompt"), glob("prompt/*.txt")),
         (join("share", PACKAGE_NAME, "srdf"), glob("srdf/*.xacro")),
         (join("share", PACKAGE_NAME, "urdf"), glob("urdf/*.xacro")),
+        (join("share", PACKAGE_NAME, "rviz"), glob("rviz/*.rviz")),
+        (join("share", PACKAGE_NAME, "worlds"), glob("worlds/*.sdf")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -31,23 +33,25 @@ setup(
     license="Apache-2.0",
     entry_points={
         "console_scripts": [
-            "command_node = ur3_llm_control.command_node:main",
-            "gripper_test = ur3_llm_control.gripper_test:main",
-            "moveit_test = ur3_llm_control.moveit_test:main",
-            "planning_scene = ur3_llm_control.planning_scene:main",
-            "planning_scene_test = ur3_llm_control.planning_scene_test:main",
-            "motion_primitives_test = ur3_llm_control.motion_primitives_test:main",
-            "gazebo_attachment_sync = ur3_llm_control.gazebo_sync_node:main",
-            "m65_phase = ur3_llm_control.m65_phases:main",
-            "robot_skills_test = ur3_llm_control.robot_skills_test:main",
-            "m8_validator_test = ur3_llm_control.m8_validator_test:main",
-            "m8_plan_test = ur3_llm_control.m8_plan_test:main",
-            "m8_transition_diagnostic = ur3_llm_control.m8_transition_diagnostic:main",
-            "student_task_test = ur3_llm_control.student_task_test:main",
-            "llm_planner_test = ur3_llm_control.llm_planner_test:main",
-            "m12_demo = ur3_llm_control.m12_demo:main",
-            "m12_runtime_test = ur3_llm_control.m12_runtime_test:main",
-            "m12_ordering_diagnostic = ur3_llm_control.m12_ordering_diagnostic:main",
+            "command_node = ur3_perception_llm_control.command_node:main",
+            "gripper_test = ur3_perception_llm_control.gripper_test:main",
+            "moveit_test = ur3_perception_llm_control.moveit_test:main",
+            "planning_scene = ur3_perception_llm_control.planning_scene:main",
+            "planning_scene_test = ur3_perception_llm_control.planning_scene_test:main",
+            "motion_primitives_test = ur3_perception_llm_control.motion_primitives_test:main",
+            "gazebo_attachment_sync = ur3_perception_llm_control.gazebo_sync_node:main",
+            "m65_phase = ur3_perception_llm_control.m65_phases:main",
+            "robot_skills_test = ur3_perception_llm_control.robot_skills_test:main",
+            "m8_validator_test = ur3_perception_llm_control.m8_validator_test:main",
+            "m8_plan_test = ur3_perception_llm_control.m8_plan_test:main",
+            "m8_transition_diagnostic = ur3_perception_llm_control.m8_transition_diagnostic:main",
+            "student_task_test = ur3_perception_llm_control.student_task_test:main",
+            "llm_planner_test = ur3_perception_llm_control.llm_planner_test:main",
+            "m12_demo = ur3_perception_llm_control.m12_demo:main",
+            "m12_runtime_test = ur3_perception_llm_control.m12_runtime_test:main",
+            "m12_ordering_diagnostic = ur3_perception_llm_control.m12_ordering_diagnostic:main",
+            "zone_markers = ur3_perception_llm_control.zone_markers:main",
+            "camera_test = ur3_perception_llm_control.camera_test:main",
         ],
     },
 )

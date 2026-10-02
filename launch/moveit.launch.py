@@ -5,7 +5,7 @@ import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetEnvironmentVariable, TimerAction
 from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -27,7 +27,7 @@ def _launch_setup(context):
     launch_rviz = LaunchConfiguration("launch_rviz")
 
     description_file = PathJoinSubstitution(
-        [FindPackageShare("ur3_llm_control"), "urdf", "mounted_ur.urdf.xacro"]
+        [FindPackageShare("ur3_perception_llm_control"), "urdf", "mounted_ur.urdf.xacro"]
     )
     vendor_description = FindPackageShare("ur_description")
     robot_description_content = Command(
@@ -68,7 +68,7 @@ def _launch_setup(context):
 
     semantic_file = PathJoinSubstitution(
         [
-            FindPackageShare("ur3_llm_control"),
+            FindPackageShare("ur3_perception_llm_control"),
             "srdf",
             "ur_with_gripper.srdf.xacro",
         ]
@@ -147,11 +147,18 @@ def _launch_setup(context):
         parameters=common_parameters,
     )
     planning_scene = Node(
-        package="ur3_llm_control",
+        package="ur3_perception_llm_control",
         executable="planning_scene",
         name="workcell_planning_scene",
         output="screen",
         parameters=[{"scene_config": LaunchConfiguration("scene_config")}],
+    )
+    zone_markers = Node(
+        package="ur3_perception_llm_control",
+        executable="zone_markers",
+        name="workcell_zone_markers",
+        output="screen",
+        parameters=[{"scene_config": LaunchConfiguration("scene_config"), "use_sim_time": True}],
     )
     rviz = Node(
         package="rviz2",
@@ -162,12 +169,12 @@ def _launch_setup(context):
         arguments=[
             "-d",
             PathJoinSubstitution(
-                [FindPackageShare("ur_moveit_config"), "rviz", "view_robot.rviz"]
+                [FindPackageShare("ur3_perception_llm_control"), "rviz", "workcell.rviz"]
             ),
         ],
         parameters=common_parameters,
     )
-    return [move_group, planning_scene, rviz]
+    return [move_group, planning_scene, TimerAction(period=5.0, actions=[zone_markers]), rviz]
 
 
 def generate_launch_description():
@@ -182,7 +189,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "scene_config",
                 default_value=PathJoinSubstitution(
-                    [FindPackageShare("ur3_llm_control"), "config", "scene.yaml"]
+                    [FindPackageShare("ur3_perception_llm_control"), "config", "scene.yaml"]
                 ),
             ),
             SetEnvironmentVariable("UR3_LLM_SCENE_CONFIG", scene_config),

@@ -27,7 +27,7 @@ def generate_launch_description() -> LaunchDescription:
                 description="Use a simulation clock when one is available.",
             ),
             Node(
-                package="ur3_llm_control",
+                package="ur3_perception_llm_control",
                 executable="command_node",
                 name="ur3_llm_command",
                 output="screen",

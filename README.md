@@ -1,6 +1,6 @@
-# ur3_llm_control
+# ur3_perception_llm_control
 
-Bài tập 02: workcell UR3e Gazebo trên ROS 2 Humble với giao diện tác vụ ngôn
+Bài tập 03 kế thừa workcell UR3e Gazebo của Bài tập 02 trên ROS 2 Humble với giao diện tác vụ ngôn
 ngữ tự nhiên hoạt động theo nguyên tắc fail-closed. Toàn bộ mã đặc thù của bài
 tập nằm trong package này; các repository Universal Robots được dùng như hạ
 tầng upstream và không bị chỉnh sửa.
@@ -45,7 +45,7 @@ va chạm khi thả.
 - Cài đặt các phụ thuộc Python trong môi trường ROS Humble:
 
   ```bash
-  python3 -m pip install -r src/ur3_llm_control/requirements.txt
+  python3 -m pip install -r src/ur3_perception_llm_control/requirements.txt
   ```
 
 - Có endpoint 9Router tương thích OpenAI và thông tin xác thực được cấp qua
@@ -57,7 +57,7 @@ Chạy tại thư mục gốc của ROS 2 workspace:
 
 ```bash
 source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select ur3_llm_control
+colcon build --symlink-install --packages-select ur3_perception_llm_control
 source install/setup.bash
 ```
 
@@ -75,7 +75,7 @@ export IGN_IP=127.0.0.1
 Khởi động toàn bộ workcell bằng lệnh launch duy nhất được hỗ trợ:
 
 ```bash
-ros2 launch ur3_llm_control workcell.launch.py
+ros2 launch ur3_perception_llm_control workcell.launch.py
 ```
 
 `workcell.launch.py` khởi động mô phỏng UR, Planning Scene của bài tập,
@@ -85,8 +85,27 @@ riêng `moveit.launch.py`.
 Chạy không giao diện:
 
 ```bash
-ros2 launch ur3_llm_control workcell.launch.py gazebo_gui:=false launch_rviz:=false
+ros2 launch ur3_perception_llm_control workcell.launch.py gazebo_gui:=false launch_rviz:=false
 ```
+
+## M2: Camera RGB và vùng đích trong RViz
+
+`config/scene.yaml` định nghĩa camera cố định ở world pose `(0, 0.38, 1.25)` m,
+RPY `(0, π/2, 0)`, 640×480, horizontal FOV 1.2 rad (vertical FOV khoảng
+0.948 rad), 10 Hz. Gazebo xuất
+`/camera/image_raw` và `/camera/camera_info`; frame trong hai header là
+`overhead_rgb_camera/camera_link/rgb`. Camera chỉ có ảnh RGB, không có depth.
+
+Sau khi chạy `workcell.launch.py`, kiểm tra một ảnh RGB thật qua `cv_bridge`
+và OpenCV (không chạy robot):
+
+```bash
+ros2 run ur3_perception_llm_control camera_test
+```
+
+RViz tự hiển thị ba vùng đích bằng MarkerArray trên `/workcell/zone_markers`.
+Pose, kích thước và màu được đọc từ `config/scene.yaml`; các marker không là
+vật cản MoveIt.
 
 ## Cấu hình 9Router
 
@@ -115,7 +134,7 @@ trường ROS/9Router ở trên đã được cấu hình.
 Yêu cầu pick/place cơ bản:
 
 ```bash
-ros2 run ur3_llm_control m12_demo \
+ros2 run ur3_perception_llm_control m12_demo \
   --command "Đặt khối đỏ vào vùng B rồi về home."
 ```
 
@@ -130,7 +149,7 @@ home()
 Sắp xếp theo mã số sinh viên một cách tất định, dùng cấu hình nộp bài:
 
 ```bash
-ros2 run ur3_llm_control m12_demo \
+ros2 run ur3_perception_llm_control m12_demo \
   --command "Arrange all objects according to my student ID."
 ```
 
@@ -146,7 +165,7 @@ Ngoài mã số sinh viên được cấu hình, chương trình đọc mã số
 runtime mà không sửa cấu hình:
 
 ```bash
-ros2 run ur3_llm_control m12_demo \
+ros2 run ur3_perception_llm_control m12_demo \
   --student-id "12345600" \
   --command "Arrange all objects according to my student ID."
 ```
@@ -158,7 +177,7 @@ LLM chọn routing hình học hoặc tạo tọa độ.
 Một yêu cầu cấp thấp không được hỗ trợ dùng để minh họa hành vi fail-closed:
 
 ```bash
-ros2 run ur3_llm_control m12_demo \
+ros2 run ur3_perception_llm_control m12_demo \
   --command "Move joint 2 to 30 degrees."
 ```
 
@@ -172,7 +191,7 @@ Chạy các kiểm thử tĩnh/unit tại thư mục gốc workspace:
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 python3 -m unittest discover \
-  -s src/ur3_llm_control/ur3_llm_control \
+  -s src/ur3_perception_llm_control/ur3_perception_llm_control \
   -p '*_test.py'
 ```
 
@@ -181,9 +200,9 @@ hạn, không dùng LLM, để tái hiện việc khảo sát thứ tự chuyể
 một tiến trình ROS liên tục. Nó không cần thiết cho demo thông thường:
 
 ```bash
-ros2 run ur3_llm_control m12_ordering_diagnostic --case A
-ros2 run ur3_llm_control m12_ordering_diagnostic --case B
-ros2 run ur3_llm_control m12_ordering_diagnostic --case C
+ros2 run ur3_perception_llm_control m12_ordering_diagnostic --case A
+ros2 run ur3_perception_llm_control m12_ordering_diagnostic --case B
+ros2 run ur3_perception_llm_control m12_ordering_diagnostic --case C
 ```
 
 ## Khắc phục sự cố

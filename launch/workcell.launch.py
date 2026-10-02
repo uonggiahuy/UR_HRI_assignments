@@ -16,7 +16,9 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-from ur3_llm_control.workcell_scene import box_sdf, iter_models, load_scene
+from ur3_perception_llm_control.workcell_scene import (
+    box_sdf, camera_config, camera_sdf, iter_models, load_scene,
+)
 
 
 def _spawn_node(model):
@@ -47,11 +49,37 @@ def _spawn_node(model):
     )
 
 
+def _spawn_camera(camera):
+    x, y, z, roll, pitch, yaw = camera.pose
+    return Node(
+        package="ros_gz_sim",
+        executable="create",
+        name=f"spawn_{camera.name}",
+        output="screen",
+        arguments=[
+            "-string", camera_sdf(camera), "-name", camera.name,
+            "-x", str(x), "-y", str(y), "-z", str(z),
+            "-R", str(roll), "-P", str(pitch), "-Y", str(yaw),
+        ],
+    )
+
+
 def _launch_setup(context):
     scene_path = LaunchConfiguration("scene_config").perform(context)
     scene = load_scene(scene_path)
+    camera = camera_config(scene)
     models = list(iter_models(scene))
-    spawners = [_spawn_node(model) for model in models]
+    spawners = [_spawn_node(model) for model in models] + [_spawn_camera(camera)]
+    camera_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="overhead_rgb_bridge",
+        output="screen",
+        arguments=[
+            f"{camera.image_topic}@sensor_msgs/msg/Image[ignition.msgs.Image",
+            f"{camera.camera_info_topic}@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
+        ],
+    )
 
     # ros_gz_sim/create waits for the Gazebo world/create service. Chain each
     # process exit so the pedestal and table exist before dynamic cubes and
@@ -80,17 +108,20 @@ def _launch_setup(context):
             "ur_type": LaunchConfiguration("ur_type"),
             "gazebo_gui": LaunchConfiguration("gazebo_gui"),
             "launch_rviz": "false",
-            "runtime_config_package": "ur3_llm_control",
+            "runtime_config_package": "ur3_perception_llm_control",
             "controllers_file": "ur3_controllers.yaml",
-            "description_package": "ur3_llm_control",
+            "description_package": "ur3_perception_llm_control",
             "description_file": "mounted_ur.urdf.xacro",
+            "world_file": PathJoinSubstitution(
+                [FindPackageShare("ur3_perception_llm_control"), "worlds", "rgb_workcell.sdf"]
+            ),
         }.items(),
     )
 
     moveit = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
-                [FindPackageShare("ur3_llm_control"), "launch", "moveit.launch.py"]
+                [FindPackageShare("ur3_perception_llm_control"), "launch", "moveit.launch.py"]
             )
         ),
         condition=IfCondition(LaunchConfiguration("launch_moveit")),
@@ -128,6 +159,7 @@ def _launch_setup(context):
         scene_environment,
         ur_simulation,
         moveit,
+        TimerAction(period=5.0, actions=[camera_bridge]),
         # RViz plus the M5 scene manager can briefly consume the remaining
         # CycloneDDS participant slots. Start this short-lived spawner after
         # the upstream controller spawners have normally exited.
@@ -167,7 +199,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument(
                 "scene_config",
                 default_value=PathJoinSubstitution(
-                    [FindPackageShare("ur3_llm_control"), "config", "scene.yaml"]
+                    [FindPackageShare("ur3_perception_llm_control"), "config", "scene.yaml"]
                 ),
                 description="Canonical M2.5 workcell YAML file.",
             ),

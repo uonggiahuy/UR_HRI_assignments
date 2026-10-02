@@ -55,6 +55,25 @@ table:
     b: 0.28
     a: 1.0
 
+# Fixed world-mounted RGB sensor. Gazebo camera +X points along its optical
+# axis; +90 degrees pitch directs it down toward the tabletop at z = 0.30 m.
+camera:
+  name: overhead_rgb_camera
+  frame_id: overhead_rgb_camera/camera_link/rgb
+  pose:
+    x: 0.0
+    y: 0.38
+    z: 1.25
+    roll: 0.0
+    pitch: 1.5707963267948966
+    yaw: 0.0
+  width: 640
+  height: 480
+  horizontal_fov: 1.2
+  update_rate: 10.0
+  image_topic: /camera/image_raw
+  camera_info_topic: /camera/camera_info
+
 objects:
   red_cube:
     name: red_cube
@@ -114,6 +133,46 @@ objects:
       r: 0.05
       g: 0.15
       b: 0.90
+      a: 1.0
+
+  green_cube:
+    name: green_cube
+    pose:
+      x: -0.12
+      y: 0.46
+      z: 0.3235
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.045
+      y: 0.045
+      z: 0.045
+    mass: 0.08
+    color:
+      r: 0.05
+      g: 0.75
+      b: 0.12
+      a: 1.0
+
+  purple_cube:
+    name: purple_cube
+    pose:
+      x: 0.12
+      y: 0.46
+      z: 0.3235
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    size:
+      x: 0.045
+      y: 0.045
+      z: 0.045
+    mass: 0.08
+    color:
+      r: 0.58
+      g: 0.08
+      b: 0.72
       a: 1.0
 
 zones:
