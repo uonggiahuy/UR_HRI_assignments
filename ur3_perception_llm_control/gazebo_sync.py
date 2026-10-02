@@ -1,8 +1,6 @@
-"""Assignment-local Gazebo state for a MoveIt-attached workcell cube.
+"""Legacy Assignment 02 visual pose follower; never use for M7 grasp.
 
-MoveIt remains authoritative for collision attachment.  Fortress has no
-entity-attachment interface in this workcell.  Repeatedly setting the pose of
-a *dynamic* model makes gravity fight those writes, which visibly drops and
+Repeatedly setting the pose of a *dynamic* model makes gravity fight those writes, which visibly drops and
 snaps a held cube.  Instead, this module replaces only the attached model with
 an equivalent static, visual-only model and moves that model from the exact
 MoveIt attachment transform.  On release it replaces the static model with the

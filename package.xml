@@ -32,6 +32,7 @@
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
   <exec_depend>shape_msgs</exec_depend>
   <exec_depend>ur_simulation_gz</exec_depend>
   <exec_depend>ur_description</exec_depend>

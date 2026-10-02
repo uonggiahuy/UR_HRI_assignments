@@ -329,3 +329,29 @@ and pass that same path as `--scene` to `perception_scene_test`. Both layouts
 returned 0.000 mm requested-to-authoritative MoveIt pose error for all five
 cubes. The legacy Assignment 02 scene initialization remains available to its
 existing execution path.
+
+## M7: Physical Gazebo grasp
+
+The Assignment 03 grasp uses Gazebo Fortress `DetachableJoint` constraints
+between `wrist_3_link` and each cube's physical `link`. `PhysicalGraspManager`
+first detaches the plugin's initially attached joints, then verifies measured
+closed fingers, gripper-to-cube proximity, and each attach/release state event.
+`RobotSkills` coordinates that physical state with MoveIt's WORLD/ATTACHED
+collision state. The physical path never calls the legacy Assignment 02
+`GazeboAttachmentSynchronizer` or writes cube poses for transport.
+
+In a fresh workcell, check the camera-derived scene and run the isolated
+red-cube physical test:
+
+```bash
+ros2 run ur3_perception_llm_control perception_scene_test
+ros2 run ur3_perception_llm_control m7_physical_grasp_test
+ros2 run ur3_perception_llm_control perception_scene_test
+```
+
+The M7 test performs HOME, pick, a 3.2-second hold, collision-checked lateral
+motion, a second hold, placement in zone A, physical release, retreat, and
+HOME. Gazebo poses in this diagnostic are read-only physical-state oracles;
+they never supply camera perception or motion targets. Run it once per fresh
+workcell because `wait_until_ready()` establishes the initial detached state
+from plugin transition events.

@@ -80,6 +80,19 @@ def _launch_setup(context):
             f"{camera.camera_info_topic}@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
         ],
     )
+    grasp_bridge_arguments = []
+    for cube in ("red_cube", "yellow_cube", "blue_cube", "green_cube", "purple_cube"):
+        base = f"/m7/grasp/{cube}"
+        grasp_bridge_arguments.extend([
+            f"{base}/state@std_msgs/msg/String[ignition.msgs.StringMsg",
+            f"{base}/attach@std_msgs/msg/Empty]ignition.msgs.Empty",
+            f"{base}/detach@std_msgs/msg/Empty]ignition.msgs.Empty",
+        ])
+    grasp_bridge = Node(
+        package="ros_gz_bridge", executable="parameter_bridge",
+        name="physical_grasp_bridge", output="screen",
+        arguments=grasp_bridge_arguments,
+    )
 
     # ros_gz_sim/create waits for the Gazebo world/create service. Chain each
     # process exit so the pedestal and table exist before dynamic cubes and
@@ -159,6 +172,7 @@ def _launch_setup(context):
         scene_environment,
         ur_simulation,
         moveit,
+        TimerAction(period=2.0, actions=[grasp_bridge]),
         TimerAction(period=5.0, actions=[camera_bridge]),
         # RViz plus the M5 scene manager can briefly consume the remaining
         # CycloneDDS participant slots. Start this short-lived spawner after

@@ -13,7 +13,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 GRIPPER_ACTION = "/gripper_controller/follow_joint_trajectory"
 FINGER_JOINTS = ("left_finger_joint", "right_finger_joint")
 # The 45 mm assignment cubes require a 45 mm or wider jaw gap.  This leaves a
-# 2 mm total clearance while MoveIt's attachment owns the grasp constraint.
+# 2 mm total clearance while the M7 Gazebo joint owns the physical constraint.
 CLOSED_POSITION = 0.0235
 OPEN_POSITION = 0.0375
 

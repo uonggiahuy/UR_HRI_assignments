@@ -42,6 +42,7 @@ setup(
             "gazebo_attachment_sync = ur3_perception_llm_control.gazebo_sync_node:main",
             "m65_phase = ur3_perception_llm_control.m65_phases:main",
             "robot_skills_test = ur3_perception_llm_control.robot_skills_test:main",
+            "m7_physical_grasp_test = ur3_perception_llm_control.m7_physical_grasp_test:main",
             "m8_validator_test = ur3_perception_llm_control.m8_validator_test:main",
             "m8_plan_test = ur3_perception_llm_control.m8_plan_test:main",
             "m8_transition_diagnostic = ur3_perception_llm_control.m8_transition_diagnostic:main",
