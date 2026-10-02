@@ -14,6 +14,7 @@ import cv2
 from cv_bridge import CvBridge
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 
@@ -24,8 +25,10 @@ from ur3_perception_llm_control.planar_mapper import Calibration, CubeTopMapper,
 
 
 class FrameCollector(Node):
-    def __init__(self, detector: CubeDetector, frame_count: int) -> None:
-        super().__init__("cube_detection_test")
+    def __init__(self, detector: CubeDetector, frame_count: int,
+                 node_name: str = "cube_detection_test", use_sim_time: bool = False) -> None:
+        overrides = [Parameter("use_sim_time", value=True)] if use_sim_time else None
+        super().__init__(node_name, parameter_overrides=overrides)
         self.bridge = CvBridge()
         self.detector = detector
         self.samples = deque(maxlen=frame_count)

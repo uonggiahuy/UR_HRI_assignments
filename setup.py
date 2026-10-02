@@ -54,6 +54,8 @@ setup(
             "camera_test = ur3_perception_llm_control.camera_test:main",
             "homography_test = ur3_perception_llm_control.homography_test:main",
             "cube_detection_test = ur3_perception_llm_control.cube_detection_test:main",
+            "perception_state_test = ur3_perception_llm_control.perception_state_test:main",
+            "perception_scene_test = ur3_perception_llm_control.perception_scene_test:main",
         ],
     },
 )

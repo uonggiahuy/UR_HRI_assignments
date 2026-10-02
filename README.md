@@ -272,3 +272,60 @@ perception configuration or code change is needed between layouts. Layout A
 error mean/max was 2.048/2.561 mm; layout B was 1.447/1.804 mm against
 settled Gazebo XY. Both used eight complete frames at 10 Hz with zero measured
 XY spread. The existing zone colors remain unchanged.
+
+## M5: Camera-derived symbolic state
+
+`perception_state.py` converts one complete five-cube M4 detection result into
+an immutable `PerceptionSnapshot`. Fixed table/zone rectangles and cube X/Y
+sizes come from the scene YAML. A cube is in a zone only when its full
+footprint lies inside that zone with 3 mm clearance; partial overlap is an
+explicit `PERCEPTION_AMBIGUOUS` error. Two blocks in one zone, missing blocks,
+non-finite positions, and detections from mixed image timestamps also fail.
+The snapshot records camera-derived XY, symbolic locations, zone occupancy,
+and its ROS image timestamp. `require_fresh` rejects data older than 1.0 s by
+default with `PERCEPTION_STALE`. It represents a static scene and sets
+`held_object=None`; the legacy task `WorldState` remains separate.
+
+With the workcell running, inspect live state using:
+
+```bash
+ros2 run ur3_perception_llm_control perception_state_test
+```
+
+For the accepted alternate scene, launch `workcell.launch.py` with
+`scene_config:=/root/ros2_ws/src/ur3_perception_llm_control/config/scene_m4_layout_b.yaml`
+and run:
+
+```bash
+ros2 run ur3_perception_llm_control perception_state_test \
+  --scene /root/ros2_ws/src/ur3_perception_llm_control/config/scene_m4_layout_b.yaml
+```
+
+The `--scene` input supplies fixed geometry and cube dimensions. Movable cube
+spawn poses do not populate the snapshot. No depth data or Gazebo pose topic is
+read by the M5 runtime diagnostic.
+
+## M6: Camera-derived MoveIt collision scene
+
+`perception_scene.py` accepts a fresh, complete M5 `PerceptionSnapshot`,
+checks its symbolic geometry, reads authoritative MoveIt attachments, then
+applies one Planning Scene diff for non-attached cubes. Cube XY is copied from
+the camera snapshot. Center Z comes from fixed table or zone top plus half the
+configured cube height. Equal-edge collision boxes use identity orientation;
+RGB does not provide cube orientation or Z. The synchronizer queries MoveIt
+after applying and verifies each WORLD ID, dimensions, pose within 1 mm,
+attached exclusions, unchanged table/pedestal, and absence of zone collision
+objects. Service success alone is insufficient.
+
+Run the no-motion live diagnostic after the workcell starts:
+
+```bash
+ros2 run ur3_perception_llm_control perception_scene_test
+```
+
+For Layout B, launch `workcell.launch.py` with
+`scene_config:=/root/ros2_ws/src/ur3_perception_llm_control/config/scene_m4_layout_b.yaml`
+and pass that same path as `--scene` to `perception_scene_test`. Both layouts
+returned 0.000 mm requested-to-authoritative MoveIt pose error for all five
+cubes. The legacy Assignment 02 scene initialization remains available to its
+existing execution path.

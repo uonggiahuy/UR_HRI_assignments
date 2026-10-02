@@ -278,6 +278,10 @@ class PlanningSceneManager:
             return False, "no response from /get_planning_scene"
         return scene_matches(actual, self._expected)
 
+    def apply_scene_diff(self, diff: PlanningScene, timeout: float = SERVICE_TIMEOUT) -> bool:
+        """Apply one caller-built diff; callers must verify authoritative state."""
+        return self._apply_diff(diff, timeout)
+
     def attach_object(self, object_name: str, timeout: float = SERVICE_TIMEOUT) -> bool:
         """Move one YAML-backed movable object from WORLD to the gripper.
 
