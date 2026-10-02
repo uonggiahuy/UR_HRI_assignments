@@ -53,6 +53,7 @@ setup(
             "zone_markers = ur3_perception_llm_control.zone_markers:main",
             "camera_test = ur3_perception_llm_control.camera_test:main",
             "homography_test = ur3_perception_llm_control.homography_test:main",
+            "cube_detection_test = ur3_perception_llm_control.cube_detection_test:main",
         ],
     },
 )

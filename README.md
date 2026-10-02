@@ -235,3 +235,40 @@ Các controller bắt buộc ở trạng thái active là `joint_state_broadcast
 `joint_trajectory_controller` và `gripper_controller`. Không khởi động một
 `moveit.launch.py` riêng để khôi phục hệ thống; hãy dùng workcell launch của
 bài tập và chẩn đoán việc khởi động controller trước.
+
+## M4: RGB five-cube localization
+
+`config/perception.yaml` records HSV ranges measured from the Gazebo RGB frame,
+blob shape/area limits, and an eight-frame 5 mm stability limit. The detector
+uses the centroid of each segmented square **top face**. A pixel first maps to
+the calibrated tabletop by the M3 homography; similar triangles along the ray
+from the fixed camera center then intersect the known cube-top plane at
+`z = 0.345 m`. The tabletop homography is unchanged. The RGB result contains
+cube identity, pixel center, world XY, area, quality, and timestamp; it does
+not estimate Z or infer zone occupancy. Missing, duplicate, or invalid cube
+blobs cause an explicit failure.
+
+Run after `workcell.launch.py` is ready:
+
+```bash
+ros2 run ur3_perception_llm_control cube_detection_test \
+  --output /tmp/ur3_m4_annotated.png
+```
+
+For a **test-only** Gazebo pose error check, save one settled pose sample and
+pass it to the diagnostic. These poses are never passed to the detector:
+
+```bash
+ign topic -t /world/empty/dynamic_pose/info -e -n 1 --json-output > /tmp/m4_gazebo_poses.json
+ros2 run ur3_perception_llm_control cube_detection_test \
+  --oracle-poses-json /tmp/m4_gazebo_poses.json \
+  --output /tmp/ur3_m4_annotated.png
+```
+
+`config/scene_m4_layout_b.yaml` is a test-only alternate launch scene. Launch
+with `scene_config:=/root/ros2_ws/src/ur3_perception_llm_control/config/scene_m4_layout_b.yaml`
+to reproduce the green-on-zone-C and purple-on-zone-B overlap check. No
+perception configuration or code change is needed between layouts. Layout A
+error mean/max was 2.048/2.561 mm; layout B was 1.447/1.804 mm against
+settled Gazebo XY. Both used eight complete frames at 10 Hz with zero measured
+XY spread. The existing zone colors remain unchanged.

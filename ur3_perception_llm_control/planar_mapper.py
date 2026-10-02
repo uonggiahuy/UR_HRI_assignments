@@ -163,3 +163,38 @@ class PlanarMapper:
         if not self._inside(self._world_hull, x, y, 1e-6):
             raise ValueError("world XY is outside the calibrated tabletop")
         return self._project(self.world_to_image_h, x, y)
+
+
+class CubeTopMapper:
+    """Intersect a tabletop-calibrated camera ray with a known cube-top plane.
+
+    The M3 homography supplies the ray's tabletop intersection. Similar
+    triangles about the fixed camera center give its intersection at top_z.
+    No cube pose or depth measurement enters this mapping.
+    """
+
+    def __init__(self, tabletop: PlanarMapper, camera_xyz: tuple[float, float, float],
+                 top_z_m: float) -> None:
+        self.tabletop = tabletop
+        self.camera_x, self.camera_y, self.camera_z = (
+            _number(value, "camera coordinate") for value in camera_xyz
+        )
+        self.top_z_m = _number(top_z_m, "cube-top Z")
+        table_z = tabletop.calibration.plane_z_m
+        if not table_z < self.top_z_m < self.camera_z:
+            raise ValueError("cube-top plane must lie strictly between table and camera")
+        self._scale = (self.camera_z - self.top_z_m) / (self.camera_z - table_z)
+
+    def pixel_to_world_xy(self, u: float, v: float) -> tuple[float, float]:
+        table_x, table_y = self.tabletop.pixel_to_world_xy(u, v)
+        x = self.camera_x + self._scale * (table_x - self.camera_x)
+        y = self.camera_y + self._scale * (table_y - self.camera_y)
+        self.tabletop.world_xy_to_pixel(x, y)  # Reject locations outside the table.
+        return x, y
+
+    def world_xy_to_pixel(self, x: float, y: float) -> tuple[float, float]:
+        x, y = _number(x, "x"), _number(y, "y")
+        self.tabletop.world_xy_to_pixel(x, y)
+        table_x = self.camera_x + (x - self.camera_x) / self._scale
+        table_y = self.camera_y + (y - self.camera_y) / self._scale
+        return self.tabletop.world_xy_to_pixel(table_x, table_y)
