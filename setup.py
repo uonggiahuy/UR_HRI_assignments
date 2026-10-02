@@ -52,6 +52,7 @@ setup(
             "m12_ordering_diagnostic = ur3_perception_llm_control.m12_ordering_diagnostic:main",
             "zone_markers = ur3_perception_llm_control.zone_markers:main",
             "camera_test = ur3_perception_llm_control.camera_test:main",
+            "homography_test = ur3_perception_llm_control.homography_test:main",
         ],
     },
 )

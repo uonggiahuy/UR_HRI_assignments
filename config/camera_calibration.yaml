@@ -1,0 +1,35 @@
+# M3 calibration of the fixed RGB camera for the tabletop surface z=0.300 m.
+# Image origin is top-left: +u right maps toward world -y; +v down maps toward
+# world -x. Pixels for table corners use live CameraInfo K and the fixed M2
+# camera/table geometry, checked against the captured RGB table boundary.
+# Zone-center pixels below were read from an M2 RGB frame for independent
+# validation; their world XY is read from scene.yaml at diagnostic time.
+schema_version: 1
+plane:
+  frame_id: world
+  z_m: 0.300
+image:
+  width_px: 640
+  height_px: 480
+  frame_id: overhead_rgb_camera/camera_link/rgb
+  distortion_model: plumb_bob
+  distortion_coefficients: [0.0, 0.0, 0.0, 0.0, 0.0]
+  k: [467.7427291870117, 0.0, 320.0,
+      0.0, 467.74269104003906, 240.0,
+      0.0, 0.0, 1.0]
+calibration:
+  image_points_px:
+    - {id: table_xmax_ymax, u: 221.527846486945, v: 92.291781776830}
+    - {id: table_xmax_ymin, u: 418.472153513055, v: 92.291781776830}
+    - {id: table_xmin_ymin, u: 418.472153513055, v: 387.708218223170}
+    - {id: table_xmin_ymax, u: 221.527846486945, v: 387.708218223170}
+  world_points_xy_m:
+    - {id: table_xmax_ymax, x: 0.300, y: 0.580}
+    - {id: table_xmax_ymin, x: 0.300, y: 0.180}
+    - {id: table_xmin_ymin, x: -0.300, y: 0.180}
+    - {id: table_xmin_ymax, x: -0.300, y: 0.580}
+validation:
+  image_points_px:
+    - {id: zone_a, u: 389.0, v: 299.0}
+    - {id: zone_b, u: 389.0, v: 240.0}
+    - {id: zone_c, u: 389.0, v: 181.0}

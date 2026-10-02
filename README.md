@@ -107,6 +107,21 @@ RViz tự hiển thị ba vùng đích bằng MarkerArray trên `/workcell/zone_
 Pose, kích thước và màu được đọc từ `config/scene.yaml`; các marker không là
 vật cản MoveIt.
 
+## M3: Đồng nhất mặt bàn
+
+`config/camera_calibration.yaml` chứa bốn cặp góc mặt bàn không thẳng hàng,
+được dùng để fit homography OpenCV cho mặt phẳng `world z=0.300 m`. Gốc ảnh ở
+góc trên trái; +u tương ứng world -y, +v tương ứng world -x. Bộ chuyển đổi
+`planar_mapper.py` chỉ nhận điểm trong vùng mặt bàn đã hiệu chuẩn, trả về XY
+và không suy Z từ ảnh RGB.
+
+Sau khi chạy workcell, kiểm tra ảnh, CameraInfo, ba tâm zone cố định và sai
+số khứ hồi mà không di chuyển robot:
+
+```bash
+ros2 run ur3_perception_llm_control homography_test
+```
+
 ## Cấu hình 9Router
 
 Trong terminal chạy lệnh ngôn ngữ tự nhiên, cung cấp đủ ba biến môi
