@@ -1,4 +1,4 @@
-"""Fail-closed M10 natural-language to validated M8 plan boundary."""
+"""OpenAI-compatible planning boundary shared by the legacy and scene-aware paths."""
 
 from __future__ import annotations
 
@@ -85,8 +85,33 @@ class LLMPlanner:
         planning_context: str | None = None,
     ) -> PlannerResult:
         """Return a new validated plan or a failure; no previous plan is retained."""
+        candidate_result = self._request_candidate(request, planning_context)
+        if candidate_result.status != PlannerStatus.SUCCESS:
+            return candidate_result
+        candidate = candidate_result.candidate_json
+        assert candidate is not None
+        validation = TaskValidator().validate(candidate, world_state)
+        if not validation.accepted:
+            return PlannerResult(
+                PlannerStatus.VALIDATION_FAILED,
+                f"LLM plan rejected: {validation.message}",
+                validation=validation,
+                candidate_json=candidate,
+            )
+        return PlannerResult(
+            PlannerStatus.SUCCESS,
+            "LLM plan accepted by M8 validator",
+            validation=validation,
+            candidate_json=candidate,
+        )
+
+    def _request_candidate(self, request: str, planning_context: str | None = None,
+                           *, allow_markdown: bool = True) -> PlannerResult:
+        """Get one fresh raw JSON candidate; never retain a prior response."""
         if not isinstance(request, str) or not request.strip():
             return PlannerResult(PlannerStatus.INVALID_REQUEST, "natural-language request must be non-empty")
+        if planning_context is not None and (not isinstance(planning_context, str) or not planning_context.strip()):
+            return PlannerResult(PlannerStatus.INVALID_REQUEST, "planning context must be non-empty text")
 
         try:
             client = self._client or self._client_factory(
@@ -100,8 +125,6 @@ class LLMPlanner:
         try:
             system_prompt = self._system_prompt
             if planning_context is not None:
-                if not isinstance(planning_context, str) or not planning_context.strip():
-                    return PlannerResult(PlannerStatus.INVALID_REQUEST, "planning context must be non-empty text")
                 # This context is supplied by deterministic application logic,
                 # never by the model.  It contains only allowed public-skill
                 # assignments, not robot coordinates or low-level commands.
@@ -119,24 +142,10 @@ class LLMPlanner:
         except Exception:
             return PlannerResult(PlannerStatus.API_ERROR, "9Router planner request failed")
 
-        candidate = _extract_json_candidate(response)
+        candidate = _extract_json_candidate(response, allow_markdown=allow_markdown)
         if candidate is None:
             return PlannerResult(PlannerStatus.MALFORMED_RESPONSE, "9Router response did not contain one JSON object")
-
-        validation = TaskValidator().validate(candidate, world_state)
-        if not validation.accepted:
-            return PlannerResult(
-                PlannerStatus.VALIDATION_FAILED,
-                f"LLM plan rejected: {validation.message}",
-                validation=validation,
-                candidate_json=candidate,
-            )
-        return PlannerResult(
-            PlannerStatus.SUCCESS,
-            "LLM plan accepted by M8 validator",
-            validation=validation,
-            candidate_json=candidate,
-        )
+        return PlannerResult(PlannerStatus.SUCCESS, "JSON candidate received", candidate_json=candidate)
 
 
 def resolve_llm_config(
@@ -161,7 +170,7 @@ def resolve_llm_config(
     return LLMConfig(base_url=base_url, api_key=api_key, model=model, timeout_sec=timeout_sec, temperature=temperature)
 
 
-def _extract_json_candidate(response: Any) -> str | None:
+def _extract_json_candidate(response: Any, *, allow_markdown: bool = True) -> str | None:
     """Accept one raw JSON object, optionally as a single JSON Markdown fence."""
     try:
         content = response.choices[0].message.content
@@ -171,6 +180,8 @@ def _extract_json_candidate(response: Any) -> str | None:
         return None
     candidate = content.strip()
     if candidate.startswith("```"):
+        if not allow_markdown:
+            return None
         lines = candidate.splitlines()
         if len(lines) < 3 or lines[0].strip().lower() not in ("```", "```json") or lines[-1].strip() != "```":
             return None
