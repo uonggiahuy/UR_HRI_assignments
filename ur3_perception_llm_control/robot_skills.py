@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from math import hypot
 from typing import Callable, Mapping
 
 from geometry_msgs.msg import PoseStamped
@@ -15,7 +16,9 @@ from ur3_perception_llm_control.planning_scene import PlanningSceneManager
 from ur3_perception_llm_control.physical_grasp import PhysicalGraspManager
 from ur3_perception_llm_control.perception_scene import PerceptionPlanningSceneSynchronizer, SceneSyncError
 from ur3_perception_llm_control.perception_state import PerceptionSnapshot
-from ur3_perception_llm_control.world_state import BLOCKS, LEGACY_STUDENT_OBJECTS
+from ur3_perception_llm_control.temporary_position import TemporaryPlacement, TemporaryPositionError, TemporaryPositionPlanner
+from ur3_perception_llm_control.temporary_position_moveit import MoveItTemporaryFeasibility
+from ur3_perception_llm_control.world_state import BLOCKS, LEGACY_STUDENT_OBJECTS, PLAN_LAYOUT_TOLERANCE_M
 
 
 class SkillStatus(str, Enum):
@@ -53,6 +56,10 @@ class RobotSkills:
         scene_synchronizer: PerceptionPlanningSceneSynchronizer | None = None,
         now_sec: Callable[[], float] | None = None,
         home_configuration: Mapping[str, float],
+        temporary_planner: TemporaryPositionPlanner | None = None,
+        temporary_scene: Mapping[str, object] | None = None,
+        temporary_motion: Mapping[str, object] | None = None,
+        require_place_verification: bool = False,
     ) -> None:
         if (gazebo_sync is None) == (physical_grasp is None):
             raise ValueError("Provide exactly one Gazebo grasp backend")
@@ -70,6 +77,49 @@ class RobotSkills:
         self._now_sec = now_sec
         self._last_observation_sec: float | None = None
         self._home_configuration = dict(home_configuration)
+        self._temporary_planner = temporary_planner
+        self._temporary_scene = temporary_scene
+        self._temporary_motion = temporary_motion
+        self._require_place_verification = require_place_verification
+        self._reserved_temporary: TemporaryPlacement | None = None
+        self._reservation_snapshot: PerceptionSnapshot | None = None
+        self.last_verified_snapshot: PerceptionSnapshot | None = None
+
+    @property
+    def reserved_temporary(self) -> TemporaryPlacement | None:
+        return self._reserved_temporary
+
+    def clear_temporary_position(self) -> None:
+        self._reserved_temporary = None
+        self._reservation_snapshot = None
+
+    def reserve_temporary_position(self, object_name: str,
+                                   snapshot: PerceptionSnapshot) -> SkillStatus:
+        """Reserve one immutable M9 target before any task motion."""
+        self.clear_temporary_position()
+        if (self._physical_grasp is None or self._temporary_planner is None
+                or self._temporary_scene is None or self._temporary_motion is None
+                or self._scene_synchronizer is None or self._now_sec is None
+                or object_name not in BLOCKS or not self._physical_grasp.ready_for_pick()):
+            return SkillStatus.FAILED
+        try:
+            now = self._now_sec()
+            snapshot.require_fresh(now)
+            report = self._scene_synchronizer.apply_snapshot(snapshot, now)
+            checker = MoveItTemporaryFeasibility(
+                self._interface, self._primitives, self._temporary_scene,
+                self._temporary_motion, snapshot, report, object_name,
+            )
+            target, _ = self._temporary_planner.find_temporary_position(
+                object_name, snapshot, self._now_sec(), checker,
+            )
+            self._reserved_temporary = target
+            self._reservation_snapshot = snapshot
+            self._last_observation_sec = snapshot.observation_timestamp_sec
+            return SkillStatus.SUCCESS
+        except (SceneSyncError, TemporaryPositionError, ValueError, TypeError, KeyError, RuntimeError) as exc:
+            self._interface._node.get_logger().error(f"Temporary reservation failed: {exc}")
+            return SkillStatus.FAILED
 
     def home(self) -> SkillStatus:
         """Plan and execute the validated HOME joint configuration."""
@@ -180,6 +230,23 @@ class RobotSkills:
             return SkillStatus.FAILED
         return SkillStatus.SUCCESS
 
+    def place_temp(self, object_name: str) -> SkillStatus:
+        """Place the held physical cube at its previously reserved table slot."""
+        target = self._reserved_temporary
+        try:
+            if (self._physical_grasp is None or target is None
+                    or target.object_name != object_name):
+                return SkillStatus.FAILED
+            placement = PoseStamped()
+            placement.header.frame_id = self._scene_synchronizer.frame_id
+            placement.pose.position.x = target.x
+            placement.pose.position.y = target.y
+            placement.pose.position.z = target.z
+            placement.pose.orientation.w = 1.0
+            return self._physical_place_at(object_name, placement, expected_location="table")
+        finally:
+            self.clear_temporary_position()
+
     def _exclusive_state(self, name: str, expected: str) -> bool:
         scene = self._scene_manager.get()
         if scene is None:
@@ -197,6 +264,13 @@ class RobotSkills:
             snapshot = self._snapshot_source()
             if not isinstance(snapshot, PerceptionSnapshot):
                 return None
+            if self._reservation_snapshot is not None:
+                reserved = self._reservation_snapshot
+                if (dict(snapshot.object_locations) != dict(reserved.object_locations)
+                        or any(hypot(snapshot.object_world_xy[cube][0] - reserved.object_world_xy[cube][0],
+                                     snapshot.object_world_xy[cube][1] - reserved.object_world_xy[cube][1])
+                               > PLAN_LAYOUT_TOLERANCE_M for cube in BLOCKS)):
+                    return None
             report = self._scene_synchronizer.apply_snapshot(snapshot, self._now_sec())
             if report.attached_ids or name not in report.authoritative_xyz:
                 return None
@@ -253,14 +327,21 @@ class RobotSkills:
         If physical release fails, restore the MoveIt attachment while the
         wrist is stationary. No retreat occurs in an inconsistent state.
         """
+        placement = self._primitives.placement_world_pose(name, zone_name)
+        return self._physical_place_at(
+            name, placement,
+            expected_location=zone_name if self._require_place_verification else None,
+        )
+
+    def _physical_place_at(self, name: str, placement: PoseStamped,
+                           *, expected_location: str | None) -> SkillStatus:
         physical = self._physical_grasp
         assert physical is not None
         if not physical.is_attached(name) or not self._exclusive_state(name, "ATTACHED"):
             return SkillStatus.FAILED
-        placement = self._primitives.placement_world_pose(name, zone_name)
         for operation in (
             lambda: self._primitives.move_above_world_pose(placement),
-            lambda: self._primitives.descend_to_placement(name, zone_name),
+            lambda: self._primitives.descend_to_world_pose(placement),
         ):
             status = self._motion(operation())
             if status != SkillStatus.SUCCESS:
@@ -307,6 +388,17 @@ class RobotSkills:
             report = self._scene_synchronizer.apply_snapshot(snapshot, self._now_sec())
             if name in report.attached_ids:
                 return SkillStatus.FAILED
+            if expected_location is not None:
+                if snapshot.object_locations[name] != expected_location:
+                    return SkillStatus.FAILED
+                if expected_location == "table":
+                    previous = (self._reservation_snapshot.object_locations[name]
+                                if self._reservation_snapshot is not None else None)
+                    if previous in ("zone_a", "zone_b", "zone_c") and snapshot.zone_occupancy[previous] is not None:
+                        return SkillStatus.FAILED
+                elif snapshot.zone_occupancy[expected_location] != name:
+                    return SkillStatus.FAILED
+            self.last_verified_snapshot = snapshot
             self._last_observation_sec = snapshot.observation_timestamp_sec
         except (SceneSyncError, ValueError, TypeError, KeyError, RuntimeError) as exc:
             self._interface._node.get_logger().error(f"Post-release observation/scene sync failed: {exc}")

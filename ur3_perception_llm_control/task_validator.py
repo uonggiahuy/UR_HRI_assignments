@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from ur3_perception_llm_control.world_state import LEGACY_STUDENT_OBJECTS, TABLE, ZONES, WorldState
+from ur3_perception_llm_control.world_state import BLOCKS, LEGACY_STUDENT_OBJECTS, TABLE, ZONES, WorldState
 
 
 class TaskStatus(str, Enum):
@@ -29,6 +29,7 @@ class ValidationResult:
     message: str
     steps: tuple[dict[str, str], ...] = ()
     world_revision: int | None = None
+    world_signature: tuple | None = None
 
     @property
     def accepted(self) -> bool:
@@ -44,7 +45,12 @@ class TaskValidator:
         "place": frozenset(("skill", "object", "zone")),
     }
 
+    def __init__(self, *, assignment03: bool = False) -> None:
+        self.assignment03 = assignment03
+
     def validate(self, plan_input: str | bytes | dict[str, Any], world_state: WorldState) -> ValidationResult:
+        if self.assignment03 and world_state.perception_timestamp_sec is None:
+            return self._reject(TaskStatus.INVALID_PLAN, "Assignment 03 requires camera-derived task state")
         document = self._decode(plan_input)
         if document is None:
             return self._reject(TaskStatus.INVALID_PLAN, "plan must be valid JSON object")
@@ -67,7 +73,8 @@ class TaskValidator:
                 return semantic_error
             self._simulate(checked, simulated)
             steps.append(checked)
-        return ValidationResult(TaskStatus.SUCCESS, "PLAN ACCEPTED", tuple(steps), world_state.revision)
+        return ValidationResult(TaskStatus.SUCCESS, "PLAN ACCEPTED", tuple(steps),
+                                world_state.revision, world_state.signature())
 
     @staticmethod
     def _decode(plan_input: str | bytes | dict[str, Any]) -> dict[str, Any] | None:
@@ -85,13 +92,17 @@ class TaskValidator:
         if not isinstance(raw_step, dict) or not raw_step:
             return self._reject(TaskStatus.INVALID_PLAN, f"step {index} must be a non-empty object")
         skill = raw_step.get("skill")
-        if not isinstance(skill, str) or skill not in self._SCHEMAS:
+        schemas = self._SCHEMAS if not self.assignment03 else {
+            **self._SCHEMAS, "place_temp": frozenset(("skill", "object")),
+        }
+        if not isinstance(skill, str) or skill not in schemas:
             return self._reject(TaskStatus.INVALID_SKILL, f"step {index} has unsupported skill")
-        if set(raw_step) != self._SCHEMAS[skill]:
+        if set(raw_step) != schemas[skill]:
             return self._reject(TaskStatus.INVALID_PLAN, f"step {index} has incorrect arguments for {skill}")
-        if skill in ("pick", "place"):
+        if skill in ("pick", "place", "place_temp"):
             object_name = raw_step["object"]
-            if not isinstance(object_name, str) or object_name not in LEGACY_STUDENT_OBJECTS:
+            allowed = BLOCKS if self.assignment03 else LEGACY_STUDENT_OBJECTS
+            if not isinstance(object_name, str) or object_name not in allowed:
                 return self._reject(TaskStatus.INVALID_OBJECT, f"step {index} has invalid object")
         if skill == "place":
             zone_name = raw_step["zone"]
@@ -106,12 +117,12 @@ class TaskValidator:
         if skill == "pick":
             if state.held_object is not None:
                 return self._reject(TaskStatus.ALREADY_HOLDING_OBJECT, f"step {index}: already holding {state.held_object}")
-            if state.object_locations[step["object"]] != TABLE:
+            if (not self.assignment03 and state.object_locations[step["object"]] != TABLE):
                 return self._reject(TaskStatus.INVALID_PLAN, f"step {index}: object is not available on table")
-        elif skill == "place":
+        elif skill in ("place", "place_temp"):
             if state.held_object != step["object"]:
                 return self._reject(TaskStatus.OBJECT_NOT_HELD, f"step {index}: object is not held")
-            if state.zone_occupancy[step["zone"]] is not None:
+            if skill == "place" and state.zone_occupancy[step["zone"]] is not None:
                 return self._reject(TaskStatus.ZONE_OCCUPIED, f"step {index}: zone is occupied")
         return None
 
@@ -121,6 +132,8 @@ class TaskValidator:
             state.record_pick_success(step["object"])
         elif step["skill"] == "place":
             state.record_place_success(step["object"], step["zone"])
+        elif step["skill"] == "place_temp":
+            state.record_temp_place_success(step["object"])
 
     @staticmethod
     def _reject(status: TaskStatus, message: str) -> ValidationResult:

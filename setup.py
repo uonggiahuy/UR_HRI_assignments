@@ -58,6 +58,7 @@ setup(
             "perception_state_test = ur3_perception_llm_control.perception_state_test:main",
             "perception_scene_test = ur3_perception_llm_control.perception_scene_test:main",
             "temporary_position_test = ur3_perception_llm_control.temporary_position_test:main",
+            "m10_blocker_execution_test = ur3_perception_llm_control.m10_blocker_execution_test:main",
         ],
     },
 )
