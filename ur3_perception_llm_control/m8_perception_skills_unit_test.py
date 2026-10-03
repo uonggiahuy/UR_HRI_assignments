@@ -29,6 +29,7 @@ class M8PerceptionSkillsTest(unittest.TestCase):
         self.interface = Mock(planning_frame="base_link")
         self.interface.move_to_joint_configuration.return_value = MotionResult.SUCCESS
         self.interface.move_to_pose.return_value = MotionResult.SUCCESS
+        self.interface.move_straight_to_pose.return_value = MotionResult.SUCCESS
         self.primitives = ManipulationMotionPrimitives(self.interface, self.scene, self.motion)
         self.gripper = Mock()
         self.physical = Mock()
@@ -89,9 +90,23 @@ class M8PerceptionSkillsTest(unittest.TestCase):
             self.assertAlmostEqual(placement.pose.position.y, zone["pose"]["y"])
             self.assertAlmostEqual(placement.pose.position.z, height + cube_half)
             self.primitives.descend_to_placement("red_cube", zone_name)
-            target = self.interface.move_to_pose.call_args.args[0]
+            target = self.interface.move_straight_to_pose.call_args.args[0]
             self.assertAlmostEqual(target.pose.position.z + self.scene["robot"]["mount_pose"]["z"],
                                    height + cube_half + self.motion["manipulation"]["grasp_z_offset"])
+
+    def test_zone_repick_descent_keeps_the_approach_xy_and_uses_cartesian_motion(self):
+        """A settled zone cube must descend vertically beside table neighbors."""
+        observed = snapshot(dict(A, red_cube=(0.002, 0.252)), self.geometry)
+        center = self.primitives.target_world_pose("red_cube")
+        center.pose.position.x = observed.object_world_xy["red_cube"][0]
+        center.pose.position.y = observed.object_world_xy["red_cube"][1]
+        approach, descent = self.primitives.placement_planning_poses(center)
+        self.primitives.descend_to_world_pose(center)
+        target = self.interface.move_straight_to_pose.call_args.args[0]
+        self.assertAlmostEqual(target.pose.position.x, descent.pose.position.x)
+        self.assertAlmostEqual(target.pose.position.y, descent.pose.position.y)
+        self.assertLess(target.pose.position.z, approach.pose.position.z)
+        self.interface.move_to_pose.assert_not_called()
 
     def test_authoritative_scene_mismatch_blocks_motion(self):
         self.manager.inject_duplicate = True
@@ -110,6 +125,9 @@ class M8PerceptionSkillsTest(unittest.TestCase):
         held = [True]
         events = []
         self.interface.move_to_pose.side_effect = lambda pose: events.append("motion") or MotionResult.SUCCESS
+        self.interface.move_straight_to_pose.side_effect = (
+            lambda pose: events.append("motion") or MotionResult.SUCCESS
+        )
         self.gripper.open.side_effect = lambda: events.append("open")
         self.physical.is_attached.side_effect = lambda name: held[0]
 

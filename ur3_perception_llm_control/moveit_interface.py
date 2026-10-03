@@ -20,7 +20,7 @@ from moveit_msgs.msg import (
     RobotState,
     RobotTrajectory,
 )
-from moveit_msgs.srv import GetPositionIK, GetStateValidity
+from moveit_msgs.srv import GetCartesianPath, GetPositionIK, GetStateValidity
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
@@ -57,6 +57,8 @@ class MoveItArmInterface:
     Pose targets are poses of ``gripper_tcp``. The configured MoveIt group
     ends at ``tool0``, so the fixed tool0-to-TCP offset is removed before IK.
     """
+
+    _CARTESIAN_TIME_SCALE = 2.0
 
     def __init__(
         self,
@@ -95,6 +97,9 @@ class MoveItArmInterface:
             node, ExecuteTrajectory, "/execute_trajectory"
         )
         self._ik_client = node.create_client(GetPositionIK, "/compute_ik")
+        self._cartesian_client = node.create_client(
+            GetCartesianPath, "/compute_cartesian_path"
+        )
         self._validity_client = node.create_client(
             GetStateValidity, "/check_state_validity"
         )
@@ -139,6 +144,7 @@ class MoveItArmInterface:
             rclpy.spin_once(self._node, timeout_sec=0.1)
             services_ready = (
                 self._ik_client.wait_for_service(timeout_sec=0.1)
+                and self._cartesian_client.wait_for_service(timeout_sec=0.1)
                 and self._validity_client.wait_for_service(timeout_sec=0.1)
                 and self._controller_client.wait_for_service(timeout_sec=0.1)
             )
@@ -193,6 +199,50 @@ class MoveItArmInterface:
         if result != MotionResult.SUCCESS or trajectory is None:
             return result
         return self._execute(trajectory, "gripper_tcp pose")
+
+    def move_straight_to_pose(self, gripper_tcp_pose: PoseStamped) -> MotionResult:
+        """Execute a fully collision-checked Cartesian TCP segment.
+
+        This is deliberately narrower than ``move_to_pose``: callers use it
+        only after reaching an aligned approach pose, where changing XY while
+        descending can sweep an adjacent cube.  The Cartesian service receives
+        the current measured state and performs collision checking for every
+        sampled waypoint; partial paths are rejected.
+        """
+        normalized = self._validated_pose(gripper_tcp_pose)
+        if normalized is None:
+            return MotionResult.INVALID_TARGET
+        if not self.wait_until_ready():
+            return MotionResult.NOT_READY
+        state = self._current_robot_state()
+        if state is None:
+            return MotionResult.NOT_READY
+        tool0_pose = self._gripper_tcp_to_tool0(normalized)
+        request = GetCartesianPath.Request()
+        request.header = tool0_pose.header
+        request.start_state = state
+        request.group_name = self.planning_group
+        request.link_name = self.planning_tip
+        request.waypoints = [tool0_pose.pose]
+        request.max_step = 0.005
+        request.jump_threshold = 0.0
+        request.prismatic_jump_threshold = 0.0
+        request.revolute_jump_threshold = 0.0
+        request.avoid_collisions = True
+        request.max_velocity_scaling_factor = self.velocity_scaling
+        request.max_acceleration_scaling_factor = self.acceleration_scaling
+        response = self._call_service(
+            self._cartesian_client, request, "collision-checked Cartesian segment"
+        )
+        if (response is None or response.error_code.val != MoveItErrorCodes.SUCCESS
+                or response.fraction < 1.0
+                or not self._trajectory_is_valid(response.solution)):
+            self._node.get_logger().error(
+                "Cartesian segment rejected: incomplete, invalid, or collision-checked path unavailable"
+            )
+            return MotionResult.PLANNING_FAILED
+        trajectory = self._retime_cartesian_trajectory(response.solution)
+        return self._execute(trajectory, "collision-checked Cartesian segment")
 
     def plan_pose_sequence(self, poses: Sequence[PoseStamped], *,
                            start_joint_positions: Mapping[str, float] | None = None,
@@ -322,6 +372,7 @@ class MoveItArmInterface:
         self._move_client.destroy()
         self._execute_client.destroy()
         self._node.destroy_client(self._ik_client)
+        self._node.destroy_client(self._cartesian_client)
         self._node.destroy_client(self._validity_client)
         self._node.destroy_client(self._controller_client)
         self._node.destroy_subscription(self._joint_state_sub)
@@ -554,6 +605,32 @@ class MoveItArmInterface:
                 return False
             previous_time = current_time
         return previous_time >= 0.0
+
+    @classmethod
+    def _retime_cartesian_trajectory(cls, trajectory: RobotTrajectory) -> RobotTrajectory:
+        """Slow a MoveIt-generated Cartesian segment without changing its path.
+
+        Humble's Cartesian-path service returns a geometric trajectory directly
+        to the controller, bypassing the time-parameterization adapter used by
+        MoveGroup pose planning.  Conservatively scaling the supplied timing
+        keeps every MoveIt collision-checked waypoint intact while avoiding
+        controller path-tolerance aborts near the workspace edge.
+        """
+        result = deepcopy(trajectory)
+        for point in result.joint_trajectory.points:
+            seconds = (float(point.time_from_start.sec)
+                       + float(point.time_from_start.nanosec) * 1e-9)
+            scaled = seconds * cls._CARTESIAN_TIME_SCALE
+            point.time_from_start.sec = int(scaled)
+            point.time_from_start.nanosec = int(round((scaled % 1.0) * 1e9))
+            if point.time_from_start.nanosec == 1_000_000_000:
+                point.time_from_start.sec += 1
+                point.time_from_start.nanosec = 0
+            point.velocities = [value / cls._CARTESIAN_TIME_SCALE for value in point.velocities]
+            point.accelerations = [
+                value / (cls._CARTESIAN_TIME_SCALE ** 2) for value in point.accelerations
+            ]
+        return result
 
     def _validated_pose(self, pose: PoseStamped) -> Optional[PoseStamped]:
         if pose.header.frame_id != self.planning_frame:

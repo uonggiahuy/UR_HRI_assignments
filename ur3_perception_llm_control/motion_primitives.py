@@ -44,9 +44,9 @@ class ManipulationMotionPrimitives:
         )
 
     def descend(self, target: str) -> MotionResult:
-        """Collision-plan to the configured gripper-TCP grasp height."""
+        """Collision-check a straight downward segment from the approach pose."""
         self._last_target = target
-        return self._interface.move_to_pose(
+        return self._interface.move_straight_to_pose(
             self._target_pose(target, self._grasp_z_offset)
         )
 
@@ -54,7 +54,7 @@ class ManipulationMotionPrimitives:
         """Descend to the YAML-derived cube placement height above a zone."""
         self._last_target = zone_name
         placement = self.placement_world_pose(object_name, zone_name)
-        return self._interface.move_to_pose(
+        return self._interface.move_straight_to_pose(
             self._pose_for_world_coordinates(
                 placement.pose.position.x,
                 placement.pose.position.y,
@@ -66,7 +66,9 @@ class ManipulationMotionPrimitives:
         return self._interface.move_to_pose(self._offset_world_pose(center, self._approach_clearance))
 
     def descend_to_world_pose(self, center: PoseStamped) -> MotionResult:
-        return self._interface.move_to_pose(self._offset_world_pose(center, self._grasp_z_offset))
+        return self._interface.move_straight_to_pose(
+            self._offset_world_pose(center, self._grasp_z_offset)
+        )
 
     def retreat_from_world_pose(self, center: PoseStamped) -> MotionResult:
         return self._interface.move_to_pose(self._offset_world_pose(center, self._retreat_clearance))

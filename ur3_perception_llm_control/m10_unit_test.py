@@ -178,6 +178,7 @@ class M10UnitTest(unittest.TestCase):
             manager.scene.world.collision_objects.append(red), True)[-1])
         interface = Mock(planning_frame="base_link")
         interface.move_to_pose.return_value = MotionResult.SUCCESS
+        interface.move_straight_to_pose.return_value = MotionResult.SUCCESS
         interface.move_to_joint_configuration.return_value = MotionResult.SUCCESS
         held = [True]
         physical = Mock()
