@@ -60,6 +60,7 @@ setup(
             "temporary_position_test = ur3_perception_llm_control.temporary_position_test:main",
             "m10_blocker_execution_test = ur3_perception_llm_control.m10_blocker_execution_test:main",
             "m11_scene_aware_planner_test = ur3_perception_llm_control.m11_scene_aware_planner_test:main",
+            "m12_scene_aware_execution = ur3_perception_llm_control.m12_scene_aware_execution:main",
         ],
     },
 )
