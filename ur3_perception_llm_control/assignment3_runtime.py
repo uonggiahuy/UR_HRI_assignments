@@ -28,7 +28,9 @@ from ur3_perception_llm_control.m12_scene_aware_execution import (
 from ur3_perception_llm_control.motion_primitives import ManipulationMotionPrimitives
 from ur3_perception_llm_control.moveit_interface import ARM_JOINTS, MoveItArmInterface
 from ur3_perception_llm_control.perception_scene import PerceptionPlanningSceneSynchronizer
-from ur3_perception_llm_control.perception_state import PerceptionSnapshot, WorkcellGeometry
+from ur3_perception_llm_control.perception_state import (
+    PerceptionSnapshot, PerceptionStateError, PerceptionStateStatus, WorkcellGeometry,
+)
 from ur3_perception_llm_control.physical_grasp import PhysicalGraspManager
 from ur3_perception_llm_control.planar_mapper import Calibration, CubeTopMapper, PlanarMapper
 from ur3_perception_llm_control.planning_scene import PlanningSceneManager
@@ -124,14 +126,20 @@ class Assignment3Runtime:
         assert self._node is not None
         deadline = time.monotonic() + self._options.camera_timeout
         while rclpy.ok() and time.monotonic() < deadline:
+            rclpy.spin_once(self._node, timeout_sec=0.1)
             if (len(self._node.samples) == self._perception.frames
+                    and len(self._node.timestamps) == self._perception.frames
                     and self._node.timestamps[-1] > self._last_stamp
                     and evaluate_stability(list(self._node.samples), self._perception).stable):
                 snapshot = PerceptionSnapshot.from_detections(self._node.samples[-1], self._geometry)
-                snapshot.require_fresh(self._now_sec())
+                try:
+                    snapshot.require_fresh(self._now_sec())
+                except PerceptionStateError as error:
+                    if error.status == PerceptionStateStatus.STALE:
+                        continue
+                    raise
                 self._last_stamp = snapshot.observation_timestamp_sec
                 return snapshot
-            rclpy.spin_once(self._node, timeout_sec=0.1)
         raise RuntimeError(f"No stable fresh RGB snapshot: {self._node.failures[-3:]}")
 
     def _safe_idle(self) -> bool:
@@ -148,8 +156,15 @@ class Assignment3Runtime:
 
     def execute_command(self, command: str) -> bool:
         """Run one new RGB/LLM/validator/executor transaction and discard it."""
+        goal = extract_placement_goal(command)
+        if goal is None:
+            print("TASK FAILED: unsupported or low-level request; no LLM call or motion", flush=True)
+            return False
         assert self._skills and self._physical and self._synchronizer and self._planner
         self._skills.clear_temporary_position()
+        assert self._node is not None
+        self._node.samples.clear()
+        self._node.timestamps.clear()
         try:
             initial = self._snapshot_source()
             initial_report = self._synchronizer.apply_snapshot(initial, self._now_sec())
@@ -158,11 +173,8 @@ class Assignment3Runtime:
             if not self._physical.ready_for_pick():
                 raise RuntimeError("stale physical attachment before planning")
             state = WorldState.from_perception_snapshot(initial, self._now_sec(), self._geometry)
-            goal = extract_placement_goal(command)
             print(f"[PERCEPTION]\n{build_scene_context(state)}", flush=True)
             print(f"[USER] {command}", flush=True)
-            if goal is None:
-                raise RuntimeError("unsupported or low-level request; no LLM call or motion")
             selected = [None]
 
             def on_success(index: int, step: dict[str, str]) -> None:
