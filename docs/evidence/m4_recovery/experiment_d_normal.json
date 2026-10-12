@@ -1,0 +1,1041 @@
+{
+  "duration": 30.000419026999907,
+  "ranges": {
+    "clock": [
+      360.525,
+      390.51,
+      9996
+    ],
+    "scan": [
+      360.498,
+      390.498,
+      1876
+    ],
+    "odom": [
+      360.519,
+      390.504,
+      1860
+    ],
+    "truth": [
+      360.522,
+      390.51,
+      1667
+    ],
+    "local_footprint": [
+      140.343,
+      140.343,
+      150
+    ],
+    "global_footprint": [
+      140.343,
+      140.343,
+      30
+    ],
+    "local": [
+      0.0,
+      0.0,
+      50
+    ],
+    "global": [
+      0.0,
+      0.0,
+      18
+    ]
+  },
+  "services": [
+    {
+      "wall_elapsed": 2.002401347999921,
+      "service": "map_server/get_state",
+      "latency": 0.0020782940000572125,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.002506915999902,
+      "service": "map_server/get_parameters",
+      "latency": 0.0021838620000380615,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0025581859999875,
+      "service": "amcl/get_state",
+      "latency": 0.0022351320001234853,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.002622927999937,
+      "service": "amcl/get_parameters",
+      "latency": 0.0022998740000730322,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.002665049999905,
+      "service": "controller_server/get_state",
+      "latency": 0.0023419960000410356,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.0027248819999386,
+      "service": "controller_server/get_parameters",
+      "latency": 0.0024018280000746017,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0027651509999487,
+      "service": "smoother_server/get_state",
+      "latency": 0.0024420970000846864,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.0029609949999667,
+      "service": "smoother_server/get_parameters",
+      "latency": 0.002637941000102728,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0030809069999123,
+      "service": "planner_server/get_state",
+      "latency": 0.0027578530000482715,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.003210774999843,
+      "service": "planner_server/get_parameters",
+      "latency": 0.0028877209999791376,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.003292022999858,
+      "service": "behavior_server/get_state",
+      "latency": 0.002968968999994104,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.003410229999872,
+      "service": "behavior_server/get_parameters",
+      "latency": 0.003087176000008185,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.003490687999829,
+      "service": "bt_navigator/get_state",
+      "latency": 0.0031676339999648917,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.003600543999937,
+      "service": "bt_navigator/get_parameters",
+      "latency": 0.0032774900000731577,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.003673187000004,
+      "service": "waypoint_follower/get_state",
+      "latency": 0.0033501330001399765,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.0037794200000008,
+      "service": "waypoint_follower/get_parameters",
+      "latency": 0.003456366000136768,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0038562519998777,
+      "service": "velocity_smoother/get_state",
+      "latency": 0.0035331980000137264,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.003969288999997,
+      "service": "velocity_smoother/get_parameters",
+      "latency": 0.003646235000132947,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0040641470000082,
+      "service": "global_costmap/global_costmap/get_state",
+      "latency": 0.0037410930001442466,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.004170257999931,
+      "service": "global_costmap/global_costmap/get_parameters",
+      "latency": 0.003847204000066995,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.004872966999983,
+      "service": "local_costmap/local_costmap/get_state",
+      "latency": 0.004549913000118977,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 2.004955348999829,
+      "service": "local_costmap/local_costmap/get_parameters",
+      "latency": 0.00463229499996487,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 2.0050425469999027,
+      "service": "lifecycle_manager_navigation/get_parameters",
+      "latency": 0.00471949300003871,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ],
+        [
+          9,
+          false,
+          [
+            "controller_server",
+            "smoother_server",
+            "planner_server",
+            "behavior_server",
+            "bt_navigator",
+            "waypoint_follower",
+            "velocity_smoother"
+          ]
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.002534193999963,
+      "service": "map_server/get_state",
+      "latency": 0.0020227459999659914,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.00265066399993,
+      "service": "map_server/get_parameters",
+      "latency": 0.0021392159999322757,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.002709698999979,
+      "service": "amcl/get_state",
+      "latency": 0.0021982509999816102,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.00279562999981,
+      "service": "amcl/get_parameters",
+      "latency": 0.0022841819998120627,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.002850291999948,
+      "service": "controller_server/get_state",
+      "latency": 0.002338843999950768,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.002926925999873,
+      "service": "controller_server/get_parameters",
+      "latency": 0.002415477999875293,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.002978549999852,
+      "service": "smoother_server/get_state",
+      "latency": 0.0024671019998550037,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003054111999973,
+      "service": "smoother_server/get_parameters",
+      "latency": 0.0025426639999750478,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003106970999852,
+      "service": "planner_server/get_state",
+      "latency": 0.0025955229998544382,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003183261000004,
+      "service": "planner_server/get_parameters",
+      "latency": 0.0026718130000062956,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003235466999968,
+      "service": "behavior_server/get_state",
+      "latency": 0.0027240189999702125,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003320708999809,
+      "service": "behavior_server/get_parameters",
+      "latency": 0.0028092609998111584,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.00337311699991,
+      "service": "bt_navigator/get_state",
+      "latency": 0.002861668999912581,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003430782999885,
+      "service": "bt_navigator/get_parameters",
+      "latency": 0.002919334999887724,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003468701999964,
+      "service": "waypoint_follower/get_state",
+      "latency": 0.0029572539999662695,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003523876999907,
+      "service": "waypoint_follower/get_parameters",
+      "latency": 0.003012428999909389,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003570496999828,
+      "service": "velocity_smoother/get_state",
+      "latency": 0.0030590489998303383,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003627090999998,
+      "service": "velocity_smoother/get_parameters",
+      "latency": 0.0031156430000010005,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003673628999877,
+      "service": "global_costmap/global_costmap/get_state",
+      "latency": 0.003162180999879638,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003730053000027,
+      "service": "global_costmap/global_costmap/get_parameters",
+      "latency": 0.003218605000029129,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.003766713000005,
+      "service": "local_costmap/local_costmap/get_state",
+      "latency": 0.003255265000007057,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 12.003818922999926,
+      "service": "local_costmap/local_costmap/get_parameters",
+      "latency": 0.0033074749999286723,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 12.00389052599985,
+      "service": "lifecycle_manager_navigation/get_parameters",
+      "latency": 0.0033790779998525977,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ],
+        [
+          9,
+          false,
+          [
+            "controller_server",
+            "smoother_server",
+            "planner_server",
+            "behavior_server",
+            "bt_navigator",
+            "waypoint_follower",
+            "velocity_smoother"
+          ]
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.00250905400003,
+      "service": "map_server/get_state",
+      "latency": 0.0014926180001566536,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.002604303,
+      "service": "map_server/get_parameters",
+      "latency": 0.0015878670001256978,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.002656141999978,
+      "service": "amcl/get_state",
+      "latency": 0.0016397060001054342,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.00271510499988,
+      "service": "amcl/get_parameters",
+      "latency": 0.0016986690000067028,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.002754447999905,
+      "service": "controller_server/get_state",
+      "latency": 0.0017380120000325405,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.002814482999838,
+      "service": "controller_server/get_parameters",
+      "latency": 0.0017980469999656634,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.002853785999832,
+      "service": "smoother_server/get_state",
+      "latency": 0.0018373499999597698,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.00290968699983,
+      "service": "smoother_server/get_parameters",
+      "latency": 0.0018932509999558533,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.00294705599981,
+      "service": "planner_server/get_state",
+      "latency": 0.0019306199999391538,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.00300090099995,
+      "service": "planner_server/get_parameters",
+      "latency": 0.001984465000077762,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.00304168799994,
+      "service": "behavior_server/get_state",
+      "latency": 0.0020252520000667573,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.00309839700003,
+      "service": "behavior_server/get_parameters",
+      "latency": 0.002081961000158117,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.003136006999966,
+      "service": "bt_navigator/get_state",
+      "latency": 0.002119571000093856,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.003189155999962,
+      "service": "bt_navigator/get_parameters",
+      "latency": 0.002172720000089612,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.00322402400002,
+      "service": "waypoint_follower/get_state",
+      "latency": 0.002207588000146643,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.003280470999925,
+      "service": "waypoint_follower/get_parameters",
+      "latency": 0.0022640350000528997,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.003317003999882,
+      "service": "velocity_smoother/get_state",
+      "latency": 0.0023005680000096618,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.00337618399999,
+      "service": "velocity_smoother/get_parameters",
+      "latency": 0.002359748000117179,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.003411630999835,
+      "service": "global_costmap/global_costmap/get_state",
+      "latency": 0.0023951949999627686,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.003477546999875,
+      "service": "global_costmap/global_costmap/get_parameters",
+      "latency": 0.0024611110000023473,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.003516080999816,
+      "service": "local_costmap/local_costmap/get_state",
+      "latency": 0.0024996449999434844,
+      "status": "OK",
+      "value": "active"
+    },
+    {
+      "wall_elapsed": 22.003577528999813,
+      "service": "local_costmap/local_costmap/get_parameters",
+      "latency": 0.0025610929999402288,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ]
+      ]
+    },
+    {
+      "wall_elapsed": 22.00366079299988,
+      "service": "lifecycle_manager_navigation/get_parameters",
+      "latency": 0.0026443570000083128,
+      "status": "OK",
+      "value": [
+        [
+          1,
+          true,
+          []
+        ],
+        [
+          9,
+          false,
+          [
+            "controller_server",
+            "smoother_server",
+            "planner_server",
+            "behavior_server",
+            "bt_navigator",
+            "waypoint_follower",
+            "velocity_smoother"
+          ]
+        ]
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "wall_elapsed": 0.0007173439998950926,
+      "monotonic": 1261.619378592,
+      "clock": null,
+      "ages": {},
+      "receipt_ages": {},
+      "tf": {},
+      "tf_error": "\"map\" passed to lookupTransform argument target_frame does not exist. "
+    },
+    {
+      "wall_elapsed": 5.002218367999831,
+      "monotonic": 1266.620879616,
+      "clock": 365.532,
+      "ages": {
+        "clock": 0.0,
+        "scan": 0.012000000000000455,
+        "odom": 0.012000000000000455,
+        "truth": 0.005999999999971806,
+        "local_footprint": 225.189,
+        "global_footprint": 225.189,
+        "local": 365.532,
+        "global": 365.532
+      },
+      "receipt_ages": {
+        "clock": 0.002847042999974292,
+        "scan": 0.008303873999921052,
+        "odom": 0.013586886999974013,
+        "truth": 0.007633043999931033,
+        "local_footprint": 0.05826426199996604,
+        "global_footprint": 0.5014328509998904,
+        "local": 0.25798737999980403,
+        "global": 0.5006486309998763
+      },
+      "tf": {
+        "map->odom": [
+          366.52,
+          -0.9879999999999995,
+          0.007515912999906504
+        ],
+        "odom->base_link": [
+          365.52,
+          0.012000000000000455,
+          0.013521451999849887
+        ]
+      },
+      "local_header_stamp": 365.274,
+      "global_header_stamp": 365.031,
+      "robot": [
+        -0.0062270913058256735,
+        -0.029642797742004515
+      ],
+      "composed_tf_age": 0.012000000000000455,
+      "truth": [
+        0.0005162005748826861,
+        -7.758142713542742e-07
+      ],
+      "error_m": 0.030399365936687576
+    },
+    {
+      "wall_elapsed": 10.002416369000002,
+      "monotonic": 1271.621077617,
+      "clock": 370.53,
+      "ages": {
+        "clock": 0.0,
+        "scan": 0.014999999999986358,
+        "odom": 0.008999999999957708,
+        "truth": 0.0,
+        "local_footprint": 230.18699999999998,
+        "global_footprint": 230.18699999999998,
+        "local": 370.53,
+        "global": 370.53
+      },
+      "receipt_ages": {
+        "clock": 0.0008940830000483402,
+        "scan": 0.010503246000098443,
+        "odom": 0.008983438000086608,
+        "truth": 1.758899998094421e-05,
+        "local_footprint": 0.05849982600011572,
+        "global_footprint": 0.5014718550000907,
+        "local": 0.45829195700002856,
+        "global": 0.5009750730000633
+      },
+      "tf": {
+        "map->odom": [
+          371.515,
+          -0.9850000000000136,
+          0.008313737999969817
+        ],
+        "odom->base_link": [
+          370.521,
+          0.008999999999957708,
+          0.008851624000044467
+        ]
+      },
+      "local_header_stamp": 370.071,
+      "global_header_stamp": 370.029,
+      "robot": [
+        -0.006227091305826314,
+        -0.029642797742004515
+      ],
+      "composed_tf_age": 0.008999999999957708,
+      "truth": [
+        0.0005162005748826861,
+        -7.758142713542742e-07
+      ],
+      "error_m": 0.030399365936687718
+    },
+    {
+      "wall_elapsed": 15.002442652999889,
+      "monotonic": 1276.621103901,
+      "clock": 375.519,
+      "ages": {
+        "clock": 0.0,
+        "scan": 0.012000000000000455,
+        "odom": 0.014999999999986358,
+        "truth": 0.002999999999985903,
+        "local_footprint": 235.17600000000002,
+        "global_footprint": 235.17600000000002,
+        "local": 375.519,
+        "global": 375.519
+      },
+      "receipt_ages": {
+        "clock": 0.0009713289998671826,
+        "scan": 0.002330067999992025,
+        "odom": 0.014362726999934239,
+        "truth": 0.002848187999916263,
+        "local_footprint": 0.0584914230000777,
+        "global_footprint": 0.5014297909999641,
+        "local": 0.05817644700005076,
+        "global": 0.5010551759999089
+      },
+      "tf": {
+        "map->odom": [
+          376.489,
+          -0.9699999999999704,
+          0.014294581000058315
+        ],
+        "odom->base_link": [
+          375.519,
+          0.0,
+          1.047699993250717e-05
+        ]
+      },
+      "local_header_stamp": 375.459,
+      "global_header_stamp": 375.018,
+      "robot": [
+        -0.006227091305826954,
+        -0.02964279774200452
+      ],
+      "composed_tf_age": 0.0,
+      "truth": [
+        0.0005162005748826861,
+        -7.758142713542742e-07
+      ],
+      "error_m": 0.030399365936687864
+    },
+    {
+      "wall_elapsed": 20.002925888999926,
+      "monotonic": 1281.621587137,
+      "clock": 380.514,
+      "ages": {
+        "clock": 0.0,
+        "scan": 0.018000000000029104,
+        "odom": 0.009000000000014552,
+        "truth": 0.012000000000000455,
+        "local_footprint": 240.17100000000002,
+        "global_footprint": 240.17100000000002,
+        "local": 380.514,
+        "global": 380.514
+      },
+      "receipt_ages": {
+        "clock": 0.0029766449999897304,
+        "scan": 0.014579580999907193,
+        "odom": 0.010875833000000057,
+        "truth": 0.0138947969999208,
+        "local_footprint": 0.05895894200011753,
+        "global_footprint": 0.5021002099999805,
+        "local": 0.25874590300009004,
+        "global": 1.501617921999923
+      },
+      "tf": {
+        "map->odom": [
+          381.496,
+          -0.9819999999999709,
+          0.010815660999924148
+        ],
+        "odom->base_link": [
+          380.505,
+          0.009000000000014552,
+          0.01127102600003127
+        ]
+      },
+      "local_header_stamp": 380.256,
+      "global_header_stamp": 379.014,
+      "robot": [
+        -0.006227091305827591,
+        -0.02964279774200452
+      ],
+      "composed_tf_age": 0.009000000000014552,
+      "truth": [
+        0.0005162005748826861,
+        -7.758142713542742e-07
+      ],
+      "error_m": 0.030399365936688006
+    },
+    {
+      "wall_elapsed": 25.00404701499997,
+      "monotonic": 1286.622708263,
+      "clock": 385.515,
+      "ages": {
+        "clock": 0.0,
+        "scan": 0.009000000000014552,
+        "odom": 0.012000000000000455,
+        "truth": 0.009000000000014552,
+        "local_footprint": 245.172,
+        "global_footprint": 245.172,
+        "local": 385.515,
+        "global": 385.515
+      },
+      "receipt_ages": {
+        "clock": 0.0029110970001511305,
+        "scan": 0.0033718889999363455,
+        "odom": 0.014091620000044713,
+        "truth": 0.011063515000159896,
+        "local_footprint": 0.06019815500008008,
+        "global_footprint": 0.5032489499999429,
+        "local": 0.459819465999999,
+        "global": 0.5026704859999427
+      },
+      "tf": {
+        "map->odom": [
+          386.491,
+          -0.9759999999999991,
+          0.013807054000153585
+        ],
+        "odom->base_link": [
+          385.503,
+          0.012000000000000455,
+          0.014030925000042771
+        ]
+      },
+      "local_header_stamp": 385.056,
+      "global_header_stamp": 385.014,
+      "robot": [
+        -0.006227091305828232,
+        -0.029642797742004522
+      ],
+      "composed_tf_age": 0.012000000000000455,
+      "truth": [
+        0.0005162005748826861,
+        -7.758142713542742e-07
+      ],
+      "error_m": 0.030399365936688152
+    }
+  ]
+}

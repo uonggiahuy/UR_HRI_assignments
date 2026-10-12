@@ -350,3 +350,21 @@ handoff were not newly verified in M4. Do not proceed to M5/M6 before M4 passes.
   UR repositories, skills, AGENTS.md and unrelated dirty files were not committed.
 - The commit/push verifies delivery of the tested software and honest failure
   evidence. It **does not change M4's failed autonomous-navigation acceptance**.
+
+## M4 recovery — 2026-10-12
+
+The original 0/3 result above is historical and retained. The recovery isolated a
+TF2 0.25.23 callback lock inversion in native costmap scan/TF threads, corrected
+Humble raw-topic timestamp handling and a misleading deadline timeout, and removed
+full-grid counting from the goal verifier's callback loop. Unmodified upstream
+TF2 0.25.24 is built separately with the assignment's pinned dependency script;
+installed vendor sources and map/config safety settings remain unchanged.
+
+The recovery run has **3/3 real SUCCEEDED goals**, healthy native timing,
+localization error below 0.30 m, no recorded collision and verified stops.
+**116 tests pass**, preserving all original 109. Nav2-frame goal errors meet the
+0.25 m tolerance; goal C's physical ground-truth target error is **0.434 m**, so
+physical 0.25 m accuracy is not established for all goals. No new video or full
+restart demonstration is claimed. See [M4_RECOVERY_REPORT.md](M4_RECOVERY_REPORT.md)
+for root-cause traces, experiment boundaries, exact setup, acceptance matrix and
+Git results. M5/M6 remain untouched.

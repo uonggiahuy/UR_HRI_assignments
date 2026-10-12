@@ -1,0 +1,163 @@
+{
+  "status": "PASS",
+  "wall_timestamp": 1791822124.4787524,
+  "lifecycle": {
+    "map_server": "active",
+    "amcl": "active"
+  },
+  "map": {
+    "width": 491,
+    "height": 447,
+    "resolution": 0.05000000074505806,
+    "origin": [
+      -13.4,
+      -12.6,
+      0.0
+    ],
+    "total_cells": 219477,
+    "free_cells": 80090,
+    "occupied_cells": 1938,
+    "unknown_cells": 137449
+  },
+  "pose": {
+    "frame_id": "map",
+    "stamp_sec": 50.337,
+    "position": [
+      -0.006,
+      -0.03,
+      0.0
+    ],
+    "yaw_rad": 0.003,
+    "yaw_deg": 0.2,
+    "variance": {
+      "x": 0.22538,
+      "y": 0.17339,
+      "yaw": 0.05182
+    },
+    "covariance_diagonal": [
+      0.22538,
+      0.17339,
+      0.0,
+      0.0,
+      0.0,
+      0.05182
+    ]
+  },
+  "ground_truth": {
+    "x": 0.0005162005748826861,
+    "y": -7.758142713542742e-07,
+    "yaw": 6.195834722434539e-06
+  },
+  "position_error_m": 0.03039936593667852,
+  "yaw_error_rad": 0.002713525787977391,
+  "timing": {
+    "clock": {
+      "samples": 3319,
+      "first": 50.319,
+      "last": 60.273
+    },
+    "scan": {
+      "samples": 622,
+      "first": 50.322,
+      "last": 60.258
+    },
+    "odom": {
+      "samples": 617,
+      "first": 50.325,
+      "last": 60.261
+    },
+    "map_to_odom": {
+      "samples": 621,
+      "first": 51.337,
+      "last": 61.258
+    }
+  },
+  "transforms": {
+    "map -> odom": {
+      "stamp": 61.258,
+      "translation": [
+        -0.006227091303431831,
+        -0.029642797741998003,
+        0.0
+      ]
+    },
+    "odom -> base_link": {
+      "stamp": 60.261,
+      "translation": [
+        -2.3547822324684525e-12,
+        -1.365032826866106e-25,
+        0.0
+      ]
+    },
+    "map -> base_link": {
+      "stamp": 60.261,
+      "translation": [
+        -0.006227091305786604,
+        -0.029642797742004408,
+        0.0
+      ]
+    }
+  },
+  "nodes": [
+    "_ros2cli_daemon_0_a291d32ae3eb445eacb1508d7c18647d",
+    "amcl",
+    "bumper_contact_bridge",
+    "buttons_msg_bridge",
+    "camera_bridge",
+    "camera_stf",
+    "cliff_front_left_bridge",
+    "cliff_front_right_bridge",
+    "cliff_side_left_bridge",
+    "cliff_side_right_bridge",
+    "clock_bridge",
+    "cmd_vel_bridge",
+    "controller_manager",
+    "diffdrive_controller",
+    "dock_state_publisher",
+    "gz_ros2_control",
+    "hazards_vector_publisher",
+    "hmi_buttons_msg_bridge",
+    "hmi_display_msg_bridge",
+    "hmi_led_msg_bridge",
+    "interface_buttons_node",
+    "ir_intensity_front_center_left_bridge",
+    "ir_intensity_front_center_right_bridge",
+    "ir_intensity_front_left_bridge",
+    "ir_intensity_front_right_bridge",
+    "ir_intensity_left_bridge",
+    "ir_intensity_right_bridge",
+    "ir_intensity_side_left_bridge",
+    "ir_intensity_vector_publisher",
+    "joint_state_broadcaster",
+    "joint_state_publisher",
+    "kidnap_estimator_publisher",
+    "lidar_bridge",
+    "lifecycle_manager_localization",
+    "m35_independent_localization_probe",
+    "map_server",
+    "mock_publisher",
+    "motion_control",
+    "odom_base_tf_bridge",
+    "pose_bridge",
+    "pose_republisher_node",
+    "recovery_light_observer",
+    "robot_state",
+    "robot_state_publisher",
+    "rplidar_stf",
+    "sensors_node",
+    "tf_odom_std_dock_link_publisher",
+    "transform_listener_impl_64d5556e2550",
+    "turtlebot4_ignition_hmi_node",
+    "turtlebot4_node",
+    "ui_mgr",
+    "wheel_status_publisher"
+  ],
+  "tf_publishers": [
+    "amcl",
+    "diffdrive_controller",
+    "dock_state_publisher",
+    "odom_base_tf_bridge",
+    "robot_state_publisher"
+  ],
+  "scope": "fresh warehouse simulation; stationary AMCL initialization; no motion"
+}

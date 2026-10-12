@@ -1,0 +1,10 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[INFO] [1791822426.501046842] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791822426.501148069] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[INFO] [1791822426.662710762] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791822427.253516049] [rviz]: Message Filter dropping message: frame 'map' at time 50.337 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791822427.253645079] [rviz]: Message Filter dropping message: frame 'map' at time 10.707 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791822427.266178537] [rviz2]: Trying to create a map of size 50 x 50 using 1 swatches
+[INFO] [1791822428.637994175] [rviz2]: Trying to create a map of size 491 x 447 using 1 swatches
+[INFO] [1791822465.729596616] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2run]: Segmentation fault

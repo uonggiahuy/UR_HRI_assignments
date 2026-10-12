@@ -1,0 +1,5 @@
+{
+  "status": "FAIL",
+  "error": "Readiness failed after 45.0s: Service timed out: /lifecycle_manager_navigation/get_parameters"
+}
+[ros2run]: Process exited with failure 1

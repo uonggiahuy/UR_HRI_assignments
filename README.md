@@ -1,4 +1,4 @@
-# Bài tập lớn 4 — Mô phỏng TurtleBot 4, Lập bản đồ SLAM & Định vị AMCL (Milestone M3)
+# Bài tập lớn 4 — Mô phỏng TurtleBot 4, Lập bản đồ SLAM & Định vị AMCL (M4 Recovery)
 
 Tài liệu hướng dẫn thực hành chi tiết bằng tiếng Việt cho gói phần mềm `turtlebot4` trên nền tảng **ROS 2 Humble** và **Ubuntu 22.04**.
 
@@ -305,15 +305,37 @@ Xem [báo cáo M3.5](docs/M3_5_MAP_CORRECTNESS_REPORT.md) và
 
 ---
 
-## 7. M4 — Nav2 độc lập (chưa đạt nghiệm thu tự hành)
+## 7. M4 — Nav2 độc lập sau khôi phục TF2
 
-**Trạng thái M4: FAIL / chưa nghiệm thu.** Mã nguồn đã build và **109 kiểm thử
-PASS** (83 kiểm thử cũ + 26 kiểm thử M4). Nav2 đã khởi chạy độc lập, tham số thực
-và từ chối goal Unknown/Occupied đã được quan sát. Tuy nhiên các lần chạy tự
-hành gặp TF/costmap cũ và sai lệch định vị; chưa có goal nào được xác minh
-`SUCCEEDED`. Không xem node ACTIVE hoặc đường đi hiển thị là bằng chứng thành công.
-Bộ kiểm tra mới từ chối costmap/footprint không cập nhật. Không tiếp tục gửi goal
-khi kiểm tra báo FAIL. Xem [báo cáo M4](docs/M4_ENGINEERING_REPORT.md).
+**Khôi phục runtime: ba goal A/B/C đã trả về `SUCCEEDED`.** Build và **116 kiểm
+thử PASS** gồm 109 kiểm thử cũ và 7 kiểm thử recovery. TF2 0.25.23 trong image
+hiện tại có deadlock giữa callback scan và listener TF. Dùng dependency upstream
+**0.25.24**, không sửa mã vendor hoặc `/opt/ros`. Ngoài ra đã sửa cách đọc timestamp
+costmap Humble và bỏ đếm toàn bộ costmap giữa từng callback khi giám sát goal.
+
+Sai số goal theo pose Nav2: 0.234 / 0.235 / 0.240 m (tolerance 0.25 m).
+Sai số định vị lớn nhất so với Gazebo: 0.229 m. Riêng goal C, khoảng cách ground
+truth tới target là 0.434 m; không coi tolerance theo AMCL là bảo đảm sai số vật
+lý 0.25 m. Chưa có video thành công hoặc kiểm chứng lại toàn bộ demo restart.
+Xem [báo cáo recovery](docs/M4_RECOVERY_REPORT.md) và
+[bằng chứng action thật](docs/evidence/m4_recovery/three_goals.json).
+Không gửi goal khi readiness báo FAIL. M5/M6 chưa triển khai.
+
+### Chuẩn bị dependency TF2 (một lần trong container Humble)
+
+```bash
+cd /root/ros2_ws
+bash src/turtlebot4/scripts/prepare_tf2_runtime.sh
+```
+
+Script lấy đúng commit upstream `404b7224d623d614f18fa9738dbf1716403d857e`
+(tag 0.25.24), build riêng package `tf2` vào cache người dùng. Nó không cài lại
+ROS, không thay middleware, không sửa vendor. Chạy lại script chỉ build cùng
+revision. Cần Git, C++ compiler và dependency build Humble đã cài trong container.
+
+Trong **mọi terminal mới**, source theo đúng thứ tự bên dưới; nếu quên overlay
+TF2, deadlock có thể xuất hiện lại. Khi thay dependency, dừng stack cũ trước rồi
+khởi chạy stack mới; source môi trường không thay thư viện của process đang chạy.
 
 ### Thứ tự terminal và quyền sở hữu tiến trình
 
@@ -322,6 +344,7 @@ Trong **mỗi terminal**, dùng môi trường ROS 2 Humble hiện có:
 ```bash
 source /opt/ros/humble/setup.bash
 source /root/ros2_ws/install/setup.bash
+source "${XDG_CACHE_HOME:-$HOME/.cache}/turtlebot4/tf2-0.25.24/install/setup.bash"
 ```
 
 **Terminal 1 — giữ chạy liên tục:**
@@ -444,5 +467,5 @@ ghi rõ FAIL thay vì ghi video như đã thành công. Ảnh hiện có ở
 [Gazebo thử nghiệm thất bại](docs/evidence/m4/gazebo_failed_trial.png) là ảnh thật,
 không phải minh chứng ba goal PASS. Chưa có link video thành công.
 
-M5/M6 chưa triển khai. Cần giải quyết blocker M4 và xác minh lại ba goal trước
-khi mở rộng nhiệm vụ.
+M5/M6 chưa triển khai. Các ảnh M4 cũ giữ nguyên trạng thái FAIL; chỉ evidence
+`m4_recovery` chứa lần chạy ba goal thành công. Chưa có video nghiệm thu mới.

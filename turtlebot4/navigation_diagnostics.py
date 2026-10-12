@@ -61,13 +61,29 @@ def check_graph(names: list[str], navigation: bool = False) -> None:
         raise RuntimeError('Stop teleop before navigation')
 
 
-def validate_costmap(msg: Costmap, now: float | None = None) -> dict:
+def costmap_stamp(msg: Costmap) -> float:
+    """Humble raw topics leave update_time zero; their header carries publish time.
+
+    A nonzero update_time remains authoritative. Fresh footprints are checked
+    separately because publication alone does not prove the TF cache advanced.
+    """
+    update = seconds(msg.metadata.update_time)
+    return update if update > 0.0 else seconds(msg.header.stamp)
+
+
+def validate_costmap_freshness(msg: Costmap, now: float | None = None) -> None:
+    """Constant-time motion guard; do not recount a full grid between callbacks."""
     meta = msg.metadata
     if (meta.size_x == 0 or meta.size_y == 0 or len(msg.data) != meta.size_x * meta.size_y
             or not math.isfinite(meta.resolution) or meta.resolution <= 0):
         raise ValueError('Invalid costmap dimensions/resolution/data')
-    if now is not None and abs(now - seconds(meta.update_time)) > 3.0:
+    if now is not None and abs(now - costmap_stamp(msg)) > 3.0:
         raise ValueError('Costmap update timestamp is stale')
+
+
+def validate_costmap(msg: Costmap, now: float | None = None) -> dict:
+    validate_costmap_freshness(msg, now)
+    meta = msg.metadata
     counts = Counter(msg.data)
     return {'width': meta.size_x, 'height': meta.size_y, 'resolution': meta.resolution,
             'unknown': counts[255], 'lethal': counts[254], 'free': counts[0],
@@ -155,9 +171,11 @@ class NavigationProbe(Node):
         if key == 'clock':
             self.clock_samples.append(seconds(msg.clock))
         if key in self.costmap_samples:
-            self.costmap_samples[key].append(seconds(msg.metadata.update_time))
+            self.costmap_samples[key].append(costmap_stamp(msg))
 
     def request(self, service_type, service, request, deadline):
+        if time.monotonic() >= deadline:
+            raise TimeoutError('Readiness observation deadline exhausted')
         # Keep service endpoints alive while spinning the probe, rather than
         # repeatedly destroying reliable reply readers during startup.
         key = (service_type, service)
@@ -166,10 +184,16 @@ class NavigationProbe(Node):
         client = self.service_clients[key]
         remaining = max(0.0, deadline - time.monotonic())
         if not client.wait_for_service(timeout_sec=min(remaining, 2.0)):
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Readiness observation deadline exhausted')
             raise RuntimeError(f'Service unavailable: {service}')
         future = client.call_async(request)
         rclpy.spin_until_future_complete(self, future, timeout_sec=min(5.0, max(0.0, deadline - time.monotonic())))
         if not future.done() or future.result() is None:
+            client.remove_pending_request(future)
+            future.cancel()
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Readiness observation deadline exhausted')
             raise RuntimeError(f'Service timed out: {service}')
         return future.result()
 
@@ -313,6 +337,10 @@ def wait_for_readiness(probe, map_path, timeout=30.0, navigation=False, process=
             return result
         except (RuntimeError, ValueError) as exc:
             last_error = str(exc)
+        except TimeoutError:
+            # Do not replace the last failed sensor/TF/costmap check with a
+            # service timeout caused solely by the overall observation budget.
+            break
     raise TimeoutError(f'Readiness failed after {timeout}s: {last_error}')
 
 

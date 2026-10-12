@@ -1,0 +1,202 @@
+Type: tf2_msgs/msg/TFMessage
+
+Publisher count: 5
+
+Node name: diffdrive_controller
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: PUBLISHER
+GID: 01.10.31.99.f3.a7.1b.01.fa.00.6a.23.00.00.6b.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (1)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: amcl
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: PUBLISHER
+GID: 01.10.3b.df.97.84.15.33.4e.b1.6b.70.00.00.25.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: odom_base_tf_bridge
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: PUBLISHER
+GID: 01.10.54.27.b0.45.96.56.4e.37.f5.64.00.00.16.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (10)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: dock_state_publisher
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: PUBLISHER
+GID: 01.10.75.da.98.cb.ae.04.ad.d0.93.8b.00.00.16.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: robot_state_publisher
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: PUBLISHER
+GID: 01.10.aa.9a.19.43.3d.f8.7e.23.0c.57.00.00.16.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 9
+
+Node name: transform_listener_impl_5a6d41cd9680
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.0f.4f.fa.ce.55.e1.c2.4a.0f.da.00.00.3e.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: motion_control
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.37.0c.e2.1b.fe.a1.94.96.96.13.00.00.16.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: transform_listener_impl_64d5556e2550
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.3b.df.97.84.15.33.4e.b1.6b.70.00.00.23.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: transform_listener_impl_5b486c5480c0
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.4b.04.fa.c3.36.e8.10.10.87.a9.00.00.3e.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: bt_navigator
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.69.9d.9a.ce.b4.fd.cc.d2.60.aa.00.00.21.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: recovery_light_observer
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.6e.c2.36.47.64.69.96.a4.9a.d8.00.00.15.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: recovery_light_observer
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.6e.c2.36.47.64.69.96.a4.9a.d8.00.00.20.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): KEEP_LAST (5)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: transform_listener_impl_7be74c03c7a0
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.c0.47.4e.c9.a7.47.4d.3a.c0.b6.00.00.23.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: transform_listener_impl_778aac038e40
+Node namespace: /
+Topic type: tf2_msgs/msg/TFMessage
+Endpoint type: SUBSCRIPTION
+GID: 01.10.c4.80.e8.ee.4f.f6.18.84.f6.96.00.00.23.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (100)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+

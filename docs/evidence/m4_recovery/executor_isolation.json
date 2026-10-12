@@ -1,0 +1,16 @@
+[
+  {
+    "guard": "validate_costmap",
+    "callbacks": 507,
+    "clock": 940.149,
+    "tf_stamp": 939.552,
+    "tf_age": 0.59699999999998
+  },
+  {
+    "guard": "validate_costmap_freshness",
+    "callbacks": 2992,
+    "clock": 943.179,
+    "tf_stamp": 943.164,
+    "tf_age": 0.014999999999986358
+  }
+]

@@ -23,7 +23,7 @@ from rclpy.action import ActionClient
 from rclpy.qos import qos_profile_sensor_data
 from ros_gz_interfaces.msg import Contacts
 
-from turtlebot4.navigation_diagnostics import NavigationProbe, cell_index, validate_path, validate_costmap, wait_for_readiness
+from turtlebot4.navigation_diagnostics import NavigationProbe, cell_index, costmap_stamp, validate_path, validate_costmap_freshness, wait_for_readiness
 from turtlebot4.localization_runner import resolve_saved_map_path
 
 
@@ -90,12 +90,20 @@ class GoalEvidence(NavigationProbe):
         if self.recording:
             stamp = transform.header.stamp.sec + transform.header.stamp.nanosec / 1e9
             if abs(self.clock_samples[-1] - stamp) > 0.5:
-                raise RuntimeError('Moving localization TF is stale')
+                raise RuntimeError(f'Moving localization TF is stale: age={self.clock_samples[-1] - stamp:.3f}s')
         tf = transform.transform
         truth = self.truth.pose.pose
         pose = [tf.translation.x, tf.translation.y, yaw(tf.rotation)]
         actual = [truth.position.x, truth.position.y, yaw(truth.orientation)]
         return {'time': self.clock_samples[-1], 'pose': pose, 'truth': actual,
+                'monotonic': time.monotonic(),
+                'tf_age': self.clock_samples[-1] - (transform.header.stamp.sec + transform.header.stamp.nanosec / 1e9),
+                'costmap_ages': {key: self.clock_samples[-1] - costmap_stamp(self.messages[key])
+                                 for key in ('global', 'local') if key in self.messages},
+                'footprint_ages': {key: self.clock_samples[-1] -
+                                   (self.messages[key + '_footprint'].header.stamp.sec +
+                                    self.messages[key + '_footprint'].header.stamp.nanosec / 1e9)
+                                   for key in ('global', 'local') if key + '_footprint' in self.messages},
                 'localization_error_m': math.dist(pose[:2], actual[:2]),
                 'localization_yaw_error': angle_error(pose[2], actual[2])}
 
@@ -186,7 +194,12 @@ class GoalEvidence(NavigationProbe):
             while not future.done() and time.monotonic() < deadline:
                 rclpy.spin_once(self, timeout_sec=0.05)
                 for key in ('local', 'global'):
-                    validate_costmap(self.messages[key], self.clock_samples[-1])
+                    validate_costmap_freshness(self.messages[key], self.clock_samples[-1])
+                    footprint = self.messages[key + '_footprint']
+                    stamp = footprint.header.stamp.sec + footprint.header.stamp.nanosec / 1e9
+                    if (abs(self.clock_samples[-1] - stamp) > 3.0 or
+                            time.monotonic() - self.received[key + '_footprint'] > 3.0):
+                        raise RuntimeError(f'{key} footprint stopped advancing')
                 if any(value in (1, 2, 3, 4) for value in self.hazards) or self.path_errors or self.bumper_contacts:
                     raise RuntimeError('Collision hazard or unsafe path: ' + str(self.path_errors))
                 if self.observations and self.observations[-1]['localization_error_m'] > 0.3:
