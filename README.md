@@ -1,41 +1,92 @@
-# Assignment 4 — TurtleBot 4 simulation
+# Bài tập lớn 4 — Mô phỏng TurtleBot 4 & Lập bản đồ SLAM (Milestone M2)
 
-M1 integrates the installed TurtleBot 4 Ignition simulator with read-only runtime
-diagnostics. SLAM, AMCL, mapping and Nav2 are disabled; no M2–M6 behavior is provided.
+Tài liệu hướng dẫn thực hành chi tiết bằng tiếng Việt cho gói phần mềm `turtlebot4` trên nền tảng **ROS 2 Humble** và **Ubuntu 22.04**.
 
-## Environment and architecture
+---
 
-Run ROS commands inside the existing Ubuntu 22.04 / ROS 2 Humble container.
-The verified workspace is `/root/ros2_ws`, backed by a host filesystem mount.
-Host Docker identity/configured mounts remain a separate partial M0 audit item.
-Do not install ROS on the Ubuntu 24.04 host or reinstall the working simulator.
+## 1. Tổng quan và Kiến trúc Hệ thống
 
-The wrapper resolves upstream shares through `ament_index_python` and includes
-`ignition.launch.py` once and `turtlebot4_spawn.launch.py` once in separate scopes.
-It explicitly supplies world, model and simulation time, disables the three
-navigation stacks, and propagates nonzero child exits through visible errors and
-launch shutdown. It forwards shutdown to its own Gazebo descendants because the
-installed upstream shell launcher does not reliably forward signals to them.
+Milestone M2 triển khai kiến trúc **Mô phỏng Bền vững (Persistent Base)** kết hợp với khối **SLAM Toolbox** hoạt động độc lập:
+- **Terminal 1 (Persistent Base):** Khởi chạy một phiên mô phỏng duy nhất gồm Gazebo Fortress, một robot TurtleBot 4, các cầu nối cảm biến (LiDAR `/scan`, Odometry `/odom`), cây biến đổi tọa độ (TF) và giao diện trực quan RViz2. Phiên này được duy trì liên tục xuyên suốt buổi thực hành và không khởi động lại khi chuyển đổi trạng thái mapping hay navigation.
+- **Terminal 2 (Mapping Mode):** Khởi chạy riêng biệt node `slam_toolbox` (chế độ mapping đồng bộ/bất đồng bộ). SLAM Toolbox là đơn vị độc quyền phát sóng transform `map -> odom` và xuất bản bản đồ `/map` (`nav_msgs/msg/OccupancyGrid`).
+- **Terminal 3 (Teleoperation):** Điều khiển di chuyển robot bằng bàn phím qua `/cmd_vel` với cơ chế dừng khẩn cấp và thiết lập QoS tương thích (`best-effort`, `volatile`). Hỗ trợ thao tác undock an toàn.
+- **Terminal 4 (Map Saver & Diagnostics):** Lưu trữ nguyên tử bản đồ vào `maps/map.yaml` và `maps/map.pgm`, đồng thời cung cấp công cụ chẩn đoán toàn diện `check_mapping`.
 
-The installed description launch publishes default joint positions. A ROS
-node-qualified remap sends `joint_state_publisher` output to
-`joint_states_visualization`. Project config makes it consume measured wheel
-states through a separate input alias and retain defaults only for passive
-wheel-drop joints. Robot state publisher consumes that merged stream; sensors
-still consume Gazebo's measured `joint_states`. This prevents conflicting wheel
-positions while keeping the full robot model connected.
+```text
+               +---------------------------------------------------------+
+               |        Terminal 1: Persistent Base Simulator           |
+               |  ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true |
+               |                                                         |
+               |  [Gazebo Fortress] ----> /clock, /scan, /odom, /tf      |
+               |  [RViz2 (odom frame)]                                   |
+               +---------------------------+-----------------------------+
+                                           |
+                   +-----------------------+-----------------------+
+                   |                                               |
+                   v                                               v
++------------------------------------+           +----------------------------------+
+|      Terminal 2: Mapping           |           |     Terminal 3: Teleoperation    |
+|   ros2 run turtlebot4 start_slam   |           |    ros2 run turtlebot4 teleop    |
+|                                    |           |                                  |
+| [slam_toolbox]                     |           | Điều khiển bàn phím              |
+|  - Thu nhận /scan & /odom          |           | Xuất bản /cmd_vel                |
+|  - Phát sóng map -> odom           |           | Tự động gửi zero twist khi dừng |
+|  - Xuất bản /map                   |           +----------------------------------+
++------------------+-----------------+
+                   |
+                   v
++------------------------------------+
+|      Terminal 4: Map Saving        |
+|    ros2 run turtlebot4 save_map    |
+|                                    |
+| [nav2_map_server map_saver_cli]    |
+|  - Kiểm tra lưới OccupancyGrid     |
+|  - Lưu map.yaml & map.pgm          |
+|  - Xác thực nguyên tử file ảnh     |
++------------------------------------+
+```
 
-RViz uses the installed `rviz2` executable and project-owned
-`rviz/simulation.rviz`: fixed frame `odom`, transient-local robot description,
-best-effort scan and TF. The upstream RViz launch hardcodes a navigation config
-with fixed frame `map`, which is unsuitable while localization is disabled.
+---
 
-Required installed packages include `turtlebot4_ignition_bringup` and its TurtleBot,
-iRobot, Gazebo bridge/control dependencies, `rviz2`, `rclpy`, `launch`,
-`launch_ros`, `ament_index_python`, `rosgraph_msgs`, `sensor_msgs`, `nav_msgs`
-and `tf2_msgs`. No upstream source is copied or modified.
+## 2. Cấu trúc Gói phần mềm (`turtlebot4`)
 
-## Build and automated tests
+```text
+turtlebot4/
+├── launch/
+│   ├── turtlebot4.launch.py       # Điểm khởi chạy mô phỏng bền vững (persistent base)
+│   ├── simulation.launch.py       # Điểm tương thích M1
+│   └── README.md
+├── turtlebot4/
+│   ├── simulation_launch.py       # Logic ghép nối mô phỏng và quản lý tiến trình
+│   ├── slam_runner.py             # Điều phối vòng đời SLAM Toolbox độc lập
+│   ├── teleop.py                  # Điều khiển bàn phím an toàn và QoS
+│   ├── map_saver.py               # Lưu và kiểm định nguyên tử OccupancyGrid
+│   ├── mapping_diagnostics.py     # Bộ công cụ chẩn đoán toàn diện SLAM
+│   └── diagnostics.py             # Chẩn đoán cảm biến và đồ thị ROS (M1)
+├── maps/
+│   ├── map.yaml                   # File cấu hình metadata bản đồ đã lưu
+│   └── map.pgm                    # File ảnh nhị phân chiếm dụng thực tế
+├── rviz/
+│   └── simulation.rviz            # Cấu hình RViz2 bền vững (RobotModel, LaserScan, TF, Map)
+├── config/
+│   └── simulation.yaml            # Cấu hình lọc và hòa trộn trạng thái khớp
+├── test/
+│   ├── test_m1.py                 # 37 bài kiểm thử hồi quy M1
+│   └── test_m2.py                 # 15 bài kiểm thử offline M2
+├── docs/
+│   ├── M1_ENGINEERING_REPORT.md   # Báo cáo kỹ thuật M1
+│   ├── M2_ENGINEERING_REPORT.md   # Báo cáo kỹ thuật M2
+│   └── evidence/                  # Minh chứng đo đạc thời gian thực
+├── package.xml
+├── setup.py
+└── README.md
+```
+
+---
+
+## 3. Biên dịch và Kiểm thử Tự động
+
+Mọi lệnh được thực thi trong môi trường **Ubuntu 22.04 / ROS 2 Humble**:
 
 ```bash
 cd /root/ros2_ws
@@ -46,135 +97,216 @@ colcon test --packages-select turtlebot4
 colcon test-result --verbose
 ```
 
-This container has an incompatible third-party AnyIO pytest plugin. Package
-`pytest.ini` excludes only that plugin, which these synchronous tests do not
-use. The standard `colcon test` command therefore runs the real assertions
-without changing system packages or suppressing test failures.
+Kết quả kỳ vọng: **52 tests passed** (37 kiểm thử M1 + 15 kiểm thử M2), 0 lỗi, 0 thất bại.
 
-Launch/config/map/RViz resources install recursively beneath `share/turtlebot4`.
-The diagnostic is installed as `ros2 run turtlebot4 check_simulation`;
-`scripts/check_simulation.py` is also available from the source tree.
+---
 
-## Launch (simulation only)
+## 4. Hướng dẫn Thực thi Từng Terminal (Step-by-Step)
+
+### Terminal 1 — Khởi chạy Mô phỏng Bền vững (Persistent Base)
+Mở cửa sổ dòng lệnh thứ nhất và chạy:
 
 ```bash
-ros2 launch turtlebot4 simulation.launch.py
-ros2 launch turtlebot4 simulation.launch.py rviz:=true
-ros2 launch turtlebot4 simulation.launch.py --show-args
-ros2 launch turtlebot4 simulation.launch.py world:=depot model:=lite namespace:=m1_robot rviz:=true
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash
+ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true
 ```
 
-Public arguments: `world` (default `warehouse`, installed SDF worlds), `model`
-(`standard`/`lite`, default `standard`), `namespace` (default empty), and `rviz`
-(`true`/`false`, default `false`). Installed worlds are `warehouse`, `depot`,
-and `maze`. Warehouse/Standard and Depot/Lite/namespaced combinations were
-verified live. Maze is installed and its forwarding is tested, but was not
-launched live. World resources may need time to load before spawn/bridges become ready.
-Simulation time is fixed true. No stack toggles, map files or arbitrary Gazebo
-command arguments are exposed. Start only one wrapper instance at a time.
+- **Tiến trình:** Khởi chạy Gazebo Fortress với thế giới `warehouse`, tạo một robot TurtleBot 4 Standard, kích hoạt các cầu nối cảm biến `/scan`, `/odom`, `/clock`, `/cmd_vel` và mở giao diện RViz2.
+- **Trạng thái:** Giữ terminal này chạy liên tục trong suốt toàn bộ phiên làm việc.
+- **Quan sát RViz2:** Khung tọa độ cố định (Fixed Frame) là `odom`. Robot model, dữ liệu quét LaserScan (chấm đỏ) và cây tọa độ TF hiển thị chuẩn xác. Mục `Map` sẽ ở trạng thái chờ cho tới khi SLAM được bật.
 
-## Read-only runtime verification
+---
 
-In a second sourced container terminal:
+### Terminal 2 — Khởi chạy SLAM Toolbox
+Mở cửa sổ dòng lệnh thứ hai và chạy:
 
 ```bash
-ros2 run turtlebot4 check_simulation --timeout 20 --expect-rviz --output /tmp/simulation_check.json
-ros2 run turtlebot4 check_simulation --timeout 20 --namespace m1_robot --expect-rviz
-ros2 topic list -t
-ros2 topic info /scan --verbose
-ros2 topic info /odom --verbose
-ros2 topic info /cmd_vel --verbose
-ros2 topic info /tf_static --verbose
-ros2 control list_controllers
-ros2 run tf2_ros tf2_echo odom base_link
-ros2 run tf2_ros tf2_echo base_link turtlebot4/rplidar_link/rplidar
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash
+ros2 run turtlebot4 start_slam
 ```
 
-Substitute the runtime namespace/frames from the diagnostic for namespaced runs.
-The diagnostic has a total 1–120 second wall-clock bound. It discovers scan and
-odometry by type, rejects ambiguous matches, records actual QoS/frame names and
-received frequencies, checks finite data, advancing clock/stamps, simulation-time
-alignment, TF topology/conflicts and duplicate node names. It never publishes
-velocity, calls an action or changes simulator parameters. Exit code is 1 for a
-failed check, 0 when machine-checkable checks pass; visual content is always
-reported `MANUAL VERIFICATION REQUIRED` by this read-only tool.
+- **Tiến trình:** Kiểm tra sự sẵn sàng của mô phỏng, xác minh không có node SLAM hoặc AMCL nào đang chạy trùng lặp, sau đó khởi chạy node `slam_toolbox` với `use_sim_time:=true`.
+- **Đầu ra kỳ vọng:**
+  ```text
+  [start_slam] Checking base simulator readiness (timeout 15.0s)...
+  [start_slam] Base simulator verified (/clock and LiDAR active).
+  [start_slam] Launching: ros2 launch turtlebot4_navigation slam.launch.py use_sim_time:=true sync:=true params:=...
+  [sync_slam_toolbox_node-1] [INFO] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+  [sync_slam_toolbox_node-1] Registering sensor: [Custom Described Lidar]
+  ```
+- **Quan sát:** Trên RViz2 (Terminal 1), lớp bản đồ `Map` lập tức nhận dữ liệu từ `/map` và hiển thị các vùng không gian tự do (màu trắng), chướng ngại vật (màu đen) và vùng chưa khám phá (màu xám).
 
-`observed_wall_hz` describes delivery during observation; `observed_sim_hz` uses
-message timestamps and may differ when Gazebo runs slower than wall time. A
-paused simulator fails the clock progression check. Static TF uses reliable
-transient-local QoS to receive retained transforms. Installed Humble rclpy lacks
-publisher GIDs in subscription callbacks, so the tool detects duplicate children,
-multiple parents, static/dynamic overlap, conflicting transform samples and cycles,
-but cannot attribute identical copies from different publishers to a specific edge.
-No `map -> odom` transform is required.
+---
 
-## Controlled teleoperation (simulation only)
+### Terminal 3 — Undock và Điều khiển Bàn phím (Teleoperation)
+Mở cửa sổ dòng lệnh thứ ba để điều khiển robot khám phá kho hàng:
 
-Inspect the GUI, LiDAR clearance, hazard flags and command subscribers before
-motion. In this installation `/cmd_vel` is `geometry_msgs/msg/Twist`, consumed
-by `/motion_control` with best-effort/volatile QoS. The robot starts docked.
-Use the supported action after confirming the undock path is clear:
+**Bước 3.1: Undock robot ra khỏi trạm sạc (nếu đang ở trạm sạc)**
+```bash
+source /opt/ros/humble/setup.bash
+ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"
+```
+*Kết quả:* Robot sẽ tự động lùi ra khỏi dock sạc khoảng 0.35m và xoay nhẹ, trạng thái hoàn thành: `SUCCEEDED`.
+
+**Bước 3.2: Khởi động giao diện điều khiển bàn phím**
+```bash
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash
+ros2 run turtlebot4 teleop
+```
+
+- **Phím điều khiển di chuyển:**
+  - `i`: Tiến thẳng (+linear)
+  - `,`: Lùi thẳng (-linear)
+  - `j`: Quay trái (+angular)
+  - `l`: Quay phải (-angular)
+  - `u` / `o`: Tiến cua trái / phải
+  - `m` / `.`: Lùi cua trái / phải
+  - `k` hoặc Phím cách (Space): Dừng khẩn cấp (stop)
+- **Phím điều chỉnh tốc độ:**
+  - `w` / `x`: Tăng / giảm 10% tốc độ tịnh tiến
+  - `e` / `c`: Tăng / giảm 10% tốc độ quay
+- **Thoát an toàn:** Nhấn `q` hoặc `Ctrl+C`. Chương trình tự động gửi vận tốc 0 (`linear=0, angular=0`) liên tục xuống `/cmd_vel` để đảm bảo robot đứng yên tuyệt đối trước khi kết thúc.
+
+*Gợi ý điều khiển:* Điều khiển robot đi chậm qua các hành lang chính, đi vòng quanh các kệ hàng và quay trở lại điểm xuất phát để thuật toán SLAM thực hiện khép vòng (loop closure).
+
+---
+
+### Terminal 4 — Kiểm tra Chẩn đoán và Lưu Bản đồ
+
+**Bước 4.1: Kiểm tra chất lượng lập bản đồ thời gian thực**
+Mở cửa sổ dòng lệnh thứ tư và chạy:
 
 ```bash
-ros2 action info /undock
-ros2 interface show irobot_create_msgs/action/Undock
-# Only after verifying a safe simulated scene:
-timeout --signal=INT 30s ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}'
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash
+ros2 run turtlebot4 check_mapping
 ```
 
-If that observation times out, cancel/stop the action and verify stopped state
-before any further test. The timeout ends the CLI, not necessarily the action.
-Use the Gazebo HMI Stop control or publish zero velocity as appropriate.
-The robot may turn while undocking. Reinspect current heading and clearance.
-The upstream BACKUP_LIMIT flag prevents reversing after undocking; retain that
-safety setting and choose a short forward test only when its path is clear.
-Physical hazards (bump, cliff, stall, wheel drop, proximity) require stopping.
+Đầu ra kỳ vọng:
+```text
+=================================================================
+ TURTLEBOT 4 SLAM MAPPING DIAGNOSTICS REPORT
+=================================================================
+Overall Status:        [PASS]
+-----------------------------------------------------------------
+Stack & Nodes:
+  SLAM Toolbox Active: YES
+  AMCL Conflict:       NONE (Good)
+  Stack Isolation:     PASS
+-----------------------------------------------------------------
+Sensors & Timing:
+  /clock Active:       YES
+  /scan Valid:         YES
+  /odom Valid:         YES
+-----------------------------------------------------------------
+Transforms (TF):
+  map -> odom:         YES
+  odom -> base_link:   YES
+  map -> base_link:    CONNECTED
+-----------------------------------------------------------------
+Occupancy Grid (/map):
+  Map Received:        YES
+  Map Progressing:     YES
+  Map Valid:           YES
+  Dimensions:          491 x 447 cells (24.55m x 22.35m)
+  Resolution:          0.05 m/cell
+  Free Cells:          80090 (36.5%)
+  Occupied Cells:      1938 (0.9%)
+  Unknown Cells:       137449 (62.6%)
+=================================================================
+```
 
-A finite forward command test, after those checks:
+**Bước 4.2: Lưu bản đồ nguyên tử**
+Sau khi robot đã khám phá đủ diện tích và dừng hẳn, chạy lệnh:
 
 ```bash
-timeout --signal=INT 5s ros2 topic pub /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.05}}' --rate 10 --times 20
-ros2 topic pub /cmd_vel geometry_msgs/msg/Twist '{}' --rate 10 --times 5
-ros2 topic echo /odom --once
+ros2 run turtlebot4 save_map
 ```
 
-Always send zero commands on completion or interruption and confirm odometry
-velocity and pose are stable. For namespaced robots, prefix all topic/action
-names. The Gazebo GUI also provides upstream teleop controls; reduce its default
-maximum speeds before use. Do not use unlimited-duration command publication.
-M1 observed a bounded 2-second forward command, expected displacement and a
-stable stop; see the engineering report for exact evidence.
+Đầu ra kỳ vọng:
+```text
+[save_map] Listening for live OccupancyGrid on '/map'...
+[save_map] Live map validated: 491x447 cells (24.6m x 22.4m), Free: 80090 (36.5%), Occupied: 1938 (0.9%), Unknown: 137449 (62.6%)
+[save_map] Invoking Nav2 map saver: ros2 run nav2_map_server map_saver_cli -t /map -f ...
+[save_map] Map files written atomically to:
+  - YAML: /root/ros2_ws/src/turtlebot4/maps/map.yaml
+  - PGM:  /root/ros2_ws/src/turtlebot4/maps/map.pgm
 
-## Troubleshooting and shutdown
+[save_map] SUCCESS: Bản đồ đã được lưu và kiểm tra thành công!
+```
 
-- Missing package: source Humble, build this package, then source `install/setup.bash`.
-- No clock/scan/odom: check launch errors and wait for actual world/spawn/controller
-  readiness; rerun diagnostics with an appropriate bounded observation window.
-  Depot's first load was slower than Warehouse in this environment.
-- RViz requires working DISPLAY/OpenGL access. Without it, launch with `rviz:=false`
-  and record graphical verification as manual. The simulator GUI also needs display access.
-- No motion while docked: inspect `/dock_status` and `/undock`; never override safety
-  flags to make a test pass. BACKUP_LIMIT is directional and blocks reversing.
-- Wheel TF conflict: verify `/joint_states` is published only by the simulation
-  broadcaster and `/joint_states_visualization` merges its measured wheel positions with
-  passive-joint defaults. Check the publisher's `source_list` and remaps.
-- Upstream logs warn about controller update period versus Gazebo step size. The
-  active controllers and odometry were verified; upstream settings remain intact.
-- Child exit: read the first launch error. Unexpected nonzero exits cause visible
-  wrapper shutdown; normal spawn/controller-loader exits do not stop simulation.
+---
 
-Before termination, stop teleoperation, send zero velocity and confirm the robot
-is stopped. Press Ctrl+C in the wrapper terminal and wait for launch shutdown.
-The wrapper signals its own Gazebo descendant processes and lets ROS launch stop
-its child nodes. Check `ros2 node list` and `ps -eo pid,args` afterward; do not
-start another simulator until the previous one is gone. Never use broad `pkill`
-or terminate unrelated user processes. The installed TurtleBot node can require
-ROS launch's SIGTERM escalation; this was observed and is documented in the report.
+## 5. Xác thực File Bản đồ Đã Lưu
 
-## Reports
+Kiểm tra nội dung file cấu hình:
+```bash
+cat /root/ros2_ws/src/turtlebot4/maps/map.yaml
+```
+Nội dung chuẩn:
+```yaml
+image: map.pgm
+mode: trinary
+resolution: 0.05
+origin: [-13.4, -12.6, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
+```
 
-- [M0 engineering report](docs/M0_ENGINEERING_REPORT.md)
-- [Installed upstream compatibility audit](docs/UPSTREAM_COMPATIBILITY.md)
-- [M1 engineering report](docs/M1_ENGINEERING_REPORT.md)
+Kiểm tra file ảnh nhị phân PGM:
+```bash
+ls -lh /root/ros2_ws/src/turtlebot4/maps/map.pgm
+```
+Kích thước file ảnh xấp xỉ `219 KB`, tương ứng với kích thước ma trận `491 x 447` pixel.
 
-Stop after M1. Mapping, localization, Nav2 and autonomous navigation are deferred.
+---
+
+## 6. Dừng SLAM và Giữ nguyên Mô phỏng Gazebo
+
+Khi hoàn thành quá trình lập bản đồ:
+1. Tại **Terminal 3:** Nhấn `q` để thoát teleop. Robot dừng tại chỗ.
+2. Tại **Terminal 2:** Nhấn `Ctrl+C` để dừng `start_slam`.
+   Thông báo xác nhận:
+   ```text
+   [start_slam] Received shutdown signal. Stopping SLAM Toolbox cleanly...
+   [start_slam] SLAM Toolbox stopped. Simulator and RViz remain running.
+   ```
+3. **Kiểm tra tính bền vững:** Tại Terminal 4, chạy lệnh kiểm tra:
+   ```bash
+   ros2 run turtlebot4 check_simulation --timeout 5
+   ```
+   *Kết quả:* Mô phỏng Gazebo Fortress, cầu nối cảm biến LiDAR, Odometry và RViz2 tại **Terminal 1** vẫn tiếp tục chạy hoàn hảo, sẵn sàng cho việc nạp bản đồ đã lưu vào AMCL ở giai đoạn tiếp theo mà không cần khởi động lại mô phỏng.
+
+---
+
+## 7. Kịch bản Xác thực Khởi động lại (Restart Scenario)
+
+Ngoài chế độ phiên liên tục, đề bài yêu cầu robot có thể được khởi động lại hoàn toàn từ đầu trong cùng thế giới kho hàng và nạp lại bản đồ vừa lưu:
+1. Tắt toàn bộ các terminal bằng `Ctrl+C`.
+2. Khởi chạy lại Terminal 1: `ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true`.
+3. Bản đồ đã được lưu cố định tại `maps/map.yaml` và `maps/map.pgm` trong mã nguồn gói và sẽ được sử dụng trực tiếp bởi Map Server trong Milestone M3.
+
+---
+
+## 8. Xử lý Sự cố Thường gặp (Troubleshooting)
+
+| Hiện tượng | Nguyên nhân | Cách khắc phục |
+|---|---|---|
+| `start_slam` báo lỗi `Duplicate SLAM stack rejected` | Có một tiến trình `slam_toolbox` khác đang chạy nền | Dừng terminal SLAM cũ bằng `Ctrl+C` hoặc kiểm tra `pkill -f slam_toolbox` |
+| `start_slam` báo lỗi `Incompatible stack rejected` | Node `amcl` đang hoạt động (xung đột thẩm quyền `map -> odom`) | Tắt `amcl` trước khi bật SLAM |
+| `save_map` báo lỗi `0 free cells observed` | Robot chưa di chuyển hoặc cảm biến chưa quét được không gian | Điều khiển robot di chuyển bằng `teleop` để quét các khoảng trống |
+| RViz2 báo lỗi TF frame `map` không tồn tại trước khi bật SLAM | Trước khi SLAM chạy, chưa có đơn vị xuất bản `map -> odom` | Đây là trạng thái bình thường; cấu hình RViz sử dụng Fixed Frame là `odom` để tránh lỗi |
+| Robot không di chuyển khi bấm phím teleop | Robot đang bị khóa trên dock sạc Create 3 | Chạy lệnh undock: `ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"` |
+
+---
+
+## 9. Định hướng Các Milestone Tiếp theo
+
+- **Milestone M3: AMCL Localization (Định vị trên Bản đồ Đã lưu)** — *CHƯA TRIỂN KHAI (NOT YET IMPLEMENTED)*:
+  Nạp file `maps/map.yaml` qua `nav2_map_server`, kích hoạt `amcl` để định vị vị trí robot và đặt điểm ước lượng ban đầu (2D Pose Estimate).
+- **Milestone M4: Nav2 Autonomous Navigation (Điều hướng Tự động)** — *CHƯA TRIỂN KHAI (NOT YET IMPLEMENTED)*:
+  Kích hoạt ngăn xếp Nav2, costmap toàn cục/cục bộ, bộ lập quỹ đạo và thực hiện tự động 3 mục tiêu điều hướng liên tiếp.

@@ -50,6 +50,19 @@ Visualization Manager:
       Marker Scale: 0.2
       Frames:
         All Enabled: true
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: true
+      Topic:
+        Value: map
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+      Color Scheme: map
+      Alpha: 0.7
+      Draw Behind: true
+      Use Timestamp: false
   Views:
     Current:
       Class: rviz_default_plugins/Orbit

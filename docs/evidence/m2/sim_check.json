@@ -1,0 +1,533 @@
+{
+  "namespace": "",
+  "observation_wall_seconds": 5.0,
+  "checks": {
+    "clock": {
+      "status": "PASS",
+      "topic": "/clock",
+      "publishers": [
+        {
+          "node": "/clock_bridge",
+          "type": "rosgraph_msgs/msg/Clock",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 10
+          }
+        }
+      ],
+      "received": 1662,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 333.29663866423385,
+      "sim_stamp_delta_sec": 4.983000000000004,
+      "observed_sim_hz": 333.3333333333331
+    },
+    "scan": {
+      "status": "PASS",
+      "topic": "/scan",
+      "publishers": [
+        {
+          "node": "/lidar_bridge",
+          "type": "sensor_msgs/msg/LaserScan",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 10
+          }
+        }
+      ],
+      "received": 298,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 62.37833703942254,
+      "sim_stamp_delta_sec": 4.751999999999995,
+      "observed_sim_hz": 62.500000000000064,
+      "frame_id": "turtlebot4/rplidar_link/rplidar",
+      "ranges": 640,
+      "valid_ranges": 440
+    },
+    "odom": {
+      "status": "PASS",
+      "topic": "/odom",
+      "publishers": [
+        {
+          "node": "/diffdrive_controller",
+          "type": "nav_msgs/msg/Odometry",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 1
+          }
+        }
+      ],
+      "received": 309,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 61.892755406848025,
+      "sim_stamp_delta_sec": 4.9680000000000035,
+      "observed_sim_hz": 61.996779388083695,
+      "frame_id": "odom",
+      "child_frame_id": "base_link",
+      "pose_and_twist": [
+        -2.357730745561005e-12,
+        -1.2860411892831426e-25,
+        0.0,
+        0.0,
+        0.0,
+        7.391679912317018e-14,
+        1.0,
+        -1.2818472412381417e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        3.53998981919268e-18
+      ]
+    },
+    "simulation_time_alignment": {
+      "status": "PASS",
+      "header_age_sim_seconds": {
+        "scan": 0.018000000000000682,
+        "odom": 0.006000000000000227
+      },
+      "allowed_age_sim_seconds": [
+        -0.2,
+        2.0
+      ]
+    },
+    "cmd_vel": {
+      "status": "PASS",
+      "topic": "/cmd_vel",
+      "types": [
+        "geometry_msgs/msg/Twist"
+      ],
+      "subscribers": [
+        {
+          "node": "/motion_control",
+          "type": "geometry_msgs/msg/Twist",
+          "qos": {
+            "reliability": "BEST_EFFORT",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 5
+          }
+        }
+      ],
+      "robot_side_subscribers": [
+        {
+          "node": "/motion_control",
+          "type": "geometry_msgs/msg/Twist",
+          "qos": {
+            "reliability": "BEST_EFFORT",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 5
+          }
+        }
+      ]
+    },
+    "tf": {
+      "status": "PASS",
+      "base_chain": [
+        "odom",
+        "base_link"
+      ],
+      "lidar_chain": [
+        "base_link",
+        "shell_link",
+        "rplidar_link",
+        "turtlebot4/rplidar_link/rplidar"
+      ],
+      "conflicts": {},
+      "duplicate_edges": [],
+      "cycles": [],
+      "invalid_transforms": 0,
+      "conflicting_samples": [],
+      "conflict_evidence": [],
+      "authority_limit": "Installed Humble rclpy does not expose publisher GIDs in callbacks; identical transforms from distinct publishers cannot be attributed per edge.",
+      "message_counts": {
+        "tf_static": 5,
+        "tf": 490
+      },
+      "edges": [
+        [
+          "odom",
+          "base_link"
+        ],
+        [
+          "base_link",
+          "bump_front_center"
+        ],
+        [
+          "base_link",
+          "bump_front_left"
+        ],
+        [
+          "base_link",
+          "bump_front_right"
+        ],
+        [
+          "base_link",
+          "bump_left"
+        ],
+        [
+          "base_link",
+          "bump_right"
+        ],
+        [
+          "base_link",
+          "bumper"
+        ],
+        [
+          "base_link",
+          "button_1"
+        ],
+        [
+          "base_link",
+          "button_2"
+        ],
+        [
+          "base_link",
+          "button_power"
+        ],
+        [
+          "base_link",
+          "cliff_front_left"
+        ],
+        [
+          "base_link",
+          "cliff_front_right"
+        ],
+        [
+          "base_link",
+          "cliff_side_left"
+        ],
+        [
+          "base_link",
+          "cliff_side_right"
+        ],
+        [
+          "base_link",
+          "front_caster_link"
+        ],
+        [
+          "base_link",
+          "front_left_bottom_weight_block"
+        ],
+        [
+          "base_link",
+          "front_left_top_weight_block"
+        ],
+        [
+          "shell_link",
+          "front_left_tower_standoff"
+        ],
+        [
+          "base_link",
+          "front_right_bottom_weight_block"
+        ],
+        [
+          "base_link",
+          "front_right_top_weight_block"
+        ],
+        [
+          "shell_link",
+          "front_right_tower_standoff"
+        ],
+        [
+          "std_dock_link",
+          "green_buoy_link"
+        ],
+        [
+          "std_dock_link",
+          "halo_link"
+        ],
+        [
+          "base_link",
+          "imu_link"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_center_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_center_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_side_left"
+        ],
+        [
+          "base_link",
+          "ir_omni"
+        ],
+        [
+          "wheel_drop_left",
+          "left_wheel"
+        ],
+        [
+          "base_link",
+          "mouse"
+        ],
+        [
+          "shell_link",
+          "oakd_camera_bracket"
+        ],
+        [
+          "oakd_link",
+          "oakd_imu_frame"
+        ],
+        [
+          "oakd_link",
+          "oakd_left_camera_frame"
+        ],
+        [
+          "oakd_left_camera_frame",
+          "oakd_left_camera_optical_frame"
+        ],
+        [
+          "oakd_camera_bracket",
+          "oakd_link"
+        ],
+        [
+          "oakd_link",
+          "oakd_rgb_camera_frame"
+        ],
+        [
+          "oakd_rgb_camera_frame",
+          "oakd_rgb_camera_optical_frame"
+        ],
+        [
+          "oakd_link",
+          "oakd_right_camera_frame"
+        ],
+        [
+          "oakd_right_camera_frame",
+          "oakd_right_camera_optical_frame"
+        ],
+        [
+          "shell_link",
+          "rear_left_tower_standoff"
+        ],
+        [
+          "shell_link",
+          "rear_right_tower_standoff"
+        ],
+        [
+          "std_dock_link",
+          "red_buoy_link"
+        ],
+        [
+          "wheel_drop_right",
+          "right_wheel"
+        ],
+        [
+          "shell_link",
+          "rplidar_link"
+        ],
+        [
+          "base_link",
+          "shell_link"
+        ],
+        [
+          "odom",
+          "std_dock_link"
+        ],
+        [
+          "shell_link",
+          "tower_sensor_plate"
+        ],
+        [
+          "oakd_rgb_camera_optical_frame",
+          "turtlebot4/oakd_rgb_camera_frame/rgbd_camera"
+        ],
+        [
+          "rplidar_link",
+          "turtlebot4/rplidar_link/rplidar"
+        ],
+        [
+          "base_link",
+          "wheel_drop_left"
+        ],
+        [
+          "base_link",
+          "wheel_drop_right"
+        ],
+        [
+          "std_dock_link",
+          "yellow_buoy_link"
+        ]
+      ],
+      "publishers": {
+        "tf": [
+          {
+            "node": "/robot_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 100
+            }
+          },
+          {
+            "node": "/diffdrive_controller",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/odom_base_tf_bridge",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 10
+            }
+          },
+          {
+            "node": "/dock_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 100
+            }
+          }
+        ],
+        "tf_static": [
+          {
+            "node": "/tf_odom_std_dock_link_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/robot_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/camera_stf",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/dock_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/rplidar_stf",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          }
+        ]
+      }
+    },
+    "node_uniqueness": {
+      "status": "PASS",
+      "duplicates": [],
+      "nodes": [
+        "/_ros2cli_daemon_0_3dfdf4340afd485f94500c90d8f1c17e",
+        "/assignment4_simulation_probe",
+        "/bumper_contact_bridge",
+        "/buttons_msg_bridge",
+        "/camera_bridge",
+        "/camera_stf",
+        "/cliff_front_left_bridge",
+        "/cliff_front_right_bridge",
+        "/cliff_side_left_bridge",
+        "/cliff_side_right_bridge",
+        "/clock_bridge",
+        "/cmd_vel_bridge",
+        "/controller_manager",
+        "/diffdrive_controller",
+        "/dock_state_publisher",
+        "/gz_ros2_control",
+        "/hazards_vector_publisher",
+        "/hmi_buttons_msg_bridge",
+        "/hmi_display_msg_bridge",
+        "/hmi_led_msg_bridge",
+        "/interface_buttons_node",
+        "/ir_intensity_front_center_left_bridge",
+        "/ir_intensity_front_center_right_bridge",
+        "/ir_intensity_front_left_bridge",
+        "/ir_intensity_front_right_bridge",
+        "/ir_intensity_left_bridge",
+        "/ir_intensity_right_bridge",
+        "/ir_intensity_side_left_bridge",
+        "/ir_intensity_vector_publisher",
+        "/joint_state_broadcaster",
+        "/joint_state_publisher",
+        "/kidnap_estimator_publisher",
+        "/lidar_bridge",
+        "/mock_publisher",
+        "/motion_control",
+        "/odom_base_tf_bridge",
+        "/pose_bridge",
+        "/pose_republisher_node",
+        "/robot_state",
+        "/robot_state_publisher",
+        "/rplidar_stf",
+        "/sensors_node",
+        "/tf_odom_std_dock_link_publisher",
+        "/turtlebot4_ignition_hmi_node",
+        "/turtlebot4_node",
+        "/ui_mgr",
+        "/wheel_status_publisher"
+      ]
+    }
+  }
+}

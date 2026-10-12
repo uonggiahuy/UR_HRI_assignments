@@ -13,11 +13,14 @@
   <exec_depend>rosgraph_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>turtlebot4_ignition_bringup</exec_depend>
+  <exec_depend>turtlebot4_navigation</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
   <test_depend>python3-pytest</test_depend>
-  <test_depend>geometry_msgs</test_depend>
   <export>
     <build_type>ament_python</build_type>
   </export>

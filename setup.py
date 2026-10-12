@@ -32,5 +32,9 @@ setup(
     url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_4',
     entry_points={'console_scripts': [
         'check_simulation = turtlebot4.diagnostics:main',
+        'start_slam = turtlebot4.slam_runner:main',
+        'teleop = turtlebot4.teleop:main',
+        'save_map = turtlebot4.map_saver:main',
+        'check_mapping = turtlebot4.mapping_diagnostics:main',
     ]},
 )

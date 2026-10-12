@@ -1,4 +1,6 @@
 # Launch resources
 
-`simulation.launch.py` composes the installed world and spawn launches.
-See the package README for simulator-only options and runtime checks.
+- `turtlebot4.launch.py`: persistent base simulator launch (Gazebo, TurtleBot 4, sensor bridges, TF, optional RViz2).
+- `simulation.launch.py`: backward-compatible simulator-only bringup entrypoint.
+
+See the package README for terminal-by-terminal usage and runtime checks.
