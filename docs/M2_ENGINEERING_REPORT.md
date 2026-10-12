@@ -240,14 +240,24 @@ All runtime artifacts are stored in `docs/evidence/m2/`:
 
 ---
 
-## 12. Remaining Limitations
+## 12. Git Commit SHA and Push Status
+
+- Implementation commit: `05bd606` (`05bd606114ebfa24e8a4d467812f842828b4d081`)
+- Commit message: `feat(assignment4): implement persistent simulation and SLAM mapping`
+- Branch: `assignments_4`
+- Remote: `origin/assignments_4` (pushed successfully, verified via `git status`: `Your branch is up to date with 'origin/assignments_4'`)
+- Worktree state: clean, zero unstaged files, zero untracked files.
+
+---
+
+## 13. Remaining Limitations
 
 1. **Undock Heading Drift:** The Create 3 undock routine backs out and turns slightly based on internal dock odometry, resulting in an initial non-zero yaw relative to the dock frame. This is standard behavior for the iRobot Create 3 platform.
 2. **LiDAR Message Drops on Heavy CPU Load:** Under intensive multi-core usage during initial simulator startup, the ROS Gazebo parameter bridge occasionally logs queue-full warnings for laser scans until the simulator time step stabilizes.
 
 ---
 
-## 13. Recommendations for Milestone M3 (AMCL Localization)
+## 14. Recommendations for Milestone M3 (AMCL Localization)
 
 1. **Map Loading:** Use `nav2_map_server` to load the verified `maps/map.yaml` created in M2.
 2. **Initial Pose Estimate:** In the continuous demonstration, the robot's current pose is approximately `x=-2.23, y=-1.51, yaw=2.53`. Set the 2D Pose Estimate in RViz2 or via `/initialpose` topic accordingly.
