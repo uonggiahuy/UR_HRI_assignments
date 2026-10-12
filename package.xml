@@ -20,6 +20,15 @@
   <exec_depend>turtlebot4_navigation</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>lifecycle_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>nav2_rviz_plugins</exec_depend>
+  <exec_depend>irobot_create_msgs</exec_depend>
+  <exec_depend>ros_gz_interfaces</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
   <test_depend>python3-pytest</test_depend>
   <test_depend>lifecycle_msgs</test_depend>
   <export>

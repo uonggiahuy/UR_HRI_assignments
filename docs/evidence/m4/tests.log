@@ -1,0 +1,19 @@
+Starting >>> turtlebot4
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /root/ros2_ws/build/turtlebot4/.pytest_cache
+rootdir: /root/ros2_ws/src/turtlebot4, configfile: pytest.ini
+plugins: ament-lint-0.12.15, ament-pep257-0.12.15, ament-copyright-0.12.15, ament-xmllint-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, launch-testing-ros-0.19.14, colcon-core-0.21.2
+collected 109 items
+
+test/test_m1.py .....................................                    [ 33%]
+test/test_m2.py ...............                                          [ 47%]
+test/test_m3.py ............                                             [ 58%]
+test/test_m3_5.py ...................                                    [ 76%]
+test/test_m4.py ..........................                               [100%]
+
+-------- generated xml file: /root/ros2_ws/build/turtlebot4/pytest.xml ---------
+============================= 109 passed in 6.46s ==============================
+Finished <<< turtlebot4 [7.02s]
+
+Summary: 1 package finished [7.19s]

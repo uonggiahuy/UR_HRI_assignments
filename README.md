@@ -305,7 +305,144 @@ Xem [báo cáo M3.5](docs/M3_5_MAP_CORRECTNESS_REPORT.md) và
 
 ---
 
-## 7. Định hướng Milestone Tiếp theo
+## 7. M4 — Nav2 độc lập (chưa đạt nghiệm thu tự hành)
 
-- **Milestone M4: Nav2 Autonomous Navigation (Điều hướng Tự động)** — *CHƯA TRIỂN KHAI (NOT YET IMPLEMENTED)*:
-  Tích hợp ngăn xếp Nav2 hoàn chỉnh (Costmap toàn cục/cục bộ, Planner, Controller, Recovery Behaviors) tái sử dụng phiên AMCL bền vững đã được hoàn thiện trong M3, thực thi tuần tự 3 mục tiêu điều hướng tự động trong kho hàng.
+**Trạng thái M4: FAIL / chưa nghiệm thu.** Mã nguồn đã build và **109 kiểm thử
+PASS** (83 kiểm thử cũ + 26 kiểm thử M4). Nav2 đã khởi chạy độc lập, tham số thực
+và từ chối goal Unknown/Occupied đã được quan sát. Tuy nhiên các lần chạy tự
+hành gặp TF/costmap cũ và sai lệch định vị; chưa có goal nào được xác minh
+`SUCCEEDED`. Không xem node ACTIVE hoặc đường đi hiển thị là bằng chứng thành công.
+Bộ kiểm tra mới từ chối costmap/footprint không cập nhật. Không tiếp tục gửi goal
+khi kiểm tra báo FAIL. Xem [báo cáo M4](docs/M4_ENGINEERING_REPORT.md).
+
+### Thứ tự terminal và quyền sở hữu tiến trình
+
+Trong **mỗi terminal**, dùng môi trường ROS 2 Humble hiện có:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash
+```
+
+**Terminal 1 — giữ chạy liên tục:**
+
+```bash
+ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true
+```
+
+Terminal này sở hữu một Gazebo, một robot Standard và một RViz. Không chạy lại
+lệnh này khi chuyển stack. Các cảnh báo frame `map` trước khi có AMCL/SLAM là
+bình thường; giữ Fixed Frame `odom` ở giai đoạn này.
+
+**Terminal 2 — localization, giữ chạy:**
+
+```bash
+ros2 run turtlebot4 start_localization
+```
+
+Trong RViz, chuyển **Global Options → Fixed Frame → map**, rồi dùng
+**2D Pose Estimate** tại vị trí/hướng thực tế của robot. Nếu vừa restart mô phỏng,
+điểm xuất phát gần `(0,0,0)`; không dùng điểm này cho robot đã di chuyển.
+
+**Terminal 3 — undock trước khi bật Nav2:**
+
+```bash
+ros2 run turtlebot4 teleop --undock --non-interactive
+```
+
+Đây là lệnh một lần đã chạy trong các chức năng M2/M3. Xác nhận robot thực sự
+ra khỏi dock và đứng yên; không chỉ tin dòng chữ “Undock completed”. Không giữ
+teleop chạy khi thực thi goal. Kiểm thử M4 dùng action undock có kiểm tra kết quả
+và chuyển động tịnh tiến giới hạn để đối chiếu AMCL với ground truth.
+
+**Terminal 4 — kiểm tra localization trước:**
+
+```bash
+ros2 run turtlebot4 check_localization --timeout 15 --json
+```
+
+Báo cáo này hỗ trợ kiểm tra bản đồ/TF; nhãn node “active” riêng lẻ không thay thế
+lifecycle và kiểm tra định vị khi robot di chuyển. Nếu robot ở ô Unknown/Occupied
+hoặc định vị không ổn định, dừng lại để phục hồi định vị trước khi bật navigation.
+
+**Terminal 3 — navigation, giữ chạy nếu READY:**
+
+```bash
+ros2 run turtlebot4 start_navigation --timeout 45
+```
+
+Lệnh này dùng `config/nav2.yaml` của assignment và chỉ include Nav2 navigation
+upstream. Nó yêu cầu AMCL/Map Server có sẵn, không khởi chạy Gazebo, RViz, SLAM
+hoặc localization lần thứ hai. Thời gian chờ được giới hạn; nếu lỗi, nó dọn các
+process Nav2 do chính nó sở hữu và báo lý do. Nó kiểm tra toàn bộ danh sách
+lifecycle của launch upstream, action và dữ liệu costmap đang cập nhật.
+
+**Terminal 4 — kiểm tra Nav2, lệnh một lần:**
+
+```bash
+ros2 run turtlebot4 check_navigation --timeout 30
+ros2 run turtlebot4 check_navigation --timeout 30 --json
+```
+
+Kiểm tra lifecycle, tham số thực, TF, footprint, timestamp costmap và action.
+`PASS` ở đây chỉ nghĩa là readiness tại thời điểm quan sát, không phải đã chạy
+thành công một goal. Bản đồ kèm repository vẫn có **80.090 Free, 1.938 Occupied,
+137.449 Unknown**. Costmap có thể có số lượng Unknown khác do layer cảm biến và
+inflation; không sửa PGM/YAML để biến vùng chưa quan sát thành Free.
+
+### RViz và xác minh ba goal — chỉ thực hiện khi readiness và định vị ổn định
+
+RViz hiện có **Global Path**, **Global Costmap**, **Local Costmap** và công cụ
+**Nav2 Goal**. Không cần mở RViz thứ hai. Khi các điều kiện an toàn đều đạt:
+
+1. Bật Map, LaserScan, AMCL Pose, Particle Swarm và các costmap; kiểm tra scan
+   khớp môi trường và footprint theo đúng robot.
+2. Chọn **Nav2 Goal**, nhấp và kéo mũi tên trong vùng **Free đã lập bản đồ**, có
+   khoảng cách an toàn tới tường/kệ. Không chọn ô Unknown/Occupied.
+3. Quan sát Global Path, costmap và chuyển động thật. Ghi start pose, goal pose,
+   kết quả action, final pose, dừng xe và dữ liệu va chạm.
+4. Chỉ ghi PASS nếu action trả `SUCCEEDED`, robot thực sự tịnh tiến và final pose
+   đạt tolerance thực của controller (mặc định 0,25 m / 0,25 rad).
+5. Lặp với ba điểm đến khác nhau, cách nhau đủ lớn. Không dùng teleop trong goal.
+   Goal được nhận, có đường đi, quay tại chỗ hoặc timeout đều không phải thành công.
+
+`GridBased.allow_unknown=false`, `track_unknown_space=true` và planner
+`tolerance=0.0` ngăn planner thay goal không hợp lệ bằng một điểm lân cận.
+Bộ kiểm tra đường đi kiểm tra cả các đoạn nội suy và từ chối đi qua Unknown,
+Occupied hoặc chi phí collision. Không tăng tolerance TF để che dữ liệu cũ.
+
+Script kiểm chứng thực **có gửi action làm robot mô phỏng di chuyển**, chỉ dùng
+khi đã undock, AMCL đáng tin cậy và readiness đạt. Nó chọn tọa độ từ bản đồ thật,
+kiểm tra clearance/planner và ghi JSON; kết quả hiện tại chưa đạt ba goal:
+
+```bash
+cd /root/ros2_ws
+timeout --signal=INT --kill-after=15s 370s python3   src/turtlebot4/scripts/verify_navigation.py   --output /tmp/m4_three_goals.json --goal-timeout 100
+```
+
+Không chạy script này để cố vượt qua lỗi readiness. Không dùng trên robot thật.
+
+### Dừng và quay lại mapping
+
+Dừng goal đang chạy bằng chức năng cancel của Nav2 trước; xác nhận odometry xe
+đã dừng. Tại **Terminal 3**, nhấn `Ctrl+C` để dừng Nav2. Terminal 1 và 2 vẫn sở
+hữu mô phỏng/RViz và localization. Dừng **Terminal 2** bằng `Ctrl+C`, chờ Map
+Server/AMCL thoát, xác nhận `ros2 node list` không còn AMCL/SLAM đang sống. Sau đó
+có thể dùng lại lệnh M2 `ros2 run turtlebot4 start_slam`, rồi teleop và save_map;
+không khởi chạy thêm Gazebo. Trước khi đóng toàn bộ, dừng stack chức năng trước,
+cuối cùng `Ctrl+C` ở Terminal 1. Quy trình restart ở phần M3 vẫn giữ nguyên.
+
+### Hướng dẫn quay video (chưa có video ba goal thành công)
+
+Ghi đồng thời Gazebo, RViz và terminal diagnostics/action result. Cho thấy một
+robot, một simulator và một RViz; bản đồ Unknown vẫn còn. Quay bước initialize,
+undock, kiểm tra định vị khi di chuyển, start_navigation và tham số thực. Với
+mỗi goal A/B/C, quay mũi tên goal, Global Path, costmap, chuyển động, `SUCCEEDED`,
+final pose và xe dừng; không cắt bỏ lỗi/va chạm. Nếu lỗi TF/costmap hoặc cancel,
+ghi rõ FAIL thay vì ghi video như đã thành công. Ảnh hiện có ở
+[RViz thử nghiệm thất bại](docs/evidence/m4/rviz_failed_trial.png) và
+[Gazebo thử nghiệm thất bại](docs/evidence/m4/gazebo_failed_trial.png) là ảnh thật,
+không phải minh chứng ba goal PASS. Chưa có link video thành công.
+
+M5/M6 chưa triển khai. Cần giải quyết blocker M4 và xác minh lại ba goal trước
+khi mở rộng nhiệm vụ.

@@ -89,6 +89,28 @@ Visualization Manager:
         Reliability Policy: Best Effort
         Value: particle_cloud
       Value: true
+    - Class: rviz_default_plugins/Path
+      Name: Global Path
+      Enabled: true
+      Topic:
+        Value: plan
+      Color: 0; 120; 255
+    - Class: rviz_default_plugins/Map
+      Name: Global Costmap
+      Enabled: true
+      Topic:
+        Value: global_costmap/costmap
+        Durability Policy: Transient Local
+      Color Scheme: costmap
+      Alpha: 0.35
+    - Class: rviz_default_plugins/Map
+      Name: Local Costmap
+      Enabled: true
+      Topic:
+        Value: local_costmap/costmap
+        Durability Policy: Transient Local
+      Color Scheme: costmap
+      Alpha: 0.5
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
@@ -109,6 +131,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: initialpose
+    - Class: nav2_rviz_plugins/GoalTool
 Window Geometry:
   Width: 1200
   Height: 900
