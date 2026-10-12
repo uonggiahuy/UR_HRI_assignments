@@ -199,6 +199,80 @@ def capture_live_map(topic: str = '/map', timeout: float = 15.0) -> OccupancyGri
     )
 
 
+def transactional_map_replace(
+    temp_yaml: Path,
+    temp_pgm: Path,
+    target_yaml: Path,
+    target_pgm: Path,
+    simulate_failure: bool = False,
+) -> dict:
+    """Transactionally replace destination map files with backup and automatic rollback on failure."""
+    target_dir = target_yaml.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Pre-replacement validation on source temp files
+    validate_saved_map_files(temp_yaml, temp_pgm)
+
+    # 2. Stage new files in destination directory using hidden .tmp files
+    stage_yaml = target_dir / f'.{target_yaml.name}.tmp'
+    stage_pgm = target_dir / f'.{target_pgm.name}.tmp'
+
+    # Backup existing destination files if they exist
+    backup_yaml = target_dir / f'.{target_yaml.name}.bak'
+    backup_pgm = target_dir / f'.{target_pgm.name}.bak'
+
+    has_orig_yaml = target_yaml.is_file()
+    has_orig_pgm = target_pgm.is_file()
+
+    try:
+        if has_orig_yaml:
+            shutil.copy2(target_yaml, backup_yaml)
+        if has_orig_pgm:
+            shutil.copy2(target_pgm, backup_pgm)
+
+        shutil.copy2(temp_yaml, stage_yaml)
+        shutil.copy2(temp_pgm, stage_pgm)
+
+        if simulate_failure:
+            raise IOError("Simulated I/O failure during transactional map replacement")
+
+        # Atomic replacement on same filesystem
+        os.replace(stage_yaml, target_yaml)
+        os.replace(stage_pgm, target_pgm)
+
+        # Post-replacement validation on final destination files
+        verified_info = validate_saved_map_files(target_yaml, target_pgm)
+
+        # Clean up backups on success
+        if backup_yaml.is_file():
+            backup_yaml.unlink()
+        if backup_pgm.is_file():
+            backup_pgm.unlink()
+
+        return verified_info
+
+    except Exception as exc:
+        # Rollback: restore from backup or remove corrupted/partial destination
+        if stage_yaml.is_file():
+            stage_yaml.unlink()
+        if stage_pgm.is_file():
+            stage_pgm.unlink()
+
+        if has_orig_yaml and backup_yaml.is_file():
+            os.replace(backup_yaml, target_yaml)
+        elif not has_orig_yaml and target_yaml.is_file():
+            target_yaml.unlink()
+
+        if has_orig_pgm and backup_pgm.is_file():
+            os.replace(backup_pgm, target_pgm)
+        elif not has_orig_pgm and target_pgm.is_file():
+            target_pgm.unlink()
+
+        raise RuntimeError(
+            f"Transactional map replacement failed and was rolled back cleanly: {exc}"
+        ) from exc
+
+
 def save_map_atomic(
     output_dir: Path | str = '/root/ros2_ws/src/turtlebot4/maps',
     map_name: str = 'map',
@@ -248,11 +322,8 @@ def save_map_atomic(
     temp_pgm = temp_dir / f'{map_name}.pgm'
 
     try:
-        verified_info = validate_saved_map_files(temp_yaml, temp_pgm)
-        # Atomically replace destination files
-        shutil.copy2(temp_yaml, target_yaml)
-        shutil.copy2(temp_pgm, target_pgm)
-        print(f"[save_map] Map files written atomically to:")
+        verified_info = transactional_map_replace(temp_yaml, temp_pgm, target_yaml, target_pgm)
+        print(f"[save_map] Map files written transactionally to:")
         print(f"  - YAML: {target_yaml}")
         print(f"  - PGM:  {target_pgm}")
     finally:

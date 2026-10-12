@@ -1,4 +1,4 @@
-# Bài tập lớn 4 — Mô phỏng TurtleBot 4 & Lập bản đồ SLAM (Milestone M2)
+# Bài tập lớn 4 — Mô phỏng TurtleBot 4, Lập bản đồ SLAM & Định vị AMCL (Milestone M3)
 
 Tài liệu hướng dẫn thực hành chi tiết bằng tiếng Việt cho gói phần mềm `turtlebot4` trên nền tảng **ROS 2 Humble** và **Ubuntu 22.04**.
 
@@ -6,44 +6,58 @@ Tài liệu hướng dẫn thực hành chi tiết bằng tiếng Việt cho gó
 
 ## 1. Tổng quan và Kiến trúc Hệ thống
 
-Milestone M2 triển khai kiến trúc **Mô phỏng Bền vững (Persistent Base)** kết hợp với khối **SLAM Toolbox** hoạt động độc lập:
-- **Terminal 1 (Persistent Base):** Khởi chạy một phiên mô phỏng duy nhất gồm Gazebo Fortress, một robot TurtleBot 4, các cầu nối cảm biến (LiDAR `/scan`, Odometry `/odom`), cây biến đổi tọa độ (TF) và giao diện trực quan RViz2. Phiên này được duy trì liên tục xuyên suốt buổi thực hành và không khởi động lại khi chuyển đổi trạng thái mapping hay navigation.
-- **Terminal 2 (Mapping Mode):** Khởi chạy riêng biệt node `slam_toolbox` (chế độ mapping đồng bộ/bất đồng bộ). SLAM Toolbox là đơn vị độc quyền phát sóng transform `map -> odom` và xuất bản bản đồ `/map` (`nav_msgs/msg/OccupancyGrid`).
-- **Terminal 3 (Teleoperation):** Điều khiển di chuyển robot bằng bàn phím qua `/cmd_vel` với cơ chế dừng khẩn cấp và thiết lập QoS tương thích (`best-effort`, `volatile`). Hỗ trợ thao tác undock an toàn.
-- **Terminal 4 (Map Saver & Diagnostics):** Lưu trữ nguyên tử bản đồ vào `maps/map.yaml` và `maps/map.pgm`, đồng thời cung cấp công cụ chẩn đoán toàn diện `check_mapping`.
+Milestone M3 hoàn thiện và tích hợp kiến trúc **Mô phỏng Bền vững (Persistent Base)**, **Bản đồ Chiếm dụng Thực tế (Saved Map)** từ M2 và ngăn xếp **Định vị Thích nghi Monte Carlo (AMCL Localization)** hoạt động độc lập:
+
+- **Terminal 1 (Persistent Base):** Khởi chạy một phiên mô phỏng duy nhất gồm Gazebo Fortress, một robot TurtleBot 4, các cầu nối cảm biến (LiDAR `/scan`, Odometry `/odom`), cây biến đổi tọa độ (TF) và giao diện trực quan RViz2. Phiên này chạy liên tục xuyên suốt buổi thực hành và không bao giờ bị khởi động lại khi chuyển đổi giữa chế độ mapping và localization.
+- **Terminal 2 (Stack Chức năng Độc lập — Mapping hoặc Localization):**
+  - *Khi Lập bản đồ (M2):* Chạy `ros2 run turtlebot4 start_slam`. SLAM Toolbox độc quyền phát sóng `map -> odom`.
+  - *Khi Định vị (M3):* Dừng SLAM bằng `Ctrl+C`, sau đó chạy `ros2 run turtlebot4 start_localization`. Map Server nạp bản đồ đã lưu và AMCL trở thành thẩm quyền phát sóng duy nhất của `map -> odom`.
+- **Terminal 3 (Teleoperation & Khởi tạo Vị trí):** Điều khiển di chuyển robot bằng bàn phím qua `/cmd_vel` với cơ chế dừng khẩn cấp, hoặc gửi mục tiêu undock khi robot còn trên dock sạc.
+- **Terminal 4 (Kiểm tra & Chẩn đoán Toàn diện):** Chạy `ros2 run turtlebot4 check_localization` để xác thực trạng thái vòng đời Map Server, AMCL, độ hội tụ của hạt `/amcl_pose`, tính toàn vẹn TF và tính tương thích của bản đồ.
 
 ```text
-               +---------------------------------------------------------+
-               |        Terminal 1: Persistent Base Simulator           |
-               |  ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true |
-               |                                                         |
-               |  [Gazebo Fortress] ----> /clock, /scan, /odom, /tf      |
-               |  [RViz2 (odom frame)]                                   |
-               +---------------------------+-----------------------------+
-                                           |
-                   +-----------------------+-----------------------+
-                   |                                               |
-                   v                                               v
-+------------------------------------+           +----------------------------------+
-|      Terminal 2: Mapping           |           |     Terminal 3: Teleoperation    |
-|   ros2 run turtlebot4 start_slam   |           |    ros2 run turtlebot4 teleop    |
-|                                    |           |                                  |
-| [slam_toolbox]                     |           | Điều khiển bàn phím              |
-|  - Thu nhận /scan & /odom          |           | Xuất bản /cmd_vel                |
-|  - Phát sóng map -> odom           |           | Tự động gửi zero twist khi dừng |
-|  - Xuất bản /map                   |           +----------------------------------+
-+------------------+-----------------+
-                   |
-                   v
-+------------------------------------+
-|      Terminal 4: Map Saving        |
-|    ros2 run turtlebot4 save_map    |
-|                                    |
-| [nav2_map_server map_saver_cli]    |
-|  - Kiểm tra lưới OccupancyGrid     |
-|  - Lưu map.yaml & map.pgm          |
-|  - Xác thực nguyên tử file ảnh     |
-+------------------------------------+
++-----------------------------------------------------------------------------------------+
+|                                    PERSISTENT BASE                                      |
+|                 ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true                  |
+|                                                                                         |
+|  [Ignition Gazebo Fortress]                                                             |
+|    - Physics & World: warehouse.sdf                                                     |
+|    - TurtleBot 4 Standard + Create 3 Base                                               |
+|    - Clock Bridge: /clock (333 Hz)                                                      |
+|    - LiDAR Bridge: /scan (62.5 Hz, sensor_msgs/msg/LaserScan)                           |
+|    - DiffDrive Controller: /odom (62 Hz, nav_msgs/msg/Odometry)                         |
+|    - Motion Control: /cmd_vel (best-effort subscriber)                                  |
+|    - TF static & dynamic publishers: odom -> base_link -> links                         |
+|  [RViz2]                                                                                |
+|    - Fixed frame: odom (mặc định) -> chuyển sang map khi định vị                        |
+|    - Displays: RobotModel, LaserScan, TF, Map, AMCL Pose, Particle Swarm                |
+|    - Tool: 2D Pose Estimate (xuất bản tới /initialpose)                                 |
++-----------------------------------------------------------------------------------------+
+                                          |
+                +-------------------------+-------------------------+
+                |                                                   |
+                v (Sau khi dừng SLAM)                               v
++---------------------------------------+         +---------------------------------------+
+|      LOCALIZATION (Terminal 2)        |         |      TELEOPERATION (Terminal 3)       |
+| ros2 run turtlebot4 start_localization|         |       ros2 run turtlebot4 teleop      |
+|                                       |         |                                       |
+|  - Tiền kiểm tra: loại trừ SLAM Toolbox|        |  - Undock Create 3 an toàn            |
+|  - Map Server: nạp maps/map.yaml      |         |  - Ramping vận tốc bàn phím           |
+|  - AMCL: bộ lọc hạt thích nghi        |         |  - QoS khớp chuẩn /cmd_vel            |
+|  - Phát sóng duy nhất: map -> odom    |         |  - Dừng xe tức thời khi thoát         |
+|  - Thu nhận /initialpose              |         +---------------------------------------+
++---------------------------------------+
+                |
+                v
++---------------------------------------+
+|     CHẨN ĐOÁN AMCL (Terminal 4)       |
+|  ros2 run turtlebot4 check_localization|
+|                                       |
+|  - Xác thực Map Server & AMCL ACTIVE  |
+|  - Kiểm tra tính hợp lệ /amcl_pose    |
+|  - Kiểm tra chuỗi TF map->odom->base  |
+|  - Xuất báo cáo JSON / Text tự động   |
++---------------------------------------+
 ```
 
 ---
@@ -53,30 +67,35 @@ Milestone M2 triển khai kiến trúc **Mô phỏng Bền vững (Persistent Ba
 ```text
 turtlebot4/
 ├── launch/
-│   ├── turtlebot4.launch.py       # Điểm khởi chạy mô phỏng bền vững (persistent base)
-│   ├── simulation.launch.py       # Điểm tương thích M1
+│   ├── turtlebot4.launch.py          # Điểm khởi chạy mô phỏng bền vững (persistent base)
+│   ├── simulation.launch.py          # Điểm tương thích M1
 │   └── README.md
 ├── turtlebot4/
-│   ├── simulation_launch.py       # Logic ghép nối mô phỏng và quản lý tiến trình
-│   ├── slam_runner.py             # Điều phối vòng đời SLAM Toolbox độc lập
-│   ├── teleop.py                  # Điều khiển bàn phím an toàn và QoS
-│   ├── map_saver.py               # Lưu và kiểm định nguyên tử OccupancyGrid
-│   ├── mapping_diagnostics.py     # Bộ công cụ chẩn đoán toàn diện SLAM
-│   └── diagnostics.py             # Chẩn đoán cảm biến và đồ thị ROS (M1)
+│   ├── simulation_launch.py          # Logic ghép nối mô phỏng và quản lý tiến trình
+│   ├── slam_runner.py                # Điều phối vòng đời SLAM Toolbox độc lập (M2)
+│   ├── teleop.py                     # Điều khiển bàn phím an toàn và QoS (M2)
+│   ├── map_saver.py                  # Bản vá giao dịch nguyên tử lưu bản đồ (M2/M3)
+│   ├── mapping_diagnostics.py        # Bộ công cụ chẩn đoán SLAM (M2)
+│   ├── localization_runner.py        # Trình khởi chạy AMCL & Map Server độc lập (M3)
+│   ├── localization_diagnostics.py   # Chẩn đoán AMCL, TF và kiểm định bản đồ (M3)
+│   └── diagnostics.py                # Chẩn đoán cảm biến và đồ thị ROS (M1)
 ├── maps/
-│   ├── map.yaml                   # File cấu hình metadata bản đồ đã lưu
-│   └── map.pgm                    # File ảnh nhị phân chiếm dụng thực tế
+│   ├── map.yaml                      # File metadata bản đồ kho hàng tạo từ M2
+│   └── map.pgm                       # File ảnh chiếm dụng (491x447 ô, 0.05 m/ô)
 ├── rviz/
-│   └── simulation.rviz            # Cấu hình RViz2 bền vững (RobotModel, LaserScan, TF, Map)
+│   ├── simulation.rviz               # RViz2 cấu hình bền vững (Map, AMCL Pose, Swarm, 2D Pose)
+│   └── README.md
 ├── config/
-│   └── simulation.yaml            # Cấu hình lọc và hòa trộn trạng thái khớp
+│   └── simulation.yaml               # Cấu hình lọc và hòa trộn trạng thái khớp
 ├── test/
-│   ├── test_m1.py                 # 37 bài kiểm thử hồi quy M1
-│   └── test_m2.py                 # 15 bài kiểm thử offline M2
+│   ├── test_m1.py                    # 37 bài kiểm thử hồi quy M1
+│   ├── test_m2.py                    # 15 bài kiểm thử offline M2
+│   └── test_m3.py                    # 12 bài kiểm thử offline M3
 ├── docs/
-│   ├── M1_ENGINEERING_REPORT.md   # Báo cáo kỹ thuật M1
-│   ├── M2_ENGINEERING_REPORT.md   # Báo cáo kỹ thuật M2
-│   └── evidence/                  # Minh chứng đo đạc thời gian thực
+│   ├── M1_ENGINEERING_REPORT.md      # Báo cáo kỹ thuật M1
+│   ├── M2_ENGINEERING_REPORT.md      # Báo cáo kỹ thuật M2
+│   ├── M3_ENGINEERING_REPORT.md      # Báo cáo kỹ thuật M3
+│   └── evidence/m3/                  # Minh chứng đo đạc thời gian thực M3
 ├── package.xml
 ├── setup.py
 └── README.md
@@ -97,216 +116,167 @@ colcon test --packages-select turtlebot4
 colcon test-result --verbose
 ```
 
-Kết quả kỳ vọng: **52 tests passed** (37 kiểm thử M1 + 15 kiểm thử M2), 0 lỗi, 0 thất bại.
+Kết quả kiểm thử tự động toàn diện: **64 tests passed, 0 errors, 0 failures, 0 skipped** (37 kiểm thử M1 + 15 kiểm thử M2 + 12 kiểm thử M3).
 
 ---
 
-## 4. Hướng dẫn Thực thi Từng Terminal (Step-by-Step)
+## 4. Hướng dẫn Thực hành — Quy trình Kép (Dual Workflows)
 
-### Terminal 1 — Khởi chạy Mô phỏng Bền vững (Persistent Base)
-Mở cửa sổ dòng lệnh thứ nhất và chạy:
+Milestone M3 hỗ trợ và xác thực thành công cả hai quy trình vận hành:
 
+### Quy trình A: Trình diễn Phiên liên tục (Continuous Demonstration)
+
+Đây là quy trình khuyến nghị khi quay video demo và đánh giá thực tế:
+
+#### Bước 1: Khởi chạy Mô phỏng Bền vững (Terminal 1)
 ```bash
 source /opt/ros/humble/setup.bash
 source /root/ros2_ws/install/setup.bash
 ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true
 ```
+*Ghi chú:* Terminal này được giữ chạy liên tục. Gazebo Fortress và RViz2 hiển thị thế giới kho hàng (`warehouse.sdf`) với Create 3 và TurtleBot 4 tại điểm xuất phát.
 
-- **Tiến trình:** Khởi chạy Gazebo Fortress với thế giới `warehouse`, tạo một robot TurtleBot 4 Standard, kích hoạt các cầu nối cảm biến `/scan`, `/odom`, `/clock`, `/cmd_vel` và mở giao diện RViz2.
-- **Trạng thái:** Giữ terminal này chạy liên tục trong suốt toàn bộ phiên làm việc.
-- **Quan sát RViz2:** Khung tọa độ cố định (Fixed Frame) là `odom`. Robot model, dữ liệu quét LaserScan (chấm đỏ) và cây tọa độ TF hiển thị chuẩn xác. Mục `Map` sẽ ở trạng thái chờ cho tới khi SLAM được bật.
-
----
-
-### Terminal 2 — Khởi chạy SLAM Toolbox
-Mở cửa sổ dòng lệnh thứ hai và chạy:
-
+#### Bước 2: Bật SLAM, Quét Bản đồ và Lưu (Terminal 2 & 3)
 ```bash
-source /opt/ros/humble/setup.bash
-source /root/ros2_ws/install/setup.bash
+# Terminal 2: Bật SLAM
 ros2 run turtlebot4 start_slam
-```
 
-- **Tiến trình:** Kiểm tra sự sẵn sàng của mô phỏng, xác minh không có node SLAM hoặc AMCL nào đang chạy trùng lặp, sau đó khởi chạy node `slam_toolbox` với `use_sim_time:=true`.
-- **Đầu ra kỳ vọng:**
-  ```text
-  [start_slam] Checking base simulator readiness (timeout 15.0s)...
-  [start_slam] Base simulator verified (/clock and LiDAR active).
-  [start_slam] Launching: ros2 launch turtlebot4_navigation slam.launch.py use_sim_time:=true sync:=true params:=...
-  [sync_slam_toolbox_node-1] [INFO] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
-  [sync_slam_toolbox_node-1] Registering sensor: [Custom Described Lidar]
-  ```
-- **Quan sát:** Trên RViz2 (Terminal 1), lớp bản đồ `Map` lập tức nhận dữ liệu từ `/map` và hiển thị các vùng không gian tự do (màu trắng), chướng ngại vật (màu đen) và vùng chưa khám phá (màu xám).
-
----
-
-### Terminal 3 — Undock và Điều khiển Bàn phím (Teleoperation)
-Mở cửa sổ dòng lệnh thứ ba để điều khiển robot khám phá kho hàng:
-
-**Bước 3.1: Undock robot ra khỏi trạm sạc (nếu đang ở trạm sạc)**
-```bash
-source /opt/ros/humble/setup.bash
-ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"
-```
-*Kết quả:* Robot sẽ tự động lùi ra khỏi dock sạc khoảng 0.35m và xoay nhẹ, trạng thái hoàn thành: `SUCCEEDED`.
-
-**Bước 3.2: Khởi động giao diện điều khiển bàn phím**
-```bash
-source /opt/ros/humble/setup.bash
-source /root/ros2_ws/install/setup.bash
+# Terminal 3: Điều khiển quét bản đồ
 ros2 run turtlebot4 teleop
-```
 
-- **Phím điều khiển di chuyển:**
-  - `i`: Tiến thẳng (+linear)
-  - `,`: Lùi thẳng (-linear)
-  - `j`: Quay trái (+angular)
-  - `l`: Quay phải (-angular)
-  - `u` / `o`: Tiến cua trái / phải
-  - `m` / `.`: Lùi cua trái / phải
-  - `k` hoặc Phím cách (Space): Dừng khẩn cấp (stop)
-- **Phím điều chỉnh tốc độ:**
-  - `w` / `x`: Tăng / giảm 10% tốc độ tịnh tiến
-  - `e` / `c`: Tăng / giảm 10% tốc độ quay
-- **Thoát an toàn:** Nhấn `q` hoặc `Ctrl+C`. Chương trình tự động gửi vận tốc 0 (`linear=0, angular=0`) liên tục xuống `/cmd_vel` để đảm bảo robot đứng yên tuyệt đối trước khi kết thúc.
-
-*Gợi ý điều khiển:* Điều khiển robot đi chậm qua các hành lang chính, đi vòng quanh các kệ hàng và quay trở lại điểm xuất phát để thuật toán SLAM thực hiện khép vòng (loop closure).
-
----
-
-### Terminal 4 — Kiểm tra Chẩn đoán và Lưu Bản đồ
-
-**Bước 4.1: Kiểm tra chất lượng lập bản đồ thời gian thực**
-Mở cửa sổ dòng lệnh thứ tư và chạy:
-
-```bash
-source /opt/ros/humble/setup.bash
-source /root/ros2_ws/install/setup.bash
-ros2 run turtlebot4 check_mapping
-```
-
-Đầu ra kỳ vọng:
-```text
-=================================================================
- TURTLEBOT 4 SLAM MAPPING DIAGNOSTICS REPORT
-=================================================================
-Overall Status:        [PASS]
------------------------------------------------------------------
-Stack & Nodes:
-  SLAM Toolbox Active: YES
-  AMCL Conflict:       NONE (Good)
-  Stack Isolation:     PASS
------------------------------------------------------------------
-Sensors & Timing:
-  /clock Active:       YES
-  /scan Valid:         YES
-  /odom Valid:         YES
------------------------------------------------------------------
-Transforms (TF):
-  map -> odom:         YES
-  odom -> base_link:   YES
-  map -> base_link:    CONNECTED
------------------------------------------------------------------
-Occupancy Grid (/map):
-  Map Received:        YES
-  Map Progressing:     YES
-  Map Valid:           YES
-  Dimensions:          491 x 447 cells (24.55m x 22.35m)
-  Resolution:          0.05 m/cell
-  Free Cells:          80090 (36.5%)
-  Occupied Cells:      1938 (0.9%)
-  Unknown Cells:       137449 (62.6%)
-=================================================================
-```
-
-**Bước 4.2: Lưu bản đồ nguyên tử**
-Sau khi robot đã khám phá đủ diện tích và dừng hẳn, chạy lệnh:
-
-```bash
+# Terminal 4: Lưu bản đồ khi hoàn thành
 ros2 run turtlebot4 save_map
 ```
 
-Đầu ra kỳ vọng:
-```text
-[save_map] Listening for live OccupancyGrid on '/map'...
-[save_map] Live map validated: 491x447 cells (24.6m x 22.4m), Free: 80090 (36.5%), Occupied: 1938 (0.9%), Unknown: 137449 (62.6%)
-[save_map] Invoking Nav2 map saver: ros2 run nav2_map_server map_saver_cli -t /map -f ...
-[save_map] Map files written atomically to:
-  - YAML: /root/ros2_ws/src/turtlebot4/maps/map.yaml
-  - PGM:  /root/ros2_ws/src/turtlebot4/maps/map.pgm
-
-[save_map] SUCCESS: Bản đồ đã được lưu và kiểm tra thành công!
-```
-
----
-
-## 5. Xác thực File Bản đồ Đã Lưu
-
-Kiểm tra nội dung file cấu hình:
-```bash
-cat /root/ros2_ws/src/turtlebot4/maps/map.yaml
-```
-Nội dung chuẩn:
-```yaml
-image: map.pgm
-mode: trinary
-resolution: 0.05
-origin: [-13.4, -12.6, 0]
-negate: 0
-occupied_thresh: 0.65
-free_thresh: 0.25
-```
-
-Kiểm tra file ảnh nhị phân PGM:
-```bash
-ls -lh /root/ros2_ws/src/turtlebot4/maps/map.pgm
-```
-Kích thước file ảnh xấp xỉ `219 KB`, tương ứng với kích thước ma trận `491 x 447` pixel.
-
----
-
-## 6. Dừng SLAM và Giữ nguyên Mô phỏng Gazebo
-
-Khi hoàn thành quá trình lập bản đồ:
-1. Tại **Terminal 3:** Nhấn `q` để thoát teleop. Robot dừng tại chỗ.
-2. Tại **Terminal 2:** Nhấn `Ctrl+C` để dừng `start_slam`.
-   Thông báo xác nhận:
+#### Bước 3: Dừng SLAM an toàn và Chuyển đổi Thẩm quyền TF
+1. Tại **Terminal 3:** Nhấn `q` để dừng teleop. Robot đứng yên tại chỗ.
+2. Tại **Terminal 2:** Nhấn `Ctrl+C` để dừng SLAM Toolbox.
+   Xác nhận đầu ra:
    ```text
    [start_slam] Received shutdown signal. Stopping SLAM Toolbox cleanly...
    [start_slam] SLAM Toolbox stopped. Simulator and RViz remain running.
    ```
-3. **Kiểm tra tính bền vững:** Tại Terminal 4, chạy lệnh kiểm tra:
+3. Xác nhận không còn node SLAM nào bằng `ros2 node list | grep slam` (phải rỗng).
+
+#### Bước 4: Khởi chạy Định vị AMCL (Terminal 2)
+Trong cùng Terminal 2, chạy lệnh khởi tạo AMCL và Map Server:
+```bash
+ros2 run turtlebot4 start_localization
+```
+Trình điều phối sẽ tự động:
+- Kiểm tra tính tồn tại và hợp lệ của `maps/map.yaml` và `maps/map.pgm`.
+- Xác nhận không có tiến trình SLAM nào đang chạy (nếu SLAM còn bật, lệnh lập tức từ chối và thoát an toàn).
+- Nạp bản đồ qua `nav2_map_server` và kích hoạt `amcl` ở chế độ mô phỏng (`use_sim_time:=true`).
+- Cả hai node đạt trạng thái lifecycle `ACTIVE`.
+
+#### Bước 5: Đặt Điểm Ước lượng Vị trí Ban đầu (2D Pose Estimate)
+Trong cửa sổ RViz2:
+1. Đổi **Global Options -> Fixed Frame** từ `odom` sang `map`.
+2. Quan sát thấy bản đồ kho hàng hiển thị rõ nét với các bức tường và lối đi.
+3. Chọn công cụ **2D Pose Estimate** trên thanh công cụ phía trên (hoặc phím tắt `p`).
+4. Nhấp và kéo chuột tại vị trí thực tế hiện tại của robot trên bản đồ theo hướng đầu xe.
+   - Nếu robot vẫn ở vị trí xuất phát: tọa độ x ≈ 0.0, y ≈ 0.0, yaw ≈ 0.0 rad.
+   - Nếu robot vừa khám phá xong M2: tọa độ x ≈ -2.23, y ≈ -1.51, yaw ≈ 2.53 rad.
+
+*(Tùy chọn CLI):* Có thể gửi vị trí ban đầu qua dòng lệnh bằng cách:
+```bash
+ros2 topic pub --once /initialpose geometry_msgs/msg/PoseWithCovarianceStamped '{header: {frame_id: "map"}, pose: {pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}, covariance: [0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.068]}}'
+```
+
+Ngay sau khi nhận `/initialpose`, AMCL thiết lập các hạt định vị, giải phóng cảnh báo và bắt đầu phát sóng transform `map -> odom`.
+
+#### Bước 6: Chẩn đoán Định vị AMCL (Terminal 4)
+Chạy bộ công cụ kiểm tra độc lập:
+```bash
+ros2 run turtlebot4 check_localization
+```
+Đầu ra chuẩn:
+```text
+====================================================================
+ TURTLEBOT 4 AMCL LOCALIZATION DIAGNOSTICS REPORT
+====================================================================
+Overall Status:        [PASS]
+--------------------------------------------------------------------
+Stack & Nodes:
+  AMCL Active:         YES
+  Map Server Active:   YES
+  SLAM Conflict:       NONE (Good)
+  Stack Isolation:     PASS
+--------------------------------------------------------------------
+Sensors & Timing:
+  /clock Active:       YES
+  /scan Valid:         YES
+  /odom Valid:         YES
+--------------------------------------------------------------------
+Transforms (TF):
+  map -> odom:         YES (AMCL)
+  odom -> base_link:   YES
+  map -> base_link:    CONNECTED
+--------------------------------------------------------------------
+Map Server (/map):
+  Map Received:        YES
+  Map Valid:           YES
+  Dimensions:          491 x 447 cells (24.55m x 22.35m)
+  Resolution:          0.05 m/cell
+  Free Cells:          217539
+--------------------------------------------------------------------
+AMCL Localization (/amcl_pose):
+  Pose Received:       YES (1 msgs)
+  Pose Valid:          YES
+  Position (x,y,z):    [0.004, -0.022, 0.0]
+  Heading (yaw):       0.3 deg (0.005 rad)
+  Variance (x, y, yaw): {'x': 0.24259, 'y': 0.17904, 'yaw': 0.06277}
+====================================================================
+```
+
+---
+
+### Quy trình B: Khởi động lại Toàn bộ và Định vị (Restart and Relocalize)
+
+Quy trình này chứng minh tính độc lập hoàn toàn của ngăn xếp định vị: robot được sinh ra trong một phiên mô phỏng hoàn toàn mới, không phụ thuộc vào dữ liệu TF hay node SLAM cũ:
+
+1. **Tắt toàn bộ:** Dừng mọi terminal bằng `Ctrl+C`.
+2. **Khởi chạy mô phỏng mới (Terminal 1):**
    ```bash
-   ros2 run turtlebot4 check_simulation --timeout 5
+   ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true
    ```
-   *Kết quả:* Mô phỏng Gazebo Fortress, cầu nối cảm biến LiDAR, Odometry và RViz2 tại **Terminal 1** vẫn tiếp tục chạy hoàn hảo, sẵn sàng cho việc nạp bản đồ đã lưu vào AMCL ở giai đoạn tiếp theo mà không cần khởi động lại mô phỏng.
+3. **Bật thẳng AMCL Localization (Terminal 2):**
+   ```bash
+   ros2 run turtlebot4 start_localization
+   ```
+   *Lưu ý:* Tuyệt đối không bật SLAM. Map Server tự động nạp `maps/map.yaml` đã lưu từ trước.
+4. **Đặt vị trí xuất phát:**
+   Trong RViz2 (Fixed Frame: `map`), chọn **2D Pose Estimate** nhấp vào điểm gốc `(0, 0)` hướng về phía trước, hoặc chạy lệnh pub `/initialpose` với `x=0, y=0, w=1`.
+5. **Điều khiển xe chạy thử (Terminal 3):**
+   Khởi chạy `ros2 run turtlebot4 teleop`, thực hiện undock và điều khiển xe di chuyển vài mét.
+6. **Kiểm tra độ hội tụ (Terminal 4):**
+   Chạy `ros2 run turtlebot4 check_localization`. Vị trí robot trên bản đồ di chuyển chính xác theo chuyển động xe, đám mây hạt (particle cloud) co cụm quanh vị trí thực và phương sai (variance) giảm dần.
 
 ---
 
-## 7. Kịch bản Xác thực Khởi động lại (Restart Scenario)
+## 5. Bản vá Giao dịch Lưu bản đồ (Transactional Map Saver Patch)
 
-Ngoài chế độ phiên liên tục, đề bài yêu cầu robot có thể được khởi động lại hoàn toàn từ đầu trong cùng thế giới kho hàng và nạp lại bản đồ vừa lưu:
-1. Tắt toàn bộ các terminal bằng `Ctrl+C`.
-2. Khởi chạy lại Terminal 1: `ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true`.
-3. Bản đồ đã được lưu cố định tại `maps/map.yaml` và `maps/map.pgm` trong mã nguồn gói và sẽ được sử dụng trực tiếp bởi Map Server trong Milestone M3.
+Trong Milestone M3, hàm `save_map` đã được nâng cấp cơ chế ghi file từ sao chép thông thường sang cơ chế **Giao dịch Nguyên tử (Transactional Replacement)**:
+1. **Tiền kiểm tra (Pre-validation):** Kiểm tra nội dung OccupancyGrid trực tiếp và các file tạm thời trong thư mục phân lập (`/tmp/tb4_map_save_...`) trước khi tác động vào thư mục đích.
+2. **Sao lưu an toàn (Backup staging):** Tạo file dự phòng `.bak` của `map.yaml` và `map.pgm` hiện hữu.
+3. **Thay thế nguyên tử (Atomic `os.replace`):** Ghi đè file trong cùng một hệ thống tệp tin qua lệnh nguyên tử của hệ điều hành.
+4. **Hậu kiểm tra & Tự động hoàn tác (Post-validation & Rollback):** Xác minh kích thước byte PGM và liên kết ảnh YAML sau khi ghi. Nếu có bất kỳ lỗi đĩa hoặc sai lệch dữ liệu nào, hệ thống tự động phục hồi lại cặp file `.bak` nguyên vẹn và xóa bỏ file tạm.
 
 ---
 
-## 8. Xử lý Sự cố Thường gặp (Troubleshooting)
+## 6. Xử lý Sự cố Thường gặp (Troubleshooting)
 
 | Hiện tượng | Nguyên nhân | Cách khắc phục |
 |---|---|---|
-| `start_slam` báo lỗi `Duplicate SLAM stack rejected` | Có một tiến trình `slam_toolbox` khác đang chạy nền | Dừng terminal SLAM cũ bằng `Ctrl+C` hoặc kiểm tra `pkill -f slam_toolbox` |
-| `start_slam` báo lỗi `Incompatible stack rejected` | Node `amcl` đang hoạt động (xung đột thẩm quyền `map -> odom`) | Tắt `amcl` trước khi bật SLAM |
-| `save_map` báo lỗi `0 free cells observed` | Robot chưa di chuyển hoặc cảm biến chưa quét được không gian | Điều khiển robot di chuyển bằng `teleop` để quét các khoảng trống |
-| RViz2 báo lỗi TF frame `map` không tồn tại trước khi bật SLAM | Trước khi SLAM chạy, chưa có đơn vị xuất bản `map -> odom` | Đây là trạng thái bình thường; cấu hình RViz sử dụng Fixed Frame là `odom` để tránh lỗi |
-| Robot không di chuyển khi bấm phím teleop | Robot đang bị khóa trên dock sạc Create 3 | Chạy lệnh undock: `ros2 action send_goal /undock irobot_create_msgs/action/Undock "{}"` |
+| `start_localization` báo lỗi `Active SLAM Toolbox detected` | Tiến trình `slam_toolbox` vẫn đang chạy nền từ giai đoạn trước | Nhấn `Ctrl+C` tại terminal SLAM hoặc kiểm tra `pkill -f slam_toolbox` |
+| AMCL báo cảnh báo `AMCL cannot publish a pose or update the transform. Please set the initial pose...` | AMCL đang chờ người dùng cung cấp điểm ước lượng ban đầu | Sử dụng công cụ `2D Pose Estimate` trên RViz2 hoặc gửi `/initialpose` |
+| RViz2 báo lỗi TF frame `map` bị đứt gãy hoặc không hiển thị LaserScan | Chưa đặt initial pose nên AMCL chưa phát sóng `map -> odom` | Đặt 2D Pose Estimate trong RViz2 để kích hoạt chuỗi transform `map -> odom -> base_link` |
+| LaserScan không khớp với các bức tường trên bản đồ | Tọa độ ban đầu đặt bị lệch góc quay hoặc vị trí | Dùng công cụ `2D Pose Estimate` nhấp và kéo lại theo đúng vị trí và hướng nhìn của robot |
+| `check_localization` báo `No OccupancyGrid received` | Map Server chưa kích hoạt hoặc đường dẫn file YAML sai | Kiểm tra sự tồn tại của `maps/map.yaml` và trạng thái lifecycle của `map_server` |
 
 ---
 
-## 9. Định hướng Các Milestone Tiếp theo
+## 7. Định hướng Milestone Tiếp theo
 
-- **Milestone M3: AMCL Localization (Định vị trên Bản đồ Đã lưu)** — *CHƯA TRIỂN KHAI (NOT YET IMPLEMENTED)*:
-  Nạp file `maps/map.yaml` qua `nav2_map_server`, kích hoạt `amcl` để định vị vị trí robot và đặt điểm ước lượng ban đầu (2D Pose Estimate).
 - **Milestone M4: Nav2 Autonomous Navigation (Điều hướng Tự động)** — *CHƯA TRIỂN KHAI (NOT YET IMPLEMENTED)*:
-  Kích hoạt ngăn xếp Nav2, costmap toàn cục/cục bộ, bộ lập quỹ đạo và thực hiện tự động 3 mục tiêu điều hướng liên tiếp.
+  Tích hợp ngăn xếp Nav2 hoàn chỉnh (Costmap toàn cục/cục bộ, Planner, Controller, Recovery Behaviors) tái sử dụng phiên AMCL bền vững đã được hoàn thiện trong M3, thực thi tuần tự 3 mục tiêu điều hướng tự động trong kho hàng.

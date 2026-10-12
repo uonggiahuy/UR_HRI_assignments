@@ -36,5 +36,7 @@ setup(
         'teleop = turtlebot4.teleop:main',
         'save_map = turtlebot4.map_saver:main',
         'check_mapping = turtlebot4.mapping_diagnostics:main',
+        'start_localization = turtlebot4.localization_runner:main',
+        'check_localization = turtlebot4.localization_diagnostics:main',
     ]},
 )
