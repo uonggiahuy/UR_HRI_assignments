@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import sys
 import time
+import yaml
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
@@ -19,7 +20,7 @@ from tf2_msgs.msg import TFMessage
 
 from turtlebot4.diagnostics import frame_chain, scan_valid, odometry_valid
 from turtlebot4.localization_runner import resolve_saved_map_path
-from turtlebot4.map_saver import validate_saved_map_files
+from turtlebot4.map_saver import occupancy_signature, validate_saved_map_files
 from turtlebot4.simulation_launch import validate_namespace
 
 
@@ -101,6 +102,16 @@ def validate_map_compatibility(msg: OccupancyGrid, expected_yaml: dict) -> dict:
     free_count = sum(1 for c in msg.data if 0 <= c <= 25)
     occupied_count = sum(1 for c in msg.data if c > 25)
     unknown_count = sum(1 for c in msg.data if c == -1)
+
+    if len(msg.data) != info.width * info.height or any(c not in (-1, 0, 100) for c in msg.data):
+        raise ValueError('Live trinary map has invalid occupancy data')
+    for key, count in (('free_cells', free_count), ('occupied_cells', occupied_count),
+                       ('unknown_cells', unknown_count)):
+        if key in expected_yaml and count != expected_yaml[key]:
+            raise ValueError(f'Live map {key} {count} does not match saved PGM {expected_yaml[key]}')
+    if ('occupancy_sha256' in expected_yaml
+            and occupancy_signature(msg.data) != expected_yaml['occupancy_sha256']):
+        raise ValueError('Live map cell layout does not match saved PGM')
 
     return {
         'width': info.width,
@@ -195,7 +206,8 @@ def run_localization_diagnostics(
     timeout: float = 10.0,
 ) -> dict:
     resolved_map = resolve_saved_map_path(map_yaml_path)
-    expected_meta = validate_saved_map_files(resolved_map, resolved_map.parent / 'map.pgm')
+    image_ref = yaml.safe_load(resolved_map.read_text())['image']
+    expected_meta = validate_saved_map_files(resolved_map, resolved_map.parent / image_ref)
 
     node = LocalizationDiagnosticsNode(namespace=namespace)
     start_time = time.monotonic()
@@ -343,6 +355,8 @@ def main(argv=None):
             print(f"  Dimensions:          {st['width']} x {st['height']} cells ({st['width']*st['resolution']:.2f}m x {st['height']*st['resolution']:.2f}m)")
             print(f"  Resolution:          {st['resolution']} m/cell")
             print(f"  Free Cells:          {st['free_cells']}")
+            print(f"  Occupied Cells:      {st['occupied_cells']}")
+            print(f"  Unknown Cells:       {st['unknown_cells']}")
         elif 'error' in report['map_server']:
             print(f"  Error:               {report['map_server']['error']}")
         print("-" * 68)

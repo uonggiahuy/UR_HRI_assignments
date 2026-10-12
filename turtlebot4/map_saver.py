@@ -1,6 +1,8 @@
 """Robust map saver wrapper using Nav2 map_saver_cli with atomic validation."""
 
 import argparse
+from collections import Counter
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -16,6 +18,34 @@ from nav_msgs.msg import OccupancyGrid
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+
+# Nav2 trinary PGM encodes free/occupied/unknown as 254/0/205.
+# Unknown has occupancy 50/255, so the upstream saver default 0.25 is unsafe.
+DEFAULT_FREE_THRESH = 0.196
+DEFAULT_OCC_THRESH = 0.65
+
+
+def validate_thresholds(free_thresh: float, occ_thresh: float) -> None:
+    if not (math.isfinite(free_thresh) and math.isfinite(occ_thresh)
+            and 0.0 < free_thresh < occ_thresh < 1.0):
+        raise ValueError('Occupancy thresholds must satisfy 0 < free_thresh < occupied_thresh < 1')
+
+
+def classify_pgm_pixel(pixel: int, free_thresh: float, occ_thresh: float,
+                       negate: bool = False) -> int:
+    """Match Nav2 trinary loader's strict comparisons for 8-bit grayscale."""
+    occupancy = pixel / 255.0 if negate else 1.0 - pixel / 255.0
+    if occupancy > occ_thresh:
+        return 100
+    if occupancy < free_thresh:
+        return 0
+    return -1
+
+
+def occupancy_signature(values) -> str:
+    """Hash cell order as well as classes; -1/0/100 encode as 0/1/101."""
+    return hashlib.sha256(bytes(value + 1 for value in values)).hexdigest()
 
 
 def bounded_timeout(value: str) -> float:
@@ -138,14 +168,28 @@ def validate_saved_map_files(yaml_path: Path, pgm_path: Path) -> dict:
         raise FileNotFoundError(f'Image referenced in YAML does not exist: {resolved_image}')
 
     resolution = float(meta.get('resolution', 0.0))
-    if resolution <= 0.0:
+    if not math.isfinite(resolution) or resolution <= 0.0:
         raise ValueError(f'Invalid resolution in YAML: {resolution}')
 
     origin = meta.get('origin')
-    if not origin or len(origin) < 3:
+    if (not isinstance(origin, list) or len(origin) != 3
+            or not all(math.isfinite(float(value)) for value in origin)):
         raise ValueError(f'Invalid origin in YAML: {origin}')
 
+    if resolved_image != pgm_path.resolve():
+        raise ValueError('YAML image reference does not match the validated PGM')
+    if meta.get('mode', 'trinary') != 'trinary':
+        raise ValueError('Assignment map requires trinary mode')
+    negate = meta.get('negate')
+    if negate not in (0, 1):
+        raise ValueError('Map negate must be 0 or 1')
+    free_thresh = float(meta.get('free_thresh', float('nan')))
+    occ_thresh = float(meta.get('occupied_thresh', float('nan')))
+    validate_thresholds(free_thresh, occ_thresh)
+
     width, height, maxval, header_offset = parse_pgm_header(pgm_path)
+    if width <= 0 or height <= 0 or maxval != 255:
+        raise ValueError('Map requires positive PGM dimensions and 8-bit maxval 255')
     file_size = pgm_path.stat().st_size
     expected_data_size = width * height
     actual_data_size = file_size - header_offset
@@ -155,7 +199,22 @@ def validate_saved_map_files(yaml_path: Path, pgm_path: Path) -> dict:
             f'PGM data size {actual_data_size} does not match {width}x{height}={expected_data_size}'
         )
 
+    pixels = pgm_path.read_bytes()[header_offset:]
+    if 205 in pixels and classify_pgm_pixel(205, free_thresh, occ_thresh, negate) != -1:
+        raise ValueError('PGM unknown pixel 205 must remain Unknown on Nav2 reload')
+    classes = [classify_pgm_pixel(pixel, free_thresh, occ_thresh, negate) for pixel in pixels]
+    counts = Counter(classes)
+    # PGM rows run top-to-bottom; OccupancyGrid rows run bottom-to-top.
+    grid = [value for row in range(height - 1, -1, -1)
+            for value in classes[row * width:(row + 1) * width]]
+
     return {
+        'free_cells': counts[0],
+        'occupied_cells': counts[100],
+        'unknown_cells': counts[-1],
+        'occupancy_sha256': occupancy_signature(grid),
+        'free_thresh': free_thresh,
+        'occupied_thresh': occ_thresh,
         'resolution': resolution,
         'origin': origin,
         'image': image_ref,
@@ -278,10 +337,13 @@ def save_map_atomic(
     map_name: str = 'map',
     map_topic: str = '/map',
     timeout: float = 20.0,
-    free_thresh: float = 0.25,
-    occ_thresh: float = 0.65,
+    free_thresh: float = DEFAULT_FREE_THRESH,
+    occ_thresh: float = DEFAULT_OCC_THRESH,
 ) -> dict:
     """Safely and atomically save live map using Nav2 map_saver_cli."""
+    validate_thresholds(free_thresh, occ_thresh)
+    if [classify_pgm_pixel(p, free_thresh, occ_thresh) for p in (254, 0, 205)] != [0, 100, -1]:
+        raise ValueError('Saver thresholds must preserve free/occupied/unknown PGM pixels')
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     target_yaml = out_dir / f'{map_name}.yaml'
@@ -308,20 +370,18 @@ def save_map_atomic(
         '--free', str(free_thresh),
         '--occ', str(occ_thresh),
         '--fmt', 'pgm',
+        '--mode', 'trinary',
     ]
 
     print(f"[save_map] Invoking Nav2 map saver: {' '.join(cmd)}")
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    if proc.returncode != 0:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise RuntimeError(
-            f"nav2_map_server map_saver_cli failed with exit code {proc.returncode}:\n{proc.stderr}\n{proc.stdout}"
-        )
-
-    temp_yaml = temp_dir / f'{map_name}.yaml'
-    temp_pgm = temp_dir / f'{map_name}.pgm'
-
     try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"nav2_map_server map_saver_cli failed with exit code {proc.returncode}:\n{proc.stderr}\n{proc.stdout}"
+            )
+        temp_yaml = temp_dir / f'{map_name}.yaml'
+        temp_pgm = temp_dir / f'{map_name}.pgm'
         verified_info = transactional_map_replace(temp_yaml, temp_pgm, target_yaml, target_pgm)
         print(f"[save_map] Map files written transactionally to:")
         print(f"  - YAML: {target_yaml}")
@@ -356,11 +416,11 @@ def main(argv=None):
         help='Operation timeout in seconds (1..120)'
     )
     parser.add_argument(
-        '--free-thresh', type=float, default=0.25,
-        help='Free cell threshold (default: 0.25)'
+        '--free-thresh', type=float, default=DEFAULT_FREE_THRESH,
+        help='Free cell threshold (default: 0.196; preserves unknown pixel 205)'
     )
     parser.add_argument(
-        '--occ-thresh', type=float, default=0.65,
+        '--occ-thresh', type=float, default=DEFAULT_OCC_THRESH,
         help='Occupied cell threshold (default: 0.65)'
     )
 

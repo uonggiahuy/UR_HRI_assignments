@@ -90,7 +90,8 @@ turtlebot4/
 ├── test/
 │   ├── test_m1.py                    # 37 bài kiểm thử hồi quy M1
 │   ├── test_m2.py                    # 15 bài kiểm thử offline M2
-│   └── test_m3.py                    # 12 bài kiểm thử offline M3
+│   ├── test_m3.py                    # 12 bài kiểm thử offline M3
+│   └── test_m3_5.py                  # 19 kiểm thử bảo toàn ô Unknown và Nav2 thật
 ├── docs/
 │   ├── M1_ENGINEERING_REPORT.md      # Báo cáo kỹ thuật M1
 │   ├── M2_ENGINEERING_REPORT.md      # Báo cáo kỹ thuật M2
@@ -116,7 +117,7 @@ colcon test --packages-select turtlebot4
 colcon test-result --verbose
 ```
 
-Kết quả kiểm thử tự động toàn diện: **64 tests passed, 0 errors, 0 failures, 0 skipped** (37 kiểm thử M1 + 15 kiểm thử M2 + 12 kiểm thử M3).
+Kết quả kiểm thử tự động toàn diện: **83 tests passed, 0 errors, 0 failures, 0 skipped** (64 kiểm thử M1–M3 + 19 kiểm thử M3.5, bao gồm Map Server và Map Saver Nav2 thật).
 
 ---
 
@@ -190,7 +191,7 @@ Chạy bộ công cụ kiểm tra độc lập:
 ```bash
 ros2 run turtlebot4 check_localization
 ```
-Đầu ra chuẩn:
+Ví dụ cấu trúc báo cáo (pose và phương sai thay đổi theo phiên chạy):
 ```text
 ====================================================================
  TURTLEBOT 4 AMCL LOCALIZATION DIAGNOSTICS REPORT
@@ -218,7 +219,9 @@ Map Server (/map):
   Map Valid:           YES
   Dimensions:          491 x 447 cells (24.55m x 22.35m)
   Resolution:          0.05 m/cell
-  Free Cells:          217539
+  Free Cells:          80090
+  Occupied Cells:      1938
+  Unknown Cells:       137449
 --------------------------------------------------------------------
 AMCL Localization (/amcl_pose):
   Pose Received:       YES (1 msgs)
@@ -261,6 +264,32 @@ Trong Milestone M3, hàm `save_map` đã được nâng cấp cơ chế ghi file
 2. **Sao lưu an toàn (Backup staging):** Tạo file dự phòng `.bak` của `map.yaml` và `map.pgm` hiện hữu.
 3. **Thay thế nguyên tử (Atomic `os.replace`):** Ghi đè file trong cùng một hệ thống tệp tin qua lệnh nguyên tử của hệ điều hành.
 4. **Hậu kiểm tra & Tự động hoàn tác (Post-validation & Rollback):** Xác minh kích thước byte PGM và liên kết ảnh YAML sau khi ghi. Nếu có bất kỳ lỗi đĩa hoặc sai lệch dữ liệu nào, hệ thống tự động phục hồi lại cặp file `.bak` nguyên vẹn và xóa bỏ file tạm.
+
+---
+
+### M3.5 — Bảo toàn vùng chưa quan sát (Unknown)
+
+Bản đồ kho hàng gốc giữ nguyên PGM: **80.090 ô Free, 1.938 ô Occupied,
+137.449 ô Unknown**. Metadata dùng `mode: trinary`, `negate: 0`,
+`free_thresh: 0.196`, `occupied_thresh: 0.65`. Không đặt lại `free_thresh: 0.25`:
+Nav2 sẽ đọc pixel xám 205 thành Free, làm mất toàn bộ vùng chưa quan sát.
+`save_map` dùng mặc định đã sửa và từ chối ngưỡng không bảo toàn ba loại ô.
+`start_localization` kiểm tra ngữ nghĩa PGM/YAML trước khi khởi chạy;
+`check_localization` đối chiếu cả số lượng và bố trí ô của `/map` với PGM.
+
+Sau khi lưu bản đồ và dừng SLAM, tại Terminal 4 đã source môi trường:
+
+```bash
+ros2 run turtlebot4 check_localization --timeout 15 --json
+```
+
+Kiểm tra `map_server.statistics.free_cells`, `occupied_cells`, `unknown_cells` trong báo cáo.
+Số lượng có thể khác nếu vừa lập bản đồ mới; bản đồ kho hàng kèm repository phải
+có ba số lượng nêu trên. Nếu báo lỗi sai lệch, kiểm tra YAML và đường dẫn ảnh,
+không biến ô Unknown thành Free để bỏ qua lỗi. Các minh chứng M2/M3 cũ được giữ
+làm lịch sử; nhận định M3 về “fully resolved trinary map” đã bị bác bỏ bởi M3.5.
+Xem [báo cáo M3.5](docs/M3_5_MAP_CORRECTNESS_REPORT.md) và
+[minh chứng AMCL thật](docs/evidence/m3_5/localization.json).
 
 ---
 
