@@ -254,3 +254,12 @@ Cleanup: SIGINT was sent only to the recorded owned localization runner and base
 launch. Their children stopped; a fresh no-daemon graph is empty. The upstream
 TurtleBot node needed launch-managed SIGTERM escalation, as in M4 Recovery.
 No simulator/SLAM/AMCL/RViz test process remains.
+
+Verified implementation commit: `bf78625199c5abac52e022f9f6c1843040e7e26c`.
+Message: `fix(assignment4): restore AMCL initial pose and RViz map frame workflow`.
+`git push origin HEAD:assignments_4` succeeded (`e3f1bd1..bf78625`). Independent
+`git ls-remote origin refs/heads/assignments_4` returned the identical full SHA.
+After the push, status contains only the original user changes to the two map
+files. This Git-result entry is a separate documentation-only follow-up; its SHA
+is available with `git log -1 --format=%H -- docs/M4_1_LOCALIZATION_INITIAL_POSE_FIX_REPORT.md`.
+No application code changed after the final 150-test run.
