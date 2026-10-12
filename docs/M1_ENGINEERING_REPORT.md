@@ -15,7 +15,8 @@ package or simulator dependency was modified or reinstalled.
 
 The exact default command was tested live with RViz disabled, and the same
 wrapper was tested with RViz enabled. Depot/Lite/namespaced bringup was also
-verified live. Final commit/push verification is recorded in section 11.
+verified live. All twelve M1 acceptance criteria are PASS. Final commit/push verification is
+recorded in section 11; the separate M0 Docker audit remains PARTIAL.
 
 ## 2. Architecture and upstream integration
 
@@ -301,7 +302,7 @@ This did not block M1 implementation or runtime validation.
 | 9 | RViz displays robot and sensor data | PASS | final application screenshot inspected |
 | 10 | Build and real automated tests | PASS | build and 37 executed assertions |
 | 11 | Upstream unmodified | PASS | 194 baseline hashes, clean UR vendor checkouts |
-| 12 | Commit and push | Pending final Git verification | section 11 updated after push |
+| 12 | Commit and push | PASS | `90b5088` pushed and remote head read back |
 
 The script's graphical check remains MANUAL VERIFICATION REQUIRED by design;
 this report's criterion 9 is independently verified. Host Docker remains the
@@ -313,8 +314,26 @@ Only `/root/ros2_ws/src/turtlebot4` on `assignments_4` is staged. Baseline check
 was clean at `adc046a0910f24811fbde1e49a4e2766a9cd9eca`; existing outer workspace
 changes and other assignment/vendor checkouts are preserved. No build/install/log
 artifacts, secrets or Docker credentials are included. Push uses existing origin
-SSH push URL, without force. Implementation commit SHA and read-back push result
-will be recorded after committing the validated changes.
+SSH push URL, without force. Implementation commit:
+`90b5088941b2d257c9e2231ae801d5e48542ef79`
+(`feat(assignment4): integrate TurtleBot4 simulation and diagnostics`).
+`git push origin assignments_4` succeeded, advancing the remote from `adc046a`
+to `90b5088`; `git ls-remote --heads origin` independently confirmed that SHA.
+The checkout was clean after the implementation commit. This report completion
+is committed separately; its final containing SHA is available with
+`git rev-parse HEAD` and is provided in the final chat report.
+
+Protected branch heads remained unchanged after the implementation push:
+
+- `assignment_1`: `5a1cf1d624e660121d4752d2617f82f61f290e17`
+- `assignments_2`: `739f4483016947fb0efd8de23691e610d4318984`
+- `assignments_3`: `bee3f40a877b3bc8abb193e12505020f7cf5eea5`
+
+Final shutdown was verified with an empty ROS node list and no owned simulator,
+RViz or TurtleBot processes. Existing vendor repositories remain clean on
+`humble`; existing student checkouts retain their original branches. Outer
+workspace generated logs and its pre-existing modified perception gitlink are
+preserved and excluded from these commits.
 
 ## 12. Known limitations and M2 recommendations
 
