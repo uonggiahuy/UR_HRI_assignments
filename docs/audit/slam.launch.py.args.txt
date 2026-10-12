@@ -1,0 +1,17 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'use_sim_time':
+        Use sim time. Valid choices are: ['true', 'false']
+        (default: 'false')
+
+    'sync':
+        Use synchronous SLAM. Valid choices are: ['true', 'false']
+        (default: 'true')
+
+    'namespace':
+        Robot namespace
+        (default: '')
+
+    'params':
+        Robot namespace
+        (default: PathJoinSubstitution(''/opt/ros/humble/share/turtlebot4_navigation', 'config', 'slam.yaml''))

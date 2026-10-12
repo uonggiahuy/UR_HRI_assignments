@@ -1,0 +1,41 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'use_sim_time':
+        Use sim time. Valid choices are: ['true', 'false']
+        (default: 'false')
+
+    'namespace':
+        Robot namespace
+        (default: '')
+
+    'params':
+        Localization parameters
+        (default: PathJoinSubstitution(''/opt/ros/humble/share/turtlebot4_navigation', 'config', 'localization.yaml''))
+
+    'map':
+        Full path to map yaml file to load
+        (default: PathJoinSubstitution(''/opt/ros/humble/share/turtlebot4_navigation', 'maps', 'warehouse.yaml''))
+
+    'params_file':
+        Full path to the ROS2 parameters file to use for all launched nodes
+        (default: '/opt/ros/humble/share/nav2_bringup/params/nav2_params.yaml')
+
+    'autostart':
+        Automatically startup the nav2 stack
+        (default: 'true')
+
+    'use_composition':
+        Use composed bringup if True
+        (default: 'False')
+
+    'container_name':
+        the name of conatiner that nodes will load in if use composition
+        (default: 'nav2_container')
+
+    'use_respawn':
+        Whether to respawn if a node crashes. Applied when composition is disabled.
+        (default: 'False')
+
+    'log_level':
+        log level
+        (default: 'info')

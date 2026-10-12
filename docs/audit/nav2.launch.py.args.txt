@@ -1,0 +1,13 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'use_sim_time':
+        Use sim time. Valid choices are: ['true', 'false']
+        (default: 'false')
+
+    'params_file':
+        Nav2 parameters
+        (default: PathJoinSubstitution(''/opt/ros/humble/share/turtlebot4_navigation', 'config', 'nav2.yaml''))
+
+    'namespace':
+        Robot namespace
+        (default: '')

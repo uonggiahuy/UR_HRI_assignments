@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>turtlebot4</name>
+  <version>0.0.1</version>
+  <description>Assignment 4 TurtleBot 4 SLAM and autonomous navigation foundation.</description>
+  <maintainer email="uonggiahuy0411@gmail.com">uonggiahuy</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
