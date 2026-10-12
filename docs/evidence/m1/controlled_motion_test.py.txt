@@ -1,0 +1,109 @@
+"""One-off M1 controlled motion test in the visually verified warehouse simulation."""
+import json, math, time
+from pathlib import Path
+import rclpy
+from rclpy.action import ActionClient
+from rclpy.qos import qos_profile_sensor_data
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
+from rosgraph_msgs.msg import Clock
+from irobot_create_msgs.msg import DockStatus, HazardDetectionVector
+from irobot_create_msgs.action import Undock
+
+rclpy.init()
+node=rclpy.create_node('m1_controlled_teleoperation_verification')
+received={};last_received={};report={'simulation_only':True,'scene_confirmation':'Warehouse GUI inspected; front scan clearance verified after undocking; BACKUP_LIMIT allowed only for forward motion.'}
+publisher=None
+
+def callback(key, message):
+    received[key]=message;last_received[key]=time.monotonic()
+
+subscriptions=[]
+for key,topic,cls in [('odom','/odom',Odometry),('scan','/scan',LaserScan),('clock','/clock',Clock),('dock','/dock_status',DockStatus),('hazards','/hazard_detection',HazardDetectionVector)]:
+    from functools import partial
+    subscriptions.append(node.create_subscription(cls,topic,partial(callback,key),qos_profile_sensor_data))
+
+def wait_for(predicate, timeout):
+    deadline=time.monotonic()+timeout
+    while time.monotonic()<deadline:
+        rclpy.spin_once(node,timeout_sec=.05)
+        if predicate():return True
+    return False
+
+def snapshot():
+    m=received['odom'];p=m.pose.pose.position;q=m.pose.pose.orientation
+    return {'x':p.x,'y':p.y,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            'linear_x':m.twist.twist.linear.x,'angular_z':m.twist.twist.angular.z,
+            'stamp':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
+
+def front_clearance():
+    scan=received['scan']
+    values=[r for i,r in enumerate(scan.ranges) if math.isfinite(r) and r>=scan.range_min
+            and abs(math.atan2(math.sin(scan.angle_min+i*scan.angle_increment),
+                              math.cos(scan.angle_min+i*scan.angle_increment))) < math.pi/4]
+    return min(values) if values else 0.0
+
+try:
+    assert wait_for(lambda:all(k in received for k in ('odom','scan','clock','dock','hazards')),5), 'Missing live safety observations'
+    assert dict(node.get_topic_names_and_types()).get('/cmd_vel')==['geometry_msgs/msg/Twist']
+    assert any(x.node_name=='motion_control' for x in node.get_subscriptions_info_by_topic('/cmd_vel'))
+    assert front_clearance()>1.0, 'Insufficient front clearance'
+    report['initial_front_clearance_m']=front_clearance()
+    report['initial_docked']=received['dock'].is_docked
+    report['before_undock']=snapshot()
+    if received['dock'].is_docked:
+        client=ActionClient(node,Undock,'/undock')
+        assert client.wait_for_server(timeout_sec=3), 'Undock action unavailable'
+        future=client.send_goal_async(Undock.Goal())
+        assert wait_for(future.done,3), 'Undock goal timeout'
+        handle=future.result();assert handle.accepted,'Undock rejected'
+        result=handle.get_result_async()
+        if not wait_for(result.done,25):
+            cancel=handle.cancel_goal_async();wait_for(cancel.done,3)
+            raise RuntimeError('Undock timed out; cancellation requested')
+        report['undock_result']={'status':result.result().status,'is_docked':result.result().result.is_docked}
+        assert result.result().status==4 and not result.result().result.is_docked,'Undock did not succeed'
+        assert wait_for(lambda:not received['dock'].is_docked,3),'Dock status still docked'
+    assert wait_for(lambda:all(h.type == 0 for h in received['hazards'].detections),3),'Hazards after undocking'
+    assert front_clearance()>1.0,'Front clearance reduced after undocking'
+    report['before_velocity']=snapshot()
+    publisher=node.create_publisher(Twist,'/cmd_vel',10)
+    assert wait_for(lambda:publisher.get_subscription_count()>0,3),'Velocity subscriber not connected'
+    command=Twist();command.linear.x=0.05
+    start=time.monotonic();next_command=start
+    while time.monotonic()-start<2.0:
+        rclpy.spin_once(node,timeout_sec=.02)
+        now=time.monotonic()
+        assert all(now-last_received[k]<.5 for k in ('clock','odom','scan','hazards')),'Stale safety data'
+        assert front_clearance()>0.75 and all(h.type == 0 for h in received['hazards'].detections),'Safety observation changed'
+        if now>=next_command:
+            publisher.publish(command);next_command=now+.1
+    report['after_velocity']=snapshot()
+    stop=Twist();deadline=time.monotonic()+1.0
+    while time.monotonic()<deadline:
+        publisher.publish(stop);rclpy.spin_once(node,timeout_sec=.1)
+    report['after_stop']=snapshot()
+    stopped=snapshot();deadline=time.monotonic()+1.0
+    while time.monotonic()<deadline:
+        publisher.publish(stop);rclpy.spin_once(node,timeout_sec=.1)
+    report['stop_hold']=snapshot()
+    before,after=report['before_velocity'],report['after_stop']
+    dx,dy=after['x']-before['x'],after['y']-before['y']
+    projected=dx*math.cos(before['yaw'])+dy*math.sin(before['yaw'])
+    report.update(command_mps=.05,command_wall_duration_sec=2.0,projected_displacement_m=projected,
+                  stopped_drift_m=math.hypot(report['stop_hold']['x']-stopped['x'],report['stop_hold']['y']-stopped['y']))
+    assert .02<projected<.15,'Odometry displacement inconsistent with command'
+    assert abs(report['stop_hold']['linear_x'])<.01 and abs(report['stop_hold']['angular_z'])<.01,'Robot did not stop'
+    assert report['stopped_drift_m']<.01,'Robot continued moving after stop'
+    report['status']='PASS'
+except Exception as error:
+    report['status']='FAIL';report['error']=str(error)
+    raise
+finally:
+    if publisher:
+        for _ in range(5):
+            publisher.publish(Twist());rclpy.spin_once(node,timeout_sec=.05)
+    Path('/tmp/assignment4_m1_teleop.json').write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps(report,indent=2))
+    node.destroy_node();rclpy.shutdown()

@@ -23,11 +23,14 @@ setup(
     packages=find_packages(exclude=['test']),
     data_files=data_files,
     install_requires=['setuptools'],
+    tests_require=['pytest'],
     zip_safe=True,
     maintainer='uonggiahuy',
     maintainer_email='uonggiahuy0411@gmail.com',
     description='Assignment 4 TurtleBot 4 package foundation.',
     license='Apache-2.0',
     url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_4',
-    entry_points={'console_scripts': []},
+    entry_points={'console_scripts': [
+        'check_simulation = turtlebot4.diagnostics:main',
+    ]},
 )

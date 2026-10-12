@@ -1,0 +1,17 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'world':
+        One of: ['depot', 'maze', 'warehouse']
+        (default: 'warehouse')
+
+    'model':
+        One of: ['standard', 'lite']
+        (default: 'standard')
+
+    'namespace':
+        Robot ROS namespace
+        (default: '')
+
+    'rviz':
+        One of: ['true', 'false']
+        (default: 'false')

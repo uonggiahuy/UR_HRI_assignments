@@ -1,0 +1,4 @@
+/**/joint_state_publisher:
+  ros__parameters:
+    source_list: [joint_states_input]
+    rate: 50

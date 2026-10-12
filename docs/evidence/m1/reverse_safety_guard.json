@@ -1,0 +1,28 @@
+{
+  "simulation_only": true,
+  "scene_confirmation": "Warehouse GUI inspected; rear scan clearance verified before undocking.",
+  "initial_rear_clearance_m": 1.3377560377120972,
+  "initial_docked": true,
+  "before_undock": {
+    "x": -2.367560662495504e-12,
+    "y": -1.2721496305675782e-25,
+    "yaw": 1.4809762746273836e-13,
+    "linear_x": -1.2797076767940432e-16,
+    "angular_z": 3.7795380546610016e-18,
+    "stamp": 160.095
+  },
+  "undock_result": {
+    "status": 4,
+    "is_docked": false
+  },
+  "before_velocity": {
+    "x": -0.3527669675973254,
+    "y": -3.198912198032434e-11,
+    "yaw": -2.9466652826937807,
+    "linear_x": 1.0778416719400289e-16,
+    "angular_z": 1.6904378441786408e-16,
+    "stamp": 169.899
+  },
+  "status": "FAIL",
+  "error": "Safety observation changed"
+}

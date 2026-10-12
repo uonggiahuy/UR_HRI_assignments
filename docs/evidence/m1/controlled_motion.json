@@ -1,0 +1,55 @@
+{
+  "simulation_only": true,
+  "scene_confirmation": "Warehouse GUI inspected; front scan clearance verified after undocking; BACKUP_LIMIT allowed only for forward motion.",
+  "initial_front_clearance_m": 7.97629451751709,
+  "initial_docked": true,
+  "before_undock": {
+    "x": -2.3534479524688157e-12,
+    "y": -1.26094493071806e-25,
+    "yaw": 1.4771826297939982e-13,
+    "linear_x": -1.2772580302076837e-16,
+    "angular_z": 3.433524071702049e-18,
+    "stamp": 49.839
+  },
+  "undock_result": {
+    "status": 4,
+    "is_docked": false
+  },
+  "before_velocity": {
+    "x": -0.3527669671274645,
+    "y": -3.203072913340757e-11,
+    "yaw": -2.9486779114729966,
+    "linear_x": -8.261086237824707e-12,
+    "angular_z": 0.09999999955453387,
+    "stamp": 59.211
+  },
+  "after_velocity": {
+    "x": -0.44595335954314586,
+    "y": -0.01839743155506108,
+    "yaw": -2.9466731613304606,
+    "linear_x": 0.04999999999158579,
+    "angular_z": 7.62186639848301e-11,
+    "stamp": 61.176
+  },
+  "after_stop": {
+    "x": -0.44842063555444694,
+    "y": -0.018884536381285632,
+    "yaw": -2.9466731613245454,
+    "linear_x": -9.839496104376346e-17,
+    "angular_z": 2.67971367194406e-17,
+    "stamp": 62.178
+  },
+  "stop_hold": {
+    "x": -0.44842063555444694,
+    "y": -0.018884536381285632,
+    "yaw": -2.9466731613245454,
+    "linear_x": -9.839496104376346e-17,
+    "angular_z": 2.67971367194406e-17,
+    "stamp": 63.177
+  },
+  "command_mps": 0.05,
+  "command_wall_duration_sec": 2.0,
+  "projected_displacement_m": 0.09749980405560126,
+  "stopped_drift_m": 0.0,
+  "status": "PASS"
+}

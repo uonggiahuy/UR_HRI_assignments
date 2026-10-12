@@ -1,0 +1,70 @@
+{
+  "namespace": "",
+  "observation_wall_seconds": 1.0,
+  "checks": {
+    "clock": {
+      "status": "FAIL",
+      "topic": null,
+      "publishers": [],
+      "received": 0,
+      "invalid": 0,
+      "stamp_regression": false
+    },
+    "scan": {
+      "status": "FAIL",
+      "topic": null,
+      "publishers": [],
+      "received": 0,
+      "invalid": 0,
+      "stamp_regression": false
+    },
+    "odom": {
+      "status": "FAIL",
+      "topic": null,
+      "publishers": [],
+      "received": 0,
+      "invalid": 0,
+      "stamp_regression": false
+    },
+    "simulation_time_alignment": {
+      "status": "FAIL",
+      "header_age_sim_seconds": {},
+      "allowed_age_sim_seconds": [
+        -0.2,
+        2.0
+      ]
+    },
+    "cmd_vel": {
+      "status": "FAIL",
+      "topic": null,
+      "types": [],
+      "subscribers": [],
+      "robot_side_subscribers": []
+    },
+    "tf": {
+      "status": "FAIL",
+      "base_chain": null,
+      "lidar_chain": null,
+      "conflicts": {},
+      "duplicate_edges": [],
+      "cycles": [],
+      "invalid_transforms": 0,
+      "conflicting_samples": [],
+      "conflict_evidence": [],
+      "authority_limit": "Installed Humble rclpy does not expose publisher GIDs in callbacks; identical transforms from distinct publishers cannot be attributed per edge.",
+      "message_counts": {},
+      "edges": [],
+      "publishers": {
+        "tf": [],
+        "tf_static": []
+      }
+    },
+    "node_uniqueness": {
+      "status": "PASS",
+      "duplicates": [],
+      "nodes": [
+        "/assignment4_simulation_probe"
+      ]
+    }
+  }
+}

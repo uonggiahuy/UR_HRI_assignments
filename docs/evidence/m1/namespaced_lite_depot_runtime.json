@@ -1,0 +1,529 @@
+{
+  "namespace": "m1_robot",
+  "observation_wall_seconds": 10.0,
+  "checks": {
+    "clock": {
+      "status": "PASS",
+      "topic": "/clock",
+      "publishers": [
+        {
+          "node": "/clock_bridge",
+          "type": "rosgraph_msgs/msg/Clock",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 10
+          }
+        }
+      ],
+      "received": 3296,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 330.19530126023284,
+      "sim_stamp_delta_sec": 9.885,
+      "observed_sim_hz": 333.3333333333333
+    },
+    "scan": {
+      "status": "PASS",
+      "topic": "/m1_robot/scan",
+      "publishers": [
+        {
+          "node": "/m1_robot/lidar_bridge",
+          "type": "sensor_msgs/msg/LaserScan",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 10
+          }
+        }
+      ],
+      "received": 618,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 61.86121541235425,
+      "sim_stamp_delta_sec": 9.87,
+      "observed_sim_hz": 62.51266464032422,
+      "frame_id": "m1_robot/turtlebot4/rplidar_link/rplidar",
+      "ranges": 640,
+      "valid_ranges": 437
+    },
+    "odom": {
+      "status": "PASS",
+      "topic": "/m1_robot/odom",
+      "publishers": [
+        {
+          "node": "/m1_robot/diffdrive_controller",
+          "type": "nav_msgs/msg/Odometry",
+          "qos": {
+            "reliability": "RELIABLE",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 1
+          }
+        }
+      ],
+      "received": 612,
+      "invalid": 0,
+      "stamp_regression": false,
+      "observed_wall_hz": 61.32007369122263,
+      "sim_stamp_delta_sec": 9.854999999999999,
+      "observed_sim_hz": 61.99898528665653,
+      "frame_id": "m1_robot/odom",
+      "child_frame_id": "m1_robot/base_link",
+      "pose_and_twist": [
+        -3.875366405281624e-12,
+        -6.67212444264042e-24,
+        0.0,
+        0.0,
+        0.0,
+        1.4350597273902319e-12,
+        1.0,
+        -4.396960232853161e-17,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        5.855622475430043e-18
+      ]
+    },
+    "simulation_time_alignment": {
+      "status": "PASS",
+      "header_age_sim_seconds": {
+        "scan": 0.012000000000000455,
+        "odom": 0.0030000000000001137
+      },
+      "allowed_age_sim_seconds": [
+        -0.2,
+        2.0
+      ]
+    },
+    "cmd_vel": {
+      "status": "PASS",
+      "topic": "/m1_robot/cmd_vel",
+      "types": [
+        "geometry_msgs/msg/Twist"
+      ],
+      "subscribers": [
+        {
+          "node": "/m1_robot/motion_control",
+          "type": "geometry_msgs/msg/Twist",
+          "qos": {
+            "reliability": "BEST_EFFORT",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 5
+          }
+        }
+      ],
+      "robot_side_subscribers": [
+        {
+          "node": "/m1_robot/motion_control",
+          "type": "geometry_msgs/msg/Twist",
+          "qos": {
+            "reliability": "BEST_EFFORT",
+            "durability": "VOLATILE",
+            "history": "KEEP_LAST",
+            "depth": 5
+          }
+        }
+      ]
+    },
+    "tf": {
+      "status": "PASS",
+      "base_chain": [
+        "m1_robot/odom",
+        "m1_robot/base_link"
+      ],
+      "lidar_chain": [
+        "m1_robot/base_link",
+        "base_link",
+        "rplidar_link",
+        "m1_robot/turtlebot4/rplidar_link/rplidar"
+      ],
+      "conflicts": {},
+      "duplicate_edges": [],
+      "cycles": [],
+      "invalid_transforms": 0,
+      "conflicting_samples": [],
+      "conflict_evidence": [],
+      "authority_limit": "Installed Humble rclpy does not expose publisher GIDs in callbacks; identical transforms from distinct publishers cannot be attributed per edge.",
+      "message_counts": {
+        "tf_static": 7,
+        "tf": 970
+      },
+      "edges": [
+        [
+          "m1_robot/base_link",
+          "base_link"
+        ],
+        [
+          "base_link",
+          "bump_front_center"
+        ],
+        [
+          "base_link",
+          "bump_front_left"
+        ],
+        [
+          "base_link",
+          "bump_front_right"
+        ],
+        [
+          "base_link",
+          "bump_left"
+        ],
+        [
+          "base_link",
+          "bump_right"
+        ],
+        [
+          "base_link",
+          "bumper"
+        ],
+        [
+          "base_link",
+          "button_1"
+        ],
+        [
+          "base_link",
+          "button_2"
+        ],
+        [
+          "base_link",
+          "button_power"
+        ],
+        [
+          "base_link",
+          "cliff_front_left"
+        ],
+        [
+          "base_link",
+          "cliff_front_right"
+        ],
+        [
+          "base_link",
+          "cliff_side_left"
+        ],
+        [
+          "base_link",
+          "cliff_side_right"
+        ],
+        [
+          "base_link",
+          "front_caster_link"
+        ],
+        [
+          "std_dock_link",
+          "green_buoy_link"
+        ],
+        [
+          "std_dock_link",
+          "halo_link"
+        ],
+        [
+          "base_link",
+          "imu_link"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_center_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_center_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_front_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_left"
+        ],
+        [
+          "base_link",
+          "ir_intensity_right"
+        ],
+        [
+          "base_link",
+          "ir_intensity_side_left"
+        ],
+        [
+          "base_link",
+          "ir_omni"
+        ],
+        [
+          "wheel_drop_left",
+          "left_wheel"
+        ],
+        [
+          "m1_robot/odom",
+          "m1_robot/base_link"
+        ],
+        [
+          "odom",
+          "m1_robot/odom"
+        ],
+        [
+          "oakd_rgb_camera_optical_frame",
+          "m1_robot/turtlebot4/oakd_rgb_camera_frame/rgbd_camera"
+        ],
+        [
+          "rplidar_link",
+          "m1_robot/turtlebot4/rplidar_link/rplidar"
+        ],
+        [
+          "base_link",
+          "mouse"
+        ],
+        [
+          "base_link",
+          "oakd_camera_bracket"
+        ],
+        [
+          "oakd_link",
+          "oakd_imu_frame"
+        ],
+        [
+          "oakd_link",
+          "oakd_left_camera_frame"
+        ],
+        [
+          "oakd_left_camera_frame",
+          "oakd_left_camera_optical_frame"
+        ],
+        [
+          "oakd_camera_bracket",
+          "oakd_link"
+        ],
+        [
+          "oakd_link",
+          "oakd_rgb_camera_frame"
+        ],
+        [
+          "oakd_rgb_camera_frame",
+          "oakd_rgb_camera_optical_frame"
+        ],
+        [
+          "oakd_link",
+          "oakd_right_camera_frame"
+        ],
+        [
+          "oakd_right_camera_frame",
+          "oakd_right_camera_optical_frame"
+        ],
+        [
+          "std_dock_link",
+          "red_buoy_link"
+        ],
+        [
+          "wheel_drop_right",
+          "right_wheel"
+        ],
+        [
+          "base_link",
+          "rplidar_link"
+        ],
+        [
+          "odom",
+          "std_dock_link"
+        ],
+        [
+          "base_link",
+          "wheel_drop_left"
+        ],
+        [
+          "base_link",
+          "wheel_drop_right"
+        ],
+        [
+          "std_dock_link",
+          "yellow_buoy_link"
+        ]
+      ],
+      "publishers": {
+        "tf": [
+          {
+            "node": "/m1_robot/odom_base_tf_bridge",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 10
+            }
+          },
+          {
+            "node": "/m1_robot/dock_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 100
+            }
+          },
+          {
+            "node": "/m1_robot/robot_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 100
+            }
+          },
+          {
+            "node": "/m1_robot/diffdrive_controller",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "VOLATILE",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          }
+        ],
+        "tf_static": [
+          {
+            "node": "/m1_robot/rplidar_stf",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/dock_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/robot_state_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/camera_stf",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/tf_namespaced_base_link_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/tf_namespaced_odom_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          },
+          {
+            "node": "/m1_robot/tf_odom_std_dock_link_publisher",
+            "type": "tf2_msgs/msg/TFMessage",
+            "qos": {
+              "reliability": "RELIABLE",
+              "durability": "TRANSIENT_LOCAL",
+              "history": "KEEP_LAST",
+              "depth": 1
+            }
+          }
+        ]
+      }
+    },
+    "node_uniqueness": {
+      "status": "PASS",
+      "duplicates": [],
+      "nodes": [
+        "/_ros2cli_daemon_0_68cabd037b2745d9a91d41bb92887d26",
+        "/assignment4_simulation_probe",
+        "/clock_bridge",
+        "/m1_robot/bumper_contact_bridge",
+        "/m1_robot/buttons_msg_bridge",
+        "/m1_robot/camera_bridge",
+        "/m1_robot/camera_stf",
+        "/m1_robot/cliff_front_left_bridge",
+        "/m1_robot/cliff_front_right_bridge",
+        "/m1_robot/cliff_side_left_bridge",
+        "/m1_robot/cliff_side_right_bridge",
+        "/m1_robot/cmd_vel_bridge",
+        "/m1_robot/controller_manager",
+        "/m1_robot/diffdrive_controller",
+        "/m1_robot/dock_state_publisher",
+        "/m1_robot/gz_ros2_control",
+        "/m1_robot/hazards_vector_publisher",
+        "/m1_robot/interface_buttons_node",
+        "/m1_robot/ir_intensity_front_center_left_bridge",
+        "/m1_robot/ir_intensity_front_center_right_bridge",
+        "/m1_robot/ir_intensity_front_left_bridge",
+        "/m1_robot/ir_intensity_front_right_bridge",
+        "/m1_robot/ir_intensity_left_bridge",
+        "/m1_robot/ir_intensity_right_bridge",
+        "/m1_robot/ir_intensity_side_left_bridge",
+        "/m1_robot/ir_intensity_vector_publisher",
+        "/m1_robot/joint_state_broadcaster",
+        "/m1_robot/joint_state_publisher",
+        "/m1_robot/kidnap_estimator_publisher",
+        "/m1_robot/lidar_bridge",
+        "/m1_robot/mock_publisher",
+        "/m1_robot/motion_control",
+        "/m1_robot/odom_base_tf_bridge",
+        "/m1_robot/pose_bridge",
+        "/m1_robot/pose_republisher_node",
+        "/m1_robot/robot_state",
+        "/m1_robot/robot_state_publisher",
+        "/m1_robot/rplidar_stf",
+        "/m1_robot/rviz2",
+        "/m1_robot/sensors_node",
+        "/m1_robot/tf_namespaced_base_link_publisher",
+        "/m1_robot/tf_namespaced_odom_publisher",
+        "/m1_robot/tf_odom_std_dock_link_publisher",
+        "/m1_robot/transform_listener_impl_640db5875470",
+        "/m1_robot/turtlebot4_node",
+        "/m1_robot/ui_mgr",
+        "/m1_robot/wheel_status_publisher"
+      ]
+    },
+    "rviz_node": {
+      "status": "PASS",
+      "expected": "/m1_robot/rviz2"
+    },
+    "rviz_visualization": {
+      "status": "MANUAL VERIFICATION REQUIRED",
+      "reason": "Node presence cannot verify graphical display content."
+    }
+  }
+}

@@ -1,4 +1,4 @@
 # Launch resources
 
-Reserved for later milestone wrappers around installed upstream launch files.
-M0 provides no executable launch file.
+`simulation.launch.py` composes the installed world and spawn launches.
+See the package README for simulator-only options and runtime checks.

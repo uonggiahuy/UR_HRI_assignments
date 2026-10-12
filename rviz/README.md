@@ -1,3 +1,4 @@
 # RViz resources
 
-Reserved for project-owned RViz configurations in later milestones.
+`simulation.rviz` displays the robot, LiDAR and TF with fixed frame `odom`.
+No localization or map is required.
