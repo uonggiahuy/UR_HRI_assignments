@@ -267,11 +267,18 @@ No build/install/log directories, external dependency code, secrets, UR work,
 skills or other branches are included. No force push.
 
 Cleanup: the bounded runner stopped all owned Nav2 children cleanly, leaving
-localization/base alive. Explicit SIGINT then stopped localization and base.
+localization/base alive. Explicit SIGINT then stopped localization and base. The upstream TurtleBot
+node required the launch system's bounded SIGTERM escalation; no orphan remained.
 The final graph/process audit is in `shutdown_nodes.txt` and
 `shutdown_processes.txt`; the fresh `ros2 node list --no-daemon --spin-time 3` graph is empty and no owned
 Gazebo/Nav2/AMCL processes remain. The initial daemon query retained stale node
 names, preserved separately in `shutdown_nodes_cached.txt`.
 
-Git finalization: pending at report creation; updated in a follow-up documentation
-commit after actual push verification.
+Verified implementation commit: `3bf26cc671d5c673f15ecbb480e2325161ea15d4`.
+Message: `fix(assignment4): recover Nav2 TF and costmap runtime stability`.
+`git push origin HEAD:assignments_4` succeeded (`39122e1..3bf26cc`).
+Independent `git ls-remote origin refs/heads/assignments_4` returned the same full
+SHA. This final Git-result documentation follows in a separate commit, whose SHA
+is available with `git log -1 --format=%H -- docs/M4_RECOVERY_REPORT.md`.
+Trailing blank lines in two new endpoint captures were normalized in that
+follow-up; no measured values changed. No source changes followed final tests.
