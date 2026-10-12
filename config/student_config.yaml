@@ -1,5 +1,0 @@
-# Default/fallback student identity for package configuration.
-# A runtime student_id overrides this value.
-# Final submission uses the real student's ID.
-student_name: "Gia Huy"
-student_id: "23020746"
