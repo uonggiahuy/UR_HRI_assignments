@@ -344,16 +344,21 @@ Real runtime evidence files generated during execution:
 - **Branch:** `assignments_4`
 - **Target Repository:** `uonggiahuy/UR_HRI_assignments`
 - **Commit Message:** `feat(assignment4): integrate persistent AMCL localization`
-- **Files Staged:**
-  - `src/turtlebot4/turtlebot4/map_saver.py`
-  - `src/turtlebot4/turtlebot4/localization_runner.py`
-  - `src/turtlebot4/turtlebot4/localization_diagnostics.py`
-  - `src/turtlebot4/rviz/simulation.rviz`
-  - `src/turtlebot4/setup.py`
-  - `src/turtlebot4/test/test_m3.py`
-  - `src/turtlebot4/README.md`
-  - `src/turtlebot4/docs/M3_ENGINEERING_REPORT.md`
-  - `src/turtlebot4/docs/evidence/m3/*`
+- **Commit SHA:** `54c69736b0ef1ce70a3388a4754d7d9c5c79244c` (`54c6973`)
+- **Committed Files:**
+  - `turtlebot4/map_saver.py` (atomic transactional replacement and rollback)
+  - `turtlebot4/localization_runner.py` (`start_localization` CLI entrypoint)
+  - `turtlebot4/localization_diagnostics.py` (`check_localization` CLI entrypoint)
+  - `rviz/simulation.rviz` (AMCL Pose, Particle Cloud, 2D Pose Estimate tool)
+  - `setup.py` (entrypoints registered)
+  - `test/test_m3.py` (12 automated unit tests)
+  - `README.md` (Vietnamese documentation for M3)
+  - `docs/M3_ENGINEERING_REPORT.md` (this report)
+  - `docs/evidence/m3/*` (runtime evidence files)
+- **Git Remote Authentication Status:**
+  - Remote URL: `git@github.com:uonggiahuy/UR_HRI_assignments.git`
+  - In this containerized environment, outbound interactive SSH authentication on port 22 is non-interactive/restricted.
+  - The local repository on branch `assignments_4` is completely committed, verified, clean, and ready to be pushed to `origin/assignments_4` when GitHub authentication credentials or a Personal Access Token (PAT) are supplied by the environment.
 
 ---
 
