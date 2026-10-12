@@ -170,90 +170,109 @@ Trình điều phối sẽ tự động:
 - Nạp bản đồ qua `nav2_map_server` và kích hoạt `amcl` ở chế độ mô phỏng (`use_sim_time:=true`).
 - Cả hai node đạt trạng thái lifecycle `ACTIVE`.
 
-#### Bước 5: Đặt Điểm Ước lượng Vị trí Ban đầu (2D Pose Estimate)
-Trong cửa sổ RViz2:
-1. Đổi **Global Options -> Fixed Frame** từ `odom` sang `map`.
-2. Quan sát thấy bản đồ kho hàng hiển thị rõ nét với các bức tường và lối đi.
-3. Chọn công cụ **2D Pose Estimate** trên thanh công cụ phía trên (hoặc phím tắt `p`).
-4. Nhấp và kéo chuột tại vị trí thực tế hiện tại của robot trên bản đồ theo hướng đầu xe.
-   - Nếu robot vẫn ở vị trí xuất phát: tọa độ x ≈ 0.0, y ≈ 0.0, yaw ≈ 0.0 rad.
-   - Nếu robot vừa khám phá xong M2: tọa độ x ≈ -2.23, y ≈ -1.51, yaw ≈ 2.53 rad.
+#### Bước 5: Đọc pose cuối SLAM và khởi tạo bằng terminal (M4.1)
 
-*(Tùy chọn CLI):* Có thể gửi vị trí ban đầu qua dòng lệnh bằng cách:
+**Thực hiện phần đọc pose trước Bước 3 (dừng SLAM).** Dừng teleop, xác nhận
+robot đã đứng yên. Trong Terminal 4, khi SLAM vẫn hoạt động:
+
 ```bash
-ros2 topic pub --once /initialpose geometry_msgs/msg/PoseWithCovarianceStamped '{header: {frame_id: "map"}, pose: {pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}, covariance: [0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.068]}}'
+# Chỉ đọc TF thật; hết 5 giây timeout trả mã 124 là bình thường.
+timeout 5 ros2 run tf2_ros tf2_echo map base_link
 ```
 
-Ngay sau khi nhận `/initialpose`, AMCL thiết lập các hạt định vị, giải phóng cảnh báo và bắt đầu phát sóng transform `map -> odom`.
+Ghi lại `Translation` x/y và `Rotation: in RPY (degree)` yaw từ mẫu cuối có
+thời gian đang tăng. Đây là pose của robot hiện tại trong bản đồ SLAM, không
+phải `origin` của map.yaml. Không lấy tọa độ từ `/odom` thay cho pose map.
+Nếu bản đồ mới đã được lưu bằng `save_map`, giữ nguyên cặp file đó; nếu đang
+chẩn đoán bản đồ đã lưu, **không chạy save_map lại chỉ để thử initialization**.
 
-#### Bước 6: Chẩn đoán Định vị AMCL (Terminal 4)
-Chạy bộ công cụ kiểm tra độc lập:
+Chỉ dùng pose vừa đọc khi bản đồ đang nạp chính là bản đồ tương ứng, Gazebo
+vẫn cùng phiên và robot không di chuyển sau lúc ghi. Nếu không xác nhận được
+ba điều kiện này, xác định lại vị trí từ cảnh Gazebo/RViz và nhập thủ công.
+M4.1 không tự lưu/nạp lại snapshot: không có cơ chế tự động tái sử dụng pose cũ.
+Không dùng pose từ phiên khác hoặc tọa độ M2 lịch sử.
+
+Sau Bước 3 (Ctrl+C terminal SLAM) và Bước 4 (start_localization đang chạy),
+Terminal 4 chạy:
+
 ```bash
-ros2 run turtlebot4 check_localization
+ros2 service call /amcl/get_state lifecycle_msgs/srv/GetState '{}'
+ros2 service call /map_server/get_state lifecycle_msgs/srv/GetState '{}'
+# Cả hai phải trả id=3, label=active.
+read -r -p "Nhập x y yaw(độ) hiện tại trong map: " INITIAL_X INITIAL_Y INITIAL_YAW_DEG
+ros2 run turtlebot4 set_initial_pose --x "$INITIAL_X" --y "$INITIAL_Y" --yaw-deg "$INITIAL_YAW_DEG" --timeout 20
+ros2 run turtlebot4 check_localization --timeout 15
 ```
-Ví dụ cấu trúc báo cáo (pose và phương sai thay đổi theo phiên chạy):
-```text
-====================================================================
- TURTLEBOT 4 AMCL LOCALIZATION DIAGNOSTICS REPORT
-====================================================================
-Overall Status:        [PASS]
---------------------------------------------------------------------
-Stack & Nodes:
-  AMCL Active:         YES
-  Map Server Active:   YES
-  SLAM Conflict:       NONE (Good)
-  Stack Isolation:     PASS
---------------------------------------------------------------------
-Sensors & Timing:
-  /clock Active:       YES
-  /scan Valid:         YES
-  /odom Valid:         YES
---------------------------------------------------------------------
-Transforms (TF):
-  map -> odom:         YES (AMCL)
-  odom -> base_link:   YES
-  map -> base_link:    CONNECTED
---------------------------------------------------------------------
-Map Server (/map):
-  Map Received:        YES
-  Map Valid:           YES
-  Dimensions:          491 x 447 cells (24.55m x 22.35m)
-  Resolution:          0.05 m/cell
-  Free Cells:          80090
-  Occupied Cells:      1938
-  Unknown Cells:       137449
---------------------------------------------------------------------
-AMCL Localization (/amcl_pose):
-  Pose Received:       YES (1 msgs)
-  Pose Valid:          YES
-  Position (x,y,z):    [0.004, -0.022, 0.0]
-  Heading (yaw):       0.3 deg (0.005 rad)
-  Variance (x, y, yaw): {'x': 0.24259, 'y': 0.17904, 'yaw': 0.06277}
-====================================================================
+
+`set_initial_pose` là lệnh một lần, độc lập Nav2. Nó dùng simulation timestamp,
+frame `map`, quaternion chuẩn hóa và đủ 36 phần tử covariance. Mặc định gọi
+service AMCL `/set_initial_pose`; nếu service không tồn tại, chỉ dùng topic khi
+đã tìm thấy subscriber AMCL đúng kiểu. Không fallback sau service timeout.
+`--interface topic` là đường topic đã kiểm chứng, có thể chọn rõ khi chẩn đoán.
+`--map` và `--namespace` hỗ trợ cấu hình khác; không tự đoán pose (0,0,0).
+PASS chỉ sau pose AMCL mới và TF động mới `map -> odom -> base_link`; phản hồi
+service rỗng hoặc một lần publish không đủ. FAIL trả mã khác 0; xem log AMCL.
+
+#### Bước 6: RViz và xác minh trước Nav2
+
+1. Mở **Displays → Global Options**, nhấp đúp **ô giá trị bên phải** của
+   **Fixed Frame**, gõ `map`, nhấn Enter. Có thể gõ tên dù chưa có trong danh sách.
+   Trước initialization, cảnh báo thiếu TF là bình thường; không tạo TF giả.
+2. Khi SLAM đang chạy hoặc sau CLI initialization PASS, dùng `map`. Trước SLAM/
+   AMCL, dùng `odom` để giữ visualization M1. Camera Target Frame trong cấu hình
+   mới là `<Fixed Frame>`, không phụ thuộc `base_link` trước localization.
+3. Nếu Map vẫn `No map received`, **bỏ tick rồi tick lại Map** sau khi đổi frame.
+   Bản đồ retained từng bị RViz MessageFilter loại do timestamp cũ khi chưa có
+   `map -> odom`; đổi frame không luôn phát lại message đó. Không cần mở RViz thứ hai.
+   Nếu AMCL Pose cũng bị drop, bỏ/tick lại display đó. Particle Cloud xuất hiện
+   khi AMCL xử lý scan; nó không phải topic retained.
+4. Quan sát Map, LaserScan, RobotModel, TF, AMCL Pose và Particle Cloud. Scan phải
+   khớp tường; nếu lệch, xác định lại pose, không gửi goal.
+5. Với GUI đã chọn `map`, **2D Pose Estimate** có thể dùng để chỉnh pose. Nếu dùng
+   lúc Fixed Frame=`odom`, RViz gửi `frame_id=odom` và AMCL **từ chối**. Kiểm chứng
+   bằng `timeout 10 ros2 topic echo /initialpose --once` trong terminal riêng,
+   rồi nhấp/kéo công cụ; frame phải là `map` và log AMCL có `Setting pose`.
+
+Terminal 4 (các lệnh chẩn đoán một lần/có giới hạn):
+
+```bash
+ros2 run turtlebot4 check_localization --timeout 15 --json
+timeout 5 ros2 topic echo /amcl_pose --once --qos-durability transient_local
+timeout 5 ros2 run tf2_ros tf2_echo map base_link
 ```
+
+`check_localization` kiểm tra lifecycle thật bằng GetState, map đúng nội dung,
+clock tăng và TF động còn mới. `/amcl_pose` retained có thể giữ timestamp cũ
+khi robot đứng yên; đó không phải heartbeat. CLI initialization yêu cầu output
+mới sau request, còn chẩn đoán stationary dựa thêm vào TF/scan đang chạy.
+Bản đồ người dùng hiện tại: **603 × 1002**, 0.05 m/cell, origin [-15, -25.1, 0],
+505.728 Free / 15.141 Occupied / 83.337 Unknown. Số liệu thay đổi khi chủ động
+lập bản đồ mới; các báo cáo M2–M4 cũ là lịch sử.
+
+Chỉ khi localization PASS **và scan/map khớp**, Terminal 2 giữ AMCL, Terminal 3
+đã dừng teleop mới chạy `ros2 run turtlebot4 start_navigation --timeout 45` theo
+mục M4. Không cần gửi goal để kiểm tra initialization. Dừng Nav2 trước AMCL,
+sau đó Ctrl+C Terminal 1 để tắt base và RViz thuộc phiên đó.
 
 ---
 
 ### Quy trình B: Khởi động lại Toàn bộ và Định vị (Restart and Relocalize)
 
-Quy trình này chứng minh tính độc lập hoàn toàn của ngăn xếp định vị: robot được sinh ra trong một phiên mô phỏng hoàn toàn mới, không phụ thuộc vào dữ liệu TF hay node SLAM cũ:
+1. Dừng Nav2, teleop, AMCL/SLAM và base bằng Ctrl+C ở terminal sở hữu tương ứng.
+2. Source ROS, assignment và TF2 overlay như mục chuẩn bị; Terminal 1 chạy lại
+   `ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true` trong cùng world.
+3. Terminal 2 chạy `ros2 run turtlebot4 start_localization`, **không bật SLAM**,
+   giữ bản đồ đã lưu. Xác định vị trí thực mới trong hệ map từ cảnh Gazebo.
+4. Terminal 4 nhập x/y/yaw hiện tại vào `set_initial_pose` như Bước 5. Không dùng
+   pose cuối phiên trước. Chỉ nhập (0,0,0) nếu đã kiểm chứng spawn và hệ map tương ứng.
+5. Thực hiện Bước 6: check_localization PASS, Fixed Frame `map`, refresh Map nếu
+   cần và xem scan khớp tường. Nếu chạy thử bằng teleop, undock an toàn, di chuyển
+   ngắn/chậm rồi dừng; xác minh pose/TF theo chuyển động. Không chạy teleop cùng goal.
 
-1. **Tắt toàn bộ:** Dừng mọi terminal bằng `Ctrl+C`.
-2. **Khởi chạy mô phỏng mới (Terminal 1):**
-   ```bash
-   ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true
-   ```
-3. **Bật thẳng AMCL Localization (Terminal 2):**
-   ```bash
-   ros2 run turtlebot4 start_localization
-   ```
-   *Lưu ý:* Tuyệt đối không bật SLAM. Map Server tự động nạp `maps/map.yaml` đã lưu từ trước.
-4. **Đặt vị trí xuất phát:**
-   Trong RViz2 (Fixed Frame: `map`), chọn **2D Pose Estimate** nhấp vào điểm gốc `(0, 0)` hướng về phía trước, hoặc chạy lệnh pub `/initialpose` với `x=0, y=0, w=1`.
-5. **Điều khiển xe chạy thử (Terminal 3):**
-   Khởi chạy `ros2 run turtlebot4 teleop`, thực hiện undock và điều khiển xe di chuyển vài mét.
-6. **Kiểm tra độ hội tụ (Terminal 4):**
-   Chạy `ros2 run turtlebot4 check_localization`. Vị trí robot trên bản đồ di chuyển chính xác theo chuyển động xe, đám mây hạt (particle cloud) co cụm quanh vị trí thực và phương sai (variance) giảm dần.
+M4.1 đã kiểm chứng CLI service/topic, handoff ngắn trong cùng phiên và moving
+localization với bản đồ mới; GUI chọn frame `map` và refresh retained map đã
+quan sát thật. Xem [báo cáo M4.1](docs/M4_1_LOCALIZATION_INITIAL_POSE_FIX_REPORT.md)
+để biết phạm vi replay và giới hạn; không coi đó là video hoàn chỉnh của người dùng.
 
 ---
 
@@ -284,8 +303,8 @@ ros2 run turtlebot4 check_localization --timeout 15 --json
 ```
 
 Kiểm tra `map_server.statistics.free_cells`, `occupied_cells`, `unknown_cells` trong báo cáo.
-Số lượng có thể khác nếu vừa lập bản đồ mới; bản đồ kho hàng kèm repository phải
-có ba số lượng nêu trên. Nếu báo lỗi sai lệch, kiểm tra YAML và đường dẫn ảnh,
+Các số lượng nêu trên thuộc bản đồ M2 lịch sử; bản đồ mới của người dùng
+có số liệu khác. Luôn so sánh `/map` với cặp PGM/YAML hiện tại. Nếu báo lỗi sai lệch, kiểm tra YAML và đường dẫn ảnh,
 không biến ô Unknown thành Free để bỏ qua lỗi. Các minh chứng M2/M3 cũ được giữ
 làm lịch sử; nhận định M3 về “fully resolved trinary map” đã bị bác bỏ bởi M3.5.
 Xem [báo cáo M3.5](docs/M3_5_MAP_CORRECTNESS_REPORT.md) và
@@ -297,9 +316,9 @@ Xem [báo cáo M3.5](docs/M3_5_MAP_CORRECTNESS_REPORT.md) và
 
 | Hiện tượng | Nguyên nhân | Cách khắc phục |
 |---|---|---|
-| `start_localization` báo lỗi `Active SLAM Toolbox detected` | Tiến trình `slam_toolbox` vẫn đang chạy nền từ giai đoạn trước | Nhấn `Ctrl+C` tại terminal SLAM hoặc kiểm tra `pkill -f slam_toolbox` |
-| AMCL báo cảnh báo `AMCL cannot publish a pose or update the transform. Please set the initial pose...` | AMCL đang chờ người dùng cung cấp điểm ước lượng ban đầu | Sử dụng công cụ `2D Pose Estimate` trên RViz2 hoặc gửi `/initialpose` |
-| RViz2 báo lỗi TF frame `map` bị đứt gãy hoặc không hiển thị LaserScan | Chưa đặt initial pose nên AMCL chưa phát sóng `map -> odom` | Đặt 2D Pose Estimate trong RViz2 để kích hoạt chuỗi transform `map -> odom -> base_link` |
+| `start_localization` báo lỗi `Active SLAM Toolbox detected` | Tiến trình `slam_toolbox` vẫn đang chạy nền từ giai đoạn trước | Nhấn `Ctrl+C` tại terminal SLAM và xác nhận node SLAM đã dừng; không kill tiến trình không thuộc terminal của mình |
+| AMCL báo cảnh báo `AMCL cannot publish a pose or update the transform. Please set the initial pose...` | AMCL đang chờ người dùng cung cấp điểm ước lượng ban đầu | Chạy `set_initial_pose` với pose map hiện tại; chỉ dùng RViz sau khi Fixed Frame=`map` |
+| RViz2 báo lỗi TF frame `map` bị đứt gãy hoặc không hiển thị LaserScan | Chưa đặt initial pose nên AMCL chưa phát sóng `map -> odom` | Dùng CLI `set_initial_pose`, chờ PASS rồi gõ `map` vào ô Fixed Frame; refresh Map nếu cần |
 | LaserScan không khớp với các bức tường trên bản đồ | Tọa độ ban đầu đặt bị lệch góc quay hoặc vị trí | Dùng công cụ `2D Pose Estimate` nhấp và kéo lại theo đúng vị trí và hướng nhìn của robot |
 | `check_localization` báo `No OccupancyGrid received` | Map Server chưa kích hoạt hoặc đường dẫn file YAML sai | Kiểm tra sự tồn tại của `maps/map.yaml` và trạng thái lifecycle của `map_server` |
 

@@ -1,0 +1,1 @@
+PASS: initialized via /initialpose; fresh AMCL pose [0.001, -0.038, 0.0], yaw 0.8 deg; fresh map -> odom -> base_link. Verify scan/map alignment before navigation.

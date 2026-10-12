@@ -1,0 +1,12 @@
+{
+  "x": -0.6647449990258315,
+  "y": -0.06158783371922512,
+  "yaw_deg": -168.83281873763784,
+  "stamp": 518.937,
+  "odom": "geometry_msgs.msg.Pose(position=geometry_msgs.msg.Point(x=-0.6647449990258311, y=-0.06158783371922717, z=0.0), orientation=geometry_msgs.msg.Quaternion(x=-0.0, y=0.0, z=0.9952553066653204, w=-0.09729786510771535))",
+  "map_sha256": {
+    "map.pgm": "915c88f67974aa4e160f2679cc17c538efceddc1e2ed2f9eb0cf05000b3a4955",
+    "map.yaml": "b1be9283ae2c966e54ce6000133263b62fcf7daa2a84cce61c94b210622bf8c9"
+  },
+  "scope": "manual reference only; no automatic replay across sessions"
+}

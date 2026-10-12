@@ -1,7 +1,6 @@
 """Diagnostic tool to inspect Map Server, AMCL localization, TF chain, and pose health."""
 
 import argparse
-from collections import defaultdict
 import json
 import math
 from pathlib import Path
@@ -18,7 +17,7 @@ from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import LaserScan
 from tf2_msgs.msg import TFMessage
 
-from turtlebot4.diagnostics import frame_chain, scan_valid, odometry_valid
+from turtlebot4.diagnostics import frame_chain, scan_valid, odometry_valid, seconds
 from turtlebot4.localization_runner import resolve_saved_map_path
 from turtlebot4.map_saver import occupancy_signature, validate_saved_map_files
 from turtlebot4.simulation_launch import validate_namespace
@@ -33,8 +32,8 @@ def bounded_timeout(value: str) -> float:
 
 def validate_amcl_pose_msg(msg: PoseWithCovarianceStamped) -> dict:
     """Validate that AMCL pose and covariance contain finite, well-conditioned values."""
-    if not msg.header.frame_id:
-        raise ValueError("AMCL pose message missing frame_id (expected 'map')")
+    if msg.header.frame_id != 'map':
+        raise ValueError("AMCL pose message has incorrect frame_id (expected 'map')")
 
     p = msg.pose.pose.position
     q = msg.pose.pose.orientation
@@ -127,7 +126,7 @@ def validate_map_compatibility(msg: OccupancyGrid, expected_yaml: dict) -> dict:
 
 class LocalizationDiagnosticsNode(Node):
     def __init__(self, namespace: str = ''):
-        super().__init__('localization_diagnostics_node')
+        super().__init__('localization_diagnostics_node', namespace=validate_namespace(namespace))
         self.namespace = validate_namespace(namespace)
         prefix = f'/{self.namespace}' if self.namespace else ''
 
@@ -142,6 +141,9 @@ class LocalizationDiagnosticsNode(Node):
         self.amcl_pose_count = 0
 
         self.tf_parents = {}
+        self.tf_times = {}
+        self.clock_time = 0.0
+        self.first_clock_time = None
 
         best_effort_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -179,6 +181,9 @@ class LocalizationDiagnosticsNode(Node):
 
     def _clock_cb(self, _msg: Clock):
         self.clock_received += 1
+        self.clock_time = seconds(_msg.clock)
+        if self.first_clock_time is None:
+            self.first_clock_time = self.clock_time
 
     def _scan_cb(self, msg: LaserScan):
         self.scan_msg = msg
@@ -198,6 +203,7 @@ class LocalizationDiagnosticsNode(Node):
             parent = transform.header.frame_id.strip('/')
             child = transform.child_frame_id.strip('/')
             self.tf_parents[child] = parent
+            self.tf_times[(parent, child)] = seconds(transform.header.stamp)
 
 
 def run_localization_diagnostics(
@@ -225,8 +231,24 @@ def run_localization_diagnostics(
 
     slam_active = any(n in ('slam_toolbox', 'sync_slam_toolbox_node', 'async_slam_toolbox_node')
                       for n in clean_node_names)
-    amcl_active = any(n in ('amcl', 'amcl_node') for n in clean_node_names)
-    map_server_active = any(n in ('map_server',) for n in clean_node_names)
+    amcl_present = any(n in ('amcl', 'amcl_node') for n in clean_node_names)
+    map_server_present = any(n in ('map_server',) for n in clean_node_names)
+
+    # Node presence does not establish lifecycle ACTIVE. Query the real services.
+    from turtlebot4.initial_pose import lifecycle_active
+    prefix = '/' + validate_namespace(namespace) if namespace else ''
+    states = {}
+    for name in ('amcl', 'map_server'):
+        try:
+            states[name] = lifecycle_active(node, prefix + '/' + name, time.monotonic() + 2.0)
+        except (RuntimeError, TimeoutError) as exc:
+            states[name] = str(exc)
+    amcl_active = states['amcl'] == 'active'
+    map_server_active = states['map_server'] == 'active'
+    clock_progressing = (node.first_clock_time is not None
+                         and node.clock_time > node.first_clock_time)
+    tf_fresh = all(-1.5 <= node.clock_time - node.tf_times.get(edge, -math.inf) <= 1.5
+                   for edge in (('map', 'odom'), ('odom', 'base_link')))
 
     results = {
         'timestamp': time.time(),
@@ -234,18 +256,23 @@ def run_localization_diagnostics(
         'map_file': str(resolved_map),
         'nodes': {
             'amcl_active': amcl_active,
+            'amcl_present': amcl_present,
+            'map_server_present': map_server_present,
+            'lifecycle_states': states,
             'map_server_active': map_server_active,
             'slam_absent': not slam_active,
-            'exclusive_localization_stack': amcl_active and not slam_active,
+            'exclusive_localization_stack': amcl_active and map_server_active and not slam_active,
         },
         'sensors': {
             'clock_received': node.clock_received > 0,
+            'clock_progressing': clock_progressing,
             'clock_ticks': node.clock_received,
             'scan_valid': scan_valid(node.scan_msg) if node.scan_msg else False,
             'odom_valid': odometry_valid(node.odom_msg) if node.odom_msg else False,
         },
         'tf': {
             'has_map_to_odom': node.tf_parents.get('odom') == 'map',
+            'dynamic_tf_fresh': tf_fresh,
             'has_odom_to_base': node.tf_parents.get('base_link') == 'odom' or 'base_link' in node.tf_parents,
             'chain_map_to_base': frame_chain(node.tf_parents, 'map', 'base_link') is not None,
             'parents_count': len(node.tf_parents),
@@ -281,10 +308,12 @@ def run_localization_diagnostics(
             results['amcl']['error'] = str(exc)
     else:
         results['amcl']['valid'] = False
-        results['amcl']['error'] = 'No /amcl_pose received (set initial pose via 2D Pose Estimate in RViz)'
+        results['amcl']['error'] = 'No /amcl_pose received (run set_initial_pose --x X --y Y --yaw-deg ANGLE in map coordinates)'
 
     all_passed = (
         results['nodes']['exclusive_localization_stack']
+        and clock_progressing
+        and tf_fresh
         and results['sensors']['scan_valid']
         and results['sensors']['odom_valid']
         and results['tf']['has_map_to_odom']
@@ -293,6 +322,7 @@ def run_localization_diagnostics(
         and results['amcl']['valid']
     )
     results['overall_pass'] = all_passed
+    node.destroy_node()
     return results
 
 

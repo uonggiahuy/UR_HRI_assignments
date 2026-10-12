@@ -1,0 +1,33 @@
+Type: geometry_msgs/msg/PoseWithCovarianceStamped
+
+Publisher count: 1
+
+Node name: rviz2
+Node namespace: /
+Topic type: geometry_msgs/msg/PoseWithCovarianceStamped
+Endpoint type: PUBLISHER
+GID: 01.10.13.29.5a.00.39.91.fe.61.13.0b.00.00.2a.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (5)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: amcl
+Node namespace: /
+Topic type: geometry_msgs/msg/PoseWithCovarianceStamped
+Endpoint type: SUBSCRIPTION
+GID: 01.10.bc.0e.2f.e6.82.6e.6d.6a.b3.d2.00.00.29.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): KEEP_LAST (1)
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite

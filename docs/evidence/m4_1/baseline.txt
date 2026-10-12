@@ -1,0 +1,83 @@
+...................................................................F.... [ 62%]
+..F......FF.................................                             [100%]
+=================================== FAILURES ===================================
+_______________ test_real_pgm_preserved_and_yaml_classification ________________
+
+    def test_real_pgm_preserved_and_yaml_classification():
+        path = ROOT / 'maps/map.pgm'
+>       assert hashlib.sha256(path.read_bytes()).hexdigest() == PGM_SHA
+E       AssertionError: assert '915c88f67974...f05000b3a4955' == '9bdc7c7095f1...13410761b2dbc'
+E         - 9bdc7c7095f17db56a5112e9c0bae857d9d8f29e9db757e9b4313410761b2dbc
+E         + 915c88f67974aa4e160f2679cc17c538efceddc1e2ed2f9eb0cf05000b3a4955
+
+src/turtlebot4/test/test_m3_5.py:52: AssertionError
+__________________ test_diagnostics_reject_reclassified_cells __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-49/test_diagnostics_reject_reclas0')
+
+    def test_diagnostics_reject_reclassified_cells(tmp_path):
+        path, pgm = map_pair(tmp_path)
+        meta = saver.validate_saved_map_files(path, pgm)
+        grid = OccupancyGrid()
+        grid.info.width, grid.info.height = meta['width'], meta['height']
+        grid.info.resolution = meta['resolution']
+>       grid.info.origin.position.x, grid.info.origin.position.y = meta['origin'][:2]
+
+src/turtlebot4/test/test_m3_5.py:111:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = geometry_msgs.msg.Point(x=0.0, y=0.0, z=0.0), value = -15
+
+    @x.setter
+    def x(self, value):
+        if __debug__:
+>           assert \
+                isinstance(value, float), \
+                "The 'x' field must be of type 'float'"
+E           AssertionError: The 'x' field must be of type 'float'
+
+/opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_point.py:135: AssertionError
+______________________ test_actual_nav2_before_and_after _______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-49/test_actual_nav2_before_and_af0')
+
+    def test_actual_nav2_before_and_after(tmp_path):
+        faulty, _ = map_pair(tmp_path / 'faulty', 0.25)
+        with actual_map_server(faulty, tmp_path / 'before.log') as (grid, _):
+>           assert Counter(grid.data) == Counter({0: 217539, 100: 1938})
+E           AssertionError: assert Counter({0: 5..., 100: 15141}) == Counter({0: 2...9, 100: 1938})
+E             Differing items:
+E             {0: 589065} != {0: 217539}
+E             {100: 15141} != {100: 1938}
+E             Full diff:
+E             - Counter({0: 217539, 100: 1938})
+E             ?             --- ^         ^^^
+E             + Counter({0: 589065, 100: 15141})...
+E
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+src/turtlebot4/test/test_m3_5.py:203: AssertionError
+_______________ test_actual_nav2_saver_and_reload_real_warehouse _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-49/test_actual_nav2_saver_and_rel0')
+
+    def test_actual_nav2_saver_and_reload_real_warehouse(tmp_path):
+        with actual_map_server(ROOT / 'maps/map.yaml', tmp_path / 'source.log') as (original, topic):
+            info = saver.save_map_atomic(tmp_path / 'saved', map_topic=topic, timeout=20)
+>           assert info['unknown_cells'] == 137449
+E           assert 83337 == 137449
+
+src/turtlebot4/test/test_m3_5.py:222: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[save_map] Listening for live OccupancyGrid on '/m35_d35fc29e86/map'...
+[save_map] Live map validated: 603x1002 cells (30.2m x 50.1m), Free: 505728 (83.7%), Occupied: 15141 (2.5%), Unknown: 83337 (13.8%)
+[save_map] Invoking Nav2 map saver: ros2 run nav2_map_server map_saver_cli -t /m35_d35fc29e86/map -f /tmp/tb4_map_save_3vs178qj/map --free 0.196 --occ 0.65 --fmt pgm --mode trinary
+[save_map] Map files written transactionally to:
+  - YAML: /tmp/pytest-of-root/pytest-49/test_actual_nav2_saver_and_rel0/saved/map.yaml
+  - PGM:  /tmp/pytest-of-root/pytest-49/test_actual_nav2_saver_and_rel0/saved/map.pgm
+=========================== short test summary info ============================
+FAILED src/turtlebot4/test/test_m3_5.py::test_real_pgm_preserved_and_yaml_classification
+FAILED src/turtlebot4/test/test_m3_5.py::test_diagnostics_reject_reclassified_cells
+FAILED src/turtlebot4/test/test_m3_5.py::test_actual_nav2_before_and_after - ...
+FAILED src/turtlebot4/test/test_m3_5.py::test_actual_nav2_saver_and_reload_real_warehouse
+4 failed, 112 passed in 4.11s

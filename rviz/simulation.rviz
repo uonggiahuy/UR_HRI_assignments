@@ -117,7 +117,7 @@ Visualization Manager:
       Distance: 8
       Pitch: 0.8
       Yaw: 0.8
-      Target Frame: base_link
+      Target Frame: <Fixed Frame>
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera

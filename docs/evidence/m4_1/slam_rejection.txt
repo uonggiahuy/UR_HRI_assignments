@@ -1,0 +1,2 @@
+FAIL: Active SLAM Toolbox detected: node 'slam_toolbox' is active. SLAM and AMCL are mutually exclusive broadcast authorities for map -> odom. Please stop SLAM (Ctrl+C in Terminal 2) before starting localization.
+[ros2run]: Process exited with failure 1

@@ -1,0 +1,4 @@
+96418: /opt/ros/humble/lib/rviz2/rviz2 -d /root/ros2_ws/install/turtlebot4/share/turtlebot4/rviz/simulation.rviz --ros-args -r __node:=rviz2 -r __ns:=/ -p use_sim_time:=True --params-file /root/ros2_ws/install/turtlebot4/share/turtlebot4/config/simulation.yaml --params-file /tmp/launch_params__4_735yi -r joint_state_publisher:joint_states:=joint_states_visualization -r joint_state_publisher:joint_states_input:=joint_states -r robot_state_publisher:joint_states:=joint_states_visualization -r /tf:=tf -r /tf_static:=tf_static
+/root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
+97759: /opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl -r __ns:=/ --params-file /tmp/launch_params_llaurbif -r /tf:=tf -r /tf_static:=tf_static
+/root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so

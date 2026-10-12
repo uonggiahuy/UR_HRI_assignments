@@ -1,0 +1,79 @@
+{
+  "timestamp": 1791829571.2760658,
+  "namespace": "",
+  "map_file": "/root/ros2_ws/src/turtlebot4/maps/map.yaml",
+  "nodes": {
+    "amcl_active": true,
+    "amcl_present": true,
+    "map_server_present": true,
+    "lifecycle_states": {
+      "amcl": "active",
+      "map_server": "active"
+    },
+    "map_server_active": true,
+    "slam_absent": true,
+    "exclusive_localization_stack": true
+  },
+  "sensors": {
+    "clock_received": true,
+    "clock_progressing": true,
+    "clock_ticks": 9,
+    "scan_valid": true,
+    "odom_valid": true
+  },
+  "tf": {
+    "has_map_to_odom": true,
+    "dynamic_tf_fresh": true,
+    "has_odom_to_base": true,
+    "chain_map_to_base": true,
+    "parents_count": 48
+  },
+  "map_server": {
+    "map_topic_active": true,
+    "valid": true,
+    "statistics": {
+      "width": 603,
+      "height": 1002,
+      "resolution": 0.05000000074505806,
+      "origin": [
+        -15.0,
+        -25.1,
+        0.0
+      ],
+      "total_cells": 604206,
+      "free_cells": 505728,
+      "occupied_cells": 15141,
+      "unknown_cells": 83337
+    }
+  },
+  "amcl": {
+    "pose_received": true,
+    "pose_count": 1,
+    "valid": true,
+    "pose_data": {
+      "frame_id": "map",
+      "stamp_sec": 540.144,
+      "position": [
+        -0.672,
+        -0.138,
+        0.0
+      ],
+      "yaw_rad": -2.981,
+      "yaw_deg": -170.8,
+      "variance": {
+        "x": 0.22307,
+        "y": 0.16765,
+        "yaw": 0.06026
+      },
+      "covariance_diagonal": [
+        0.22307,
+        0.16765,
+        0.0,
+        0.0,
+        0.0,
+        0.06026
+      ]
+    }
+  },
+  "overall_pass": true
+}

@@ -37,6 +37,7 @@ setup(
         'save_map = turtlebot4.map_saver:main',
         'check_mapping = turtlebot4.mapping_diagnostics:main',
         'start_localization = turtlebot4.localization_runner:main',
+        'set_initial_pose = turtlebot4.initial_pose:main',
         'check_localization = turtlebot4.localization_diagnostics:main',
         'start_navigation = turtlebot4.navigation_runner:main',
         'check_navigation = turtlebot4.navigation_diagnostics:main',

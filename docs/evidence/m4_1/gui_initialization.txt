@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/tmp/m4_1/gui_initialization.py", line 18, in <module>
+    wait_until(n,lambda:n.output_ready(seconds(req.header.stamp),old_pose,old_tf),time.monotonic()+10,'AMCL output after GUI request')
+  File "/root/ros2_ws/build/turtlebot4/turtlebot4/initial_pose.py", line 71, in wait_until
+    raise TimeoutError(f'Timed out waiting for {description}')
+TimeoutError: Timed out waiting for AMCL output after GUI request

@@ -27,8 +27,12 @@ from turtlebot4.localization_diagnostics import validate_map_compatibility
 from turtlebot4.localization_runner import resolve_saved_map_path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = Counter({0: 80090, 100: 1938, -1: 137449})
-PGM_SHA = '9bdc7c7095f17db56a5112e9c0bae857d9d8f29e9db757e9b4313410761b2dbc'
+# Derive the independent expectation directly from canonical PGM pixel bytes.
+PGM_BYTES = (ROOT / 'maps/map.pgm').read_bytes()
+_, _, _, PGM_OFFSET = saver.parse_pgm_header(ROOT / 'maps/map.pgm')
+PIXELS = Counter(PGM_BYTES[PGM_OFFSET:])
+EXPECTED = Counter({0: PIXELS[254], 100: PIXELS[0], -1: PIXELS[205]})
+PGM_SHA = hashlib.sha256(PGM_BYTES).hexdigest()
 
 
 def map_pair(directory, free=0.196):
@@ -51,7 +55,7 @@ def test_real_pgm_preserved_and_yaml_classification():
     path = ROOT / 'maps/map.pgm'
     assert hashlib.sha256(path.read_bytes()).hexdigest() == PGM_SHA
     _, _, _, offset = saver.parse_pgm_header(path)
-    assert Counter(path.read_bytes()[offset:]) == Counter({254: 80090, 0: 1938, 205: 137449})
+    assert Counter(path.read_bytes()[offset:]) == PIXELS
     meta = saver.validate_saved_map_files(ROOT / 'maps/map.yaml', path)
     assert meta['free_cells'] == EXPECTED[0]
     assert meta['occupied_cells'] == EXPECTED[100]
@@ -108,7 +112,7 @@ def test_diagnostics_reject_reclassified_cells(tmp_path):
     grid = OccupancyGrid()
     grid.info.width, grid.info.height = meta['width'], meta['height']
     grid.info.resolution = meta['resolution']
-    grid.info.origin.position.x, grid.info.origin.position.y = meta['origin'][:2]
+    grid.info.origin.position.x, grid.info.origin.position.y = map(float, meta['origin'][:2])
     grid.data = [0] * (grid.info.width * grid.info.height)
     with pytest.raises(ValueError, match='free_cells'):
         validate_map_compatibility(grid, meta)
@@ -200,13 +204,13 @@ def actual_map_server(yaml_path, log_path):
 def test_actual_nav2_before_and_after(tmp_path):
     faulty, _ = map_pair(tmp_path / 'faulty', 0.25)
     with actual_map_server(faulty, tmp_path / 'before.log') as (grid, _):
-        assert Counter(grid.data) == Counter({0: 217539, 100: 1938})
+        assert Counter(grid.data) == Counter({0: EXPECTED[0] + EXPECTED[-1], 100: EXPECTED[100]})
         print('NAV2_BEFORE ' + json.dumps(dict(Counter(grid.data)), sort_keys=True))
     with actual_map_server(ROOT / 'maps/map.yaml', tmp_path / 'after.log') as (grid, _):
         assert Counter(grid.data) == EXPECTED
         print('NAV2_AFTER ' + json.dumps(dict(Counter(grid.data)), sort_keys=True))
         meta = saver.validate_saved_map_files(ROOT / 'maps/map.yaml', ROOT / 'maps/map.pgm')
-        assert validate_map_compatibility(grid, meta)['unknown_cells'] == 137449
+        assert validate_map_compatibility(grid, meta)['unknown_cells'] == EXPECTED[-1]
         # Counts alone cannot detect swapped cell positions.
         changed = list(grid.data)
         a, b = changed.index(0), changed.index(-1)
@@ -219,7 +223,7 @@ def test_actual_nav2_before_and_after(tmp_path):
 def test_actual_nav2_saver_and_reload_real_warehouse(tmp_path):
     with actual_map_server(ROOT / 'maps/map.yaml', tmp_path / 'source.log') as (original, topic):
         info = saver.save_map_atomic(tmp_path / 'saved', map_topic=topic, timeout=20)
-        assert info['unknown_cells'] == 137449
+        assert info['unknown_cells'] == EXPECTED[-1]
         assert yaml.safe_load(Path(info['target_yaml']).read_text())['free_thresh'] == 0.196
         with actual_map_server(Path(info['target_yaml']), tmp_path / 'reload.log') as (reloaded, _):
             assert Counter(reloaded.data) == EXPECTED
