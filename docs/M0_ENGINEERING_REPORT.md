@@ -145,7 +145,7 @@ the user's working simulator was preserved.
 | Required upstream dependencies available | PASS | four package prefixes under `/opt/ros/humble` |
 | No upstream source modified | PASS | 194 upstream share-file hashes unchanged; UR checkouts clean |
 | Git branch isolation verified | PASS | separate clone on `assignments_4`; existing branches unchanged |
-| Committed and pushed to `assignments_4` | Pending final Git verification | updated below after push |
+| Committed and pushed to `assignments_4` | PASS | foundation commit `18c67a8` pushed; remote head verified |
 
 ## 6. Git isolation, commits and push
 
@@ -154,7 +154,18 @@ confirmed `assignments_4` and `assignments_3` initially share
 `bee3f40a877b3bc8abb193e12505020f7cf5eea5`.
 A separate single-branch clone checked out `assignments_4` at the requested path.
 Cleanup commit: `962edb1` (`chore(assignment4): remove inherited Assignment 3 package`).
-The foundation commit and push result will be recorded after Git verification.
+Foundation commit: `18c67a8edd12862062c42ffc7abfc474374b89b5`
+(`feat(assignment4): initialize TurtleBot4 ROS2 package`).
+The initial HTTPS push failed because no HTTPS credentials were configured.
+The clone's origin fetch URL remains HTTPS; origin push URL was set to the
+SSH URL already used by existing assignment checkouts:
+`git@github.com:uonggiahuy/UR_HRI_assignments.git`.
+`git push -u origin assignments_4` succeeded through SSH, advancing the remote
+from `bee3f40` to `18c67a8` without force. Remote branch head was independently
+read back, and all three protected remote heads below were unchanged.
+This finalized report is committed separately after the foundation push.
+To obtain its containing commit SHA use `git rev-parse HEAD` from this checkout;
+the final chat report also records it.
 Only this checkout is staged; outer workspace artifacts are excluded.
 
 Protected remote heads recorded before work:
