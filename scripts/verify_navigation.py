@@ -23,6 +23,7 @@ from rclpy.action import ActionClient
 from rclpy.qos import qos_profile_sensor_data
 from ros_gz_interfaces.msg import Contacts
 
+from turtlebot4.localization_health import aligned_truth, validate_registration
 from turtlebot4.navigation_diagnostics import NavigationProbe, cell_index, costmap_stamp, validate_path, validate_costmap_freshness, wait_for_readiness
 from turtlebot4.localization_runner import resolve_saved_map_path
 
@@ -36,8 +37,10 @@ def angle_error(a, b):
 
 
 class GoalEvidence(NavigationProbe):
-    def __init__(self):
+    def __init__(self, registration):
+        validate_registration(registration)
         super().__init__()
+        self.registration = registration
         self.truth = None
         self.docked = None
         self.hazards = []
@@ -94,7 +97,9 @@ class GoalEvidence(NavigationProbe):
         tf = transform.transform
         truth = self.truth.pose.pose
         pose = [tf.translation.x, tf.translation.y, yaw(tf.rotation)]
-        actual = [truth.position.x, truth.position.y, yaw(truth.orientation)]
+        actual = aligned_truth(self.truth, self.registration)
+        if abs(self.clock_samples[-1] - (self.truth.header.stamp.sec + self.truth.header.stamp.nanosec/1e9)) > .5:
+            raise RuntimeError('Ground-truth measurement is stale')
         return {'time': self.clock_samples[-1], 'pose': pose, 'truth': actual,
                 'monotonic': time.monotonic(),
                 'tf_age': self.clock_samples[-1] - (transform.header.stamp.sec + transform.header.stamp.nanosec / 1e9),
@@ -226,6 +231,8 @@ class GoalEvidence(NavigationProbe):
             assert not any(value in (1, 2, 3, 4) for value in self.hazards)
             return {'name': name, 'status': 'PASS', 'action_accepted': handle.accepted,
                     'action_result': result.status, 'start': start, 'goal': target, 'final': final,
+                    'physical_position_goal_error': math.dist(final['truth'][:2], target[:2]),
+                    'reference_uncertainty_m': self.registration['reference_uncertainty_m'],
                     'position_goal_error': distance, 'yaw_goal_error': rotation,
                     'configured_tolerances': params, 'goal_clearance_m': margin,
                     'preflight_plan': planned, 'observed_paths': self.paths,
@@ -246,12 +253,16 @@ class GoalEvidence(NavigationProbe):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--registration', type=Path, required=True,
+                        help='Reviewed world-to-map landmark registration JSON; no identity assumption')
     parser.add_argument('--goal-timeout', type=float, default=100.0)
     args = parser.parse_args()
     if not math.isfinite(args.goal_timeout) or not 10 <= args.goal_timeout <= 180:
         parser.error('goal-timeout must be finite and between 10 and 180 seconds')
+    registration = json.loads(args.registration.read_text())
+    validate_registration(registration)
     rclpy.init()
-    node = GoalEvidence()
+    node = GoalEvidence(registration)
     results = {'status': 'RUNNING', 'goals': []}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:

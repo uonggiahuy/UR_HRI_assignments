@@ -1,0 +1,112 @@
+{
+  "timestamp": 1791864079.4354274,
+  "namespace": "",
+  "map_file": "/root/ros2_ws/src/turtlebot4/maps/map.yaml",
+  "nodes": {
+    "amcl_active": true,
+    "amcl_present": true,
+    "map_server_present": true,
+    "lifecycle_states": {
+      "amcl": "active",
+      "map_server": "active"
+    },
+    "map_server_active": true,
+    "slam_absent": true,
+    "exclusive_localization_stack": true
+  },
+  "sensors": {
+    "clock_received": true,
+    "clock_progressing": true,
+    "clock_ticks": 1006,
+    "scan_valid": true,
+    "odom_valid": true
+  },
+  "tf": {
+    "has_map_to_odom": true,
+    "dynamic_tf_fresh": true,
+    "has_odom_to_base": true,
+    "chain_map_to_base": true,
+    "parents_count": 57,
+    "stable_observation": true
+  },
+  "map_server": {
+    "map_topic_active": true,
+    "valid": true,
+    "statistics": {
+      "width": 603,
+      "height": 1002,
+      "resolution": 0.05000000074505806,
+      "origin": [
+        -15.0,
+        -25.1,
+        0.0
+      ],
+      "total_cells": 604206,
+      "free_cells": 505728,
+      "occupied_cells": 15141,
+      "unknown_cells": 83337
+    }
+  },
+  "amcl": {
+    "pose_received": true,
+    "pose_count": 1,
+    "valid": true,
+    "pose_data": {
+      "frame_id": "map",
+      "stamp_sec": 516.339,
+      "position": [
+        -0.509,
+        -0.142,
+        0.0
+      ],
+      "yaw_rad": -3.114,
+      "yaw_deg": -178.4,
+      "variance": {
+        "x": 0.14461,
+        "y": 0.0307,
+        "yaw": 0.04145
+      },
+      "covariance_diagonal": [
+        0.14461,
+        0.0307,
+        0.0,
+        0.0,
+        0.0,
+        0.04145
+      ]
+    },
+    "covariance_health": {
+      "acceptable": false,
+      "positive_semidefinite": true,
+      "position_major_std_m": 0.3815291899662411,
+      "yaw_std_rad": 0.20358247649088337,
+      "limits": {
+        "position_major_std_m": 0.3,
+        "yaw_std_rad": 0.2617993877991494
+      }
+    },
+    "timestamp_health": {
+      "acceptable": true,
+      "age_sec": 95.7779999999999,
+      "retained_stationary": true,
+      "sensor_freshness_pass": true,
+      "pose_tf_agreement": true
+    }
+  },
+  "checks": {
+    "localization_stack_active": true,
+    "map_valid": true,
+    "tf_connected": true,
+    "sensor_freshness_pass": true,
+    "amcl_pose_available": true,
+    "amcl_covariance_acceptable": false,
+    "localization_converged": false,
+    "ground_truth_accuracy_verified": false,
+    "navigation_safe": false
+  },
+  "ground_truth": {
+    "status": "NOT VERIFIED",
+    "reason": "Requires independently validated world-to-map registration and synchronized measurements"
+  },
+  "overall_pass": false
+}

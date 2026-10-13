@@ -1,0 +1,16 @@
+usage: verify_navigation.py [-h] --output OUTPUT --registration REGISTRATION
+                            [--goal-timeout GOAL_TIMEOUT]
+
+M4 simulator-only evidence capture: plan checks and three real Nav2 goals.
+Requires a safely undocked, localized Standard robot in the real saved
+warehouse map, with Nav2 active. This script DOES execute simulation
+navigation actions. It never publishes teleop velocity, fake TF or robot
+poses. Use only in simulation.
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT
+  --registration REGISTRATION
+                        Reviewed world-to-map landmark registration JSON; no
+                        identity assumption
+  --goal-timeout GOAL_TIMEOUT

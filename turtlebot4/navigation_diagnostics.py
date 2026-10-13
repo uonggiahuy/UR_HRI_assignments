@@ -1,7 +1,7 @@
 """Bounded live readiness checks shared by Nav2 runner and operator diagnostics."""
 import argparse
 import ast
-from collections import Counter
+from collections import Counter, deque
 import json
 import math
 from pathlib import Path
@@ -25,6 +25,7 @@ from sensor_msgs.msg import LaserScan
 from tf2_ros import Buffer, TransformListener, TransformException
 import yaml
 
+from turtlebot4.localization_health import covariance_health, pose_time_health, yaw, transform_pose
 from turtlebot4.diagnostics import scan_valid, odometry_valid, seconds
 from turtlebot4.localization_diagnostics import validate_amcl_pose_msg, validate_map_compatibility
 from turtlebot4.localization_runner import bounded_timeout, resolve_saved_map_path
@@ -85,7 +86,9 @@ def validate_costmap(msg: Costmap, now: float | None = None) -> dict:
     validate_costmap_freshness(msg, now)
     meta = msg.metadata
     counts = Counter(msg.data)
-    return {'width': meta.size_x, 'height': meta.size_y, 'resolution': meta.resolution,
+    return {'frame': msg.header.frame_id, 'origin': [meta.origin.position.x, meta.origin.position.y],
+            'stamp': costmap_stamp(msg),
+            'width': meta.size_x, 'height': meta.size_y, 'resolution': meta.resolution,
             'unknown': counts[255], 'lethal': counts[254], 'free': counts[0],
             'inflated': sum(count for cost, count in counts.items() if 0 < cost < 254)}
 
@@ -98,11 +101,11 @@ def cell_index(x: float, y: float, msg) -> int:
     else:
         meta = msg.info
         width, height, resolution, origin = meta.width, meta.height, meta.resolution, meta.origin
-    # Map/costmap grids are axis-aligned in this verified upstream configuration.
-    if abs(origin.orientation.z) > 1e-6:
-        raise ValueError('Rotated grid requires a coordinate transform')
-    ix = math.floor((x - origin.position.x) / resolution)
-    iy = math.floor((y - origin.position.y) / resolution)
+    angle = yaw(origin.orientation)
+    dx, dy = x - origin.position.x, y - origin.position.y
+    c, sn = math.cos(angle), math.sin(angle)
+    ix = math.floor((c * dx + sn * dy) / resolution)
+    iy = math.floor((-sn * dx + c * dy) / resolution)
     if not (0 <= ix < width and 0 <= iy < height):
         raise ValueError('Coordinate outside map')
     return iy * width + ix
@@ -129,6 +132,48 @@ def validate_path(path: RosPath, grid: OccupancyGrid, costmap: Costmap) -> dict:
             'length_m': sum(math.dist(a, b) for a, b in zip(points, points[1:]))}
 
 
+def path_costmap_overlap(path, costmap, transform):
+    """Count path vertices in a local grid using an explicit target<-source TF.
+
+    This measures geometric overlap; it cannot establish DWB reachability or
+    distinguish bad localization from a bad plan without independent evidence.
+    """
+    if (transform.header.frame_id != costmap.header.frame_id
+            or transform.child_frame_id != path.header.frame_id):
+        raise ValueError('Path/costmap transform frames do not match')
+    t = transform.transform
+    planar = (t.translation.x, t.translation.y, yaw(t.rotation))
+    costs = []
+    outside = 0
+    for item in path.poses:
+        p = item.pose.position
+        x, y, _ = transform_pose((p.x, p.y, 0.), planar)
+        try:
+            costs.append(int(costmap.data[cell_index(x, y, costmap)]))
+        except ValueError as exc:
+            if str(exc) != 'Coordinate outside map':
+                raise
+            outside += 1
+    return {'points': len(path.poses), 'inside': len(costs), 'outside': outside,
+            'free_or_inflated': sum(c < 253 for c in costs),
+            'free': costs.count(0), 'unknown': costs.count(255),
+            'blocked': sum(c >= 253 for c in costs), 'costs': costs,
+            'frame': costmap.header.frame_id,
+            'origin': [costmap.metadata.origin.position.x, costmap.metadata.origin.position.y]}
+
+
+def classify_path_rejection(overlap, fresh=True):
+    if not fresh:
+        return 'STALE_COSTMAP_OR_TF'
+    if not overlap['points']:
+        return 'EMPTY_PLAN'
+    if not overlap['inside']:
+        return 'NO_GEOMETRIC_OVERLAP'
+    if not overlap['free_or_inflated']:
+        return 'OVERLAPPING_POINTS_BLOCKED_OR_UNKNOWN'
+    return 'OVERLAP_PRESENT_REQUIRES_CRITIC_AND_MOTION_EVIDENCE'
+
+
 class NavigationProbe(Node):
     def __init__(self, namespace=''):
         normalized = validate_namespace(namespace)
@@ -143,6 +188,7 @@ class NavigationProbe(Node):
         self.clock_samples = []
         self.costmap_samples = {'global': [], 'local': []}
         self.tf_samples = []
+        self.odom_observations = deque()
         self.buffer = Buffer(node=self)
         self.listener = TransformListener(self.buffer, self)
         self.subscriptions_owned = []
@@ -168,6 +214,11 @@ class NavigationProbe(Node):
     def record(self, key, msg):
         self.messages[key] = msg
         self.received[key] = time.monotonic()
+        if key == 'odom':
+            t = msg.twist.twist
+            self.odom_observations.append((time.monotonic(), abs(t.linear.x) < .02 and abs(t.linear.y) < .02 and abs(t.angular.z) < .05))
+            while self.odom_observations and time.monotonic() - self.odom_observations[0][0] > 3.0:
+                self.odom_observations.popleft()
         if key == 'clock':
             self.clock_samples.append(seconds(msg.clock))
         if key in self.costmap_samples:
@@ -226,6 +277,8 @@ class NavigationProbe(Node):
         now = self.clock_samples[-1]
         if any(b < a for a, b in zip(self.clock_samples, self.clock_samples[1:])):
             raise RuntimeError('Simulation clock moved backwards')
+        if time.monotonic() - self.received['clock'] > 1.0:
+            raise RuntimeError('Simulation clock reception is stale')
         if len(self.clock_samples) < 5 or self.clock_samples[-1] <= self.clock_samples[0]:
             raise RuntimeError('Simulation clock is not progressing')
         for key, valid in (('scan', scan_valid), ('odom', odometry_valid)):
@@ -234,7 +287,8 @@ class NavigationProbe(Node):
                     or time.monotonic() - self.received[key] > 1.0):
                 raise RuntimeError(f'{key} invalid or stale')
         pose = validate_amcl_pose_msg(self.messages['pose'])
-        if pose['frame_id'] != 'map' or max(pose['variance'].values()) > 0.5:
+        covariance = covariance_health(self.messages['pose'])
+        if not covariance['acceptable']:
             raise RuntimeError('AMCL pose is uninitialized or uncertain')
         for parent, child in [('map', 'odom'), ('odom', 'base_link'), ('map', 'base_link')]:
             try:
@@ -245,15 +299,23 @@ class NavigationProbe(Node):
                 raise RuntimeError(f'Stale TF {parent} -> {child}')
         tf = self.buffer.lookup_transform('map', 'base_link', rclpy.time.Time())
         stamp = seconds(tf.header.stamp)
-        self.tf_samples.append((time.monotonic(), stamp, tf.transform.translation.x, tf.transform.translation.y))
+        self.tf_samples.append((time.monotonic(), stamp, tf.transform.translation.x, tf.transform.translation.y, yaw(tf.transform.rotation)))
+        self.tf_samples = [sample for sample in self.tf_samples if time.monotonic() - sample[0] <= 3.0]
         if len(self.tf_samples) < 2 or self.tf_samples[-1][0] - self.tf_samples[0][0] < 2:
             raise RuntimeError('Observing localization stability over two seconds')
         if stamp <= self.tf_samples[0][1]:
             raise RuntimeError('Localization TF is not advancing')
+        observations = self.odom_observations
+        stationary = (len(observations) > 1 and observations[-1][0] - observations[0][0] >= 2.0
+                      and all(stopped for _, stopped in observations))
+        timing = pose_time_health(self.messages['pose'], now, self.messages['scan'], self.messages['odom'],
+                                  (tf.transform.translation.x, tf.transform.translation.y, yaw(tf.transform.rotation)), stationary)
+        if not timing['acceptable']:
+            raise RuntimeError('AMCL estimate timestamp inconsistent; establish current initial pose')
         odom = self.messages['odom']
         if abs(odom.twist.twist.linear.x) < 0.02 and abs(odom.twist.twist.angular.z) < 0.05:
             if math.hypot(tf.transform.translation.x - self.tf_samples[0][2],
-                          tf.transform.translation.y - self.tf_samples[0][3]) > 0.15:
+                          tf.transform.translation.y - self.tf_samples[0][3]) > 0.15 or abs(math.remainder(yaw(tf.transform.rotation) - self.tf_samples[0][4], 2*math.pi)) > .15:
                 raise RuntimeError('Stationary localization is unstable')
         meta = yaml.safe_load(Path(map_path).read_text())
         expected = validate_saved_map_files(Path(map_path), Path(map_path).parent / meta['image'])
@@ -261,6 +323,8 @@ class NavigationProbe(Node):
         if self.messages['map'].data[cell_index(tf.transform.translation.x, tf.transform.translation.y, self.messages['map'])] != 0:
             raise RuntimeError('Localized robot is outside saved-map free space')
         return {'lifecycle': lifecycle, 'map': stats, 'pose': pose,
+                'covariance_health': covariance, 'timestamp_health': timing,
+                'ground_truth_accuracy_verified': False, 'navigation_safe': True,
                 'clock': now, 'tf_stamp': stamp, 'stable_observation_seconds': self.tf_samples[-1][0] - self.tf_samples[0][0]}
 
     def navigation(self, deadline):
@@ -273,10 +337,11 @@ class NavigationProbe(Node):
         params = {
             'planner': self.parameters('planner_server', ['use_sim_time', 'GridBased.allow_unknown', 'GridBased.plugin', 'GridBased.tolerance'], deadline),
             'global': self.parameters('global_costmap/global_costmap', [
-                'use_sim_time', 'track_unknown_space', 'robot_radius', 'plugins',
+                'global_frame', 'robot_base_frame', 'use_sim_time', 'track_unknown_space', 'robot_radius', 'plugins',
                 'static_layer.map_subscribe_transient_local', 'obstacle_layer.scan.topic',
                 'inflation_layer.inflation_radius'], deadline),
             'local': self.parameters('local_costmap/local_costmap', [
+                'global_frame', 'robot_base_frame', 'rolling_window', 'width', 'height',
                 'use_sim_time', 'robot_radius', 'plugins', 'voxel_layer.scan.topic',
                 'inflation_layer.inflation_radius'], deadline),
             'controller': self.parameters('controller_server', ['use_sim_time', 'FollowPath.plugin',
@@ -288,6 +353,9 @@ class NavigationProbe(Node):
             raise RuntimeError('Unsafe runtime unknown-space parameters')
         if not all(values['use_sim_time'] is True for values in params.values()):
             raise RuntimeError('Nav2 node is not using simulation time')
+        if (params['global']['global_frame'] != 'map' or params['local']['global_frame'] != 'odom'
+                or params['local']['rolling_window'] is not True):
+            raise RuntimeError('Unexpected costmap frame or rolling-window configuration')
         maps = {}
         for key in ('global', 'local'):
             if key not in self.messages or time.monotonic() - self.received[key] > 3:
@@ -305,7 +373,18 @@ class NavigationProbe(Node):
             center = (sum(p.x for p in points) / len(points), sum(p.y for p in points) / len(points))
             if math.dist(center, (tf.transform.translation.x, tf.transform.translation.y)) > 0.15:
                 raise RuntimeError(f'{key} footprint disagrees with live robot TF')
-            maps[key] = validate_costmap(self.messages[key], self.clock_samples[-1])
+            grid = self.messages[key]
+            if grid.header.frame_id != params[key]['global_frame']:
+                raise RuntimeError(f'{key} grid frame differs from runtime parameter')
+            robot_tf = self.buffer.lookup_transform(grid.header.frame_id, 'base_link', rclpy.time.Time())
+            cell_index(robot_tf.transform.translation.x, robot_tf.transform.translation.y, grid)
+            if key == 'local':
+                meta = grid.metadata
+                center = (meta.origin.position.x + meta.size_x*meta.resolution/2,
+                          meta.origin.position.y + meta.size_y*meta.resolution/2)
+                if math.dist(center, (robot_tf.transform.translation.x, robot_tf.transform.translation.y)) > 2*meta.resolution:
+                    raise RuntimeError('Local rolling window is not centered on robot')
+            maps[key] = validate_costmap(grid, self.clock_samples[-1])
         if self.localization_unknown_count() > 0 and maps['global']['unknown'] == 0:
             raise RuntimeError('Global costmap lost all unknown cells')
         interfaces = {name: [info.node_name for info in self.get_publishers_info_by_topic(self.topic(name))]
@@ -313,11 +392,16 @@ class NavigationProbe(Node):
         if not interfaces['cmd_vel'] or not self.get_subscriptions_info_by_topic(self.topic('cmd_vel')):
             raise RuntimeError('Robot command interface unavailable')
         path = None
+        overlap = None
         if 'path' in self.messages:
             path = validate_path(self.messages['path'], self.messages['map'], self.messages['global'])
+            local = self.messages['local']
+            transform = self.buffer.lookup_transform(local.header.frame_id, self.messages['path'].header.frame_id, rclpy.time.Time())
+            overlap = path_costmap_overlap(self.messages['path'], local, transform)
+            overlap['classification'] = classify_path_rejection(overlap, abs(self.clock_samples[-1] - seconds(transform.header.stamp)) <= 2.0)
         return {'lifecycle': states, 'parameters': params, 'costmaps': maps,
                 'navigate_to_pose_available': True, 'interfaces': interfaces,
-                'last_path': path, 'autonomous_goals_verified': False}
+                'last_path': path, 'local_path_overlap': overlap, 'autonomous_goals_verified': False}
 
     def localization_unknown_count(self):
         return sum(value == -1 for value in self.messages['map'].data)

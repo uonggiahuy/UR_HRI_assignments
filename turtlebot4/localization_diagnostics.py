@@ -1,6 +1,7 @@
 """Diagnostic tool to inspect Map Server, AMCL localization, TF chain, and pose health."""
 
 import argparse
+from collections import deque
 import json
 import math
 from pathlib import Path
@@ -17,6 +18,7 @@ from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import LaserScan
 from tf2_msgs.msg import TFMessage
 
+from turtlebot4.localization_health import (covariance_health, pose_time_health, transform_pose, yaw, STATIONARY_OBSERVATION_SEC)
 from turtlebot4.diagnostics import frame_chain, scan_valid, odometry_valid, seconds
 from turtlebot4.localization_runner import resolve_saved_map_path
 from turtlebot4.map_saver import occupancy_signature, validate_saved_map_files
@@ -142,6 +144,12 @@ class LocalizationDiagnosticsNode(Node):
 
         self.tf_parents = {}
         self.tf_times = {}
+        self.first_tf_times = {}
+        self.tf_transforms = {}
+        self.odom_observations = deque()
+        self.received = {}
+        self.tf_observations = deque()
+        self.clock_consistent = True
         self.clock_time = 0.0
         self.first_clock_time = None
 
@@ -181,15 +189,24 @@ class LocalizationDiagnosticsNode(Node):
 
     def _clock_cb(self, _msg: Clock):
         self.clock_received += 1
-        self.clock_time = seconds(_msg.clock)
+        self.received["clock"] = time.monotonic()
+        new_time = seconds(_msg.clock)
+        self.clock_consistent &= new_time >= self.clock_time
+        self.clock_time = new_time
         if self.first_clock_time is None:
             self.first_clock_time = self.clock_time
 
     def _scan_cb(self, msg: LaserScan):
         self.scan_msg = msg
+        self.received["scan"] = time.monotonic()
 
     def _odom_cb(self, msg: Odometry):
         self.odom_msg = msg
+        self.received["odom"] = time.monotonic()
+        t = msg.twist.twist
+        self.odom_observations.append((time.monotonic(), abs(t.linear.x) < .02 and abs(t.linear.y) < .02 and abs(t.angular.z) < .05))
+        while self.odom_observations and time.monotonic() - self.odom_observations[0][0] > 3.0:
+            self.odom_observations.popleft()
 
     def _map_cb(self, msg: OccupancyGrid):
         self.map_msg = msg
@@ -204,6 +221,15 @@ class LocalizationDiagnosticsNode(Node):
             child = transform.child_frame_id.strip('/')
             self.tf_parents[child] = parent
             self.tf_times[(parent, child)] = seconds(transform.header.stamp)
+            self.first_tf_times.setdefault((parent, child), self.tf_times[(parent, child)])
+            t = transform.transform
+            self.tf_transforms[(parent, child)] = (t.translation.x, t.translation.y, yaw(t.rotation))
+        edges = (('map', 'odom'), ('odom', 'base_link'))
+        if all(edge in self.tf_transforms for edge in edges):
+            pose = transform_pose(self.tf_transforms[edges[1]], self.tf_transforms[edges[0]])
+            self.tf_observations.append((time.monotonic(), pose))
+            while self.tf_observations and time.monotonic() - self.tf_observations[0][0] > 3.0:
+                self.tf_observations.popleft()
 
 
 def run_localization_diagnostics(
@@ -222,7 +248,7 @@ def run_localization_diagnostics(
     while time.monotonic() - start_time < timeout:
         rclpy.spin_once(node, timeout_sec=0.1)
         # If we have all required elements, we can conclude early
-        if (node.clock_received > 5 and node.scan_msg and node.odom_msg and
+        if (time.monotonic() - start_time >= STATIONARY_OBSERVATION_SEC + 1.0 and node.clock_received > 5 and node.scan_msg and node.odom_msg and
             node.map_msg and node.amcl_pose_msg and node.tf_parents.get('odom') == 'map'):
             break
 
@@ -246,8 +272,9 @@ def run_localization_diagnostics(
     amcl_active = states['amcl'] == 'active'
     map_server_active = states['map_server'] == 'active'
     clock_progressing = (node.first_clock_time is not None
-                         and node.clock_time > node.first_clock_time)
+                         and node.clock_time > node.first_clock_time and node.clock_consistent)
     tf_fresh = all(-1.5 <= node.clock_time - node.tf_times.get(edge, -math.inf) <= 1.5
+                   and node.tf_times.get(edge, -math.inf) > node.first_tf_times.get(edge, math.inf)
                    for edge in (('map', 'odom'), ('odom', 'base_link')))
 
     results = {
@@ -310,18 +337,40 @@ def run_localization_diagnostics(
         results['amcl']['valid'] = False
         results['amcl']['error'] = 'No /amcl_pose received (run set_initial_pose --x X --y Y --yaw-deg ANGLE in map coordinates)'
 
-    all_passed = (
-        results['nodes']['exclusive_localization_stack']
-        and clock_progressing
-        and tf_fresh
-        and results['sensors']['scan_valid']
-        and results['sensors']['odom_valid']
-        and results['tf']['has_map_to_odom']
-        and results['tf']['chain_map_to_base']
-        and results['map_server']['valid']
-        and results['amcl']['valid']
-    )
-    results['overall_pass'] = all_passed
+    covariance = covariance_health(node.amcl_pose_msg) if results['amcl'].get('valid') else {'acceptable': False}
+    observations = node.odom_observations
+    stationary = (len(observations) > 1 and observations[-1][0] - observations[0][0] >= STATIONARY_OBSERVATION_SEC
+                  and all(stopped for _, stopped in observations))
+    timing = {'acceptable': False, 'sensor_freshness_pass': False}
+    if node.amcl_pose_msg and all(edge in node.tf_transforms for edge in (('map', 'odom'), ('odom', 'base_link'))):
+        tf_pose = transform_pose(node.tf_transforms[('odom', 'base_link')], node.tf_transforms[('map', 'odom')])
+        timing = pose_time_health(node.amcl_pose_msg, node.clock_time, node.scan_msg,
+                                  node.odom_msg, tf_pose, stationary)
+    timing['sensor_freshness_pass'] &= all(time.monotonic() - node.received.get(key, -math.inf) <= 1.0 for key in ('clock', 'scan', 'odom'))
+    timing['acceptable'] &= timing['sensor_freshness_pass']
+    tf_samples = node.tf_observations
+    stable = (len(tf_samples) > 1 and tf_samples[-1][0] - tf_samples[0][0] >= 2.0
+              and (not stationary or all(math.dist(pose[:2], tf_samples[0][1][:2]) <= .15
+                   and abs(math.remainder(pose[2] - tf_samples[0][1][2], 2*math.pi)) <= .15
+                   for _, pose in tf_samples)))
+    results['tf']['stable_observation'] = stable
+    checks = {
+        'localization_stack_active': results['nodes']['exclusive_localization_stack'],
+        'map_valid': results['map_server']['valid'],
+        'tf_connected': results['tf']['chain_map_to_base'],
+        'sensor_freshness_pass': timing['sensor_freshness_pass'] and results['sensors']['scan_valid'] and results['sensors']['odom_valid'],
+        'amcl_pose_available': results['amcl'].get('valid', False),
+        'amcl_covariance_acceptable': covariance['acceptable'],
+        'localization_converged': (covariance['acceptable'] and timing['acceptable'] and tf_fresh and clock_progressing and stable),
+        'ground_truth_accuracy_verified': False,
+    }
+    # Ground truth needs separately validated registration, never raw x/y subtraction.
+    checks['navigation_safe'] = all(value for key, value in checks.items() if key != 'ground_truth_accuracy_verified')
+    results['checks'] = checks
+    results['amcl']['covariance_health'] = covariance
+    results['amcl']['timestamp_health'] = timing
+    results['ground_truth'] = {'status': 'NOT VERIFIED', 'reason': 'Requires independently validated world-to-map registration and synchronized measurements'}
+    results['overall_pass'] = checks['navigation_safe']
     node.destroy_node()
     return results
 
@@ -361,6 +410,9 @@ def main(argv=None):
         print("=" * 68)
         print(f"Overall Status:        {'[PASS]' if report['overall_pass'] else '[FAIL]'}")
         print("-" * 68)
+        print("Readiness checks (physical accuracy requires registered ground truth):")
+        for name, passed in report["checks"].items():
+            print(f"  {name}: {passed}")
         print("Stack & Nodes:")
         print(f"  AMCL Active:         {'YES' if report['nodes']['amcl_active'] else 'NO (Required)'}")
         print(f"  Map Server Active:   {'YES' if report['nodes']['map_server_active'] else 'NO (Required)'}")

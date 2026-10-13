@@ -32,7 +32,7 @@ def test_persistent_base_launch_syntax_and_loadability():
     description = PythonLaunchDescriptionSource(str(path)).get_launch_description(LaunchContext())
     assert description.entities
     declarations = {item.name: item for item in description.entities if isinstance(item, DeclareLaunchArgument)}
-    assert set(declarations) == {'world', 'model', 'namespace', 'rviz'}
+    assert set(declarations) == {'world', 'model', 'namespace', 'rviz', 'rviz_fixed_frame'}
 
 
 def test_slam_runner_timeout_validation():

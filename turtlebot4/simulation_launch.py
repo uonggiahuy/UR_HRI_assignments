@@ -141,7 +141,8 @@ def compose(context):
     if rviz == 'true':
         # The upstream RViz launch hardcodes a map-frame navigation config.
         # Reuse upstream rviz2 with an assignment-owned simulator-only config.
-        config = Path(get_package_share_directory('turtlebot4')) / 'rviz/simulation.rviz'
+        view = 'navigation.rviz' if context.launch_configurations.get('rviz_fixed_frame', 'odom') == 'map' else 'simulation.rviz'
+        config = Path(get_package_share_directory('turtlebot4')) / 'rviz' / view
         actions.append(Node(package='rviz2', executable='rviz2', name='rviz2',
                             namespace=namespace, arguments=['-d', str(config)],
                             parameters=[{'use_sim_time': True}],
