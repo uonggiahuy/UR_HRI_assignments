@@ -12,6 +12,7 @@ import tty
 from geometry_msgs.msg import Twist
 import rclpy
 from rclpy.action import ActionClient
+from action_msgs.msg import GoalStatus
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
@@ -110,16 +111,21 @@ class TeleopNode(Node):
             
         self.publisher = self.create_publisher(Twist, self.cmd_topic, cmd_vel_qos())
         self.is_docked = False
+        self.dock_status_received = False
         self.dock_sub = None
 
         if HAVE_CREATE_MSGS:
             dock_topic = f'/{self.namespace}/dock_status' if self.namespace else '/dock_status'
             self.dock_sub = self.create_subscription(
-                DockStatus, dock_topic, self._dock_cb, 5
+                DockStatus, dock_topic, self._dock_cb,
+                QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
+                           durability=DurabilityPolicy.VOLATILE,
+                           history=HistoryPolicy.KEEP_LAST, depth=5)
             )
 
     def _dock_cb(self, msg):
         self.is_docked = getattr(msg, 'is_docked', False)
+        self.dock_status_received = True
 
     def publish_twist(self, linear_x: float, angular_z: float):
         msg = Twist()
@@ -137,29 +143,46 @@ class TeleopNode(Node):
 def undock_robot(node: TeleopNode, timeout: float = 10.0) -> bool:
     """Send undock action goal if Create 3 undock action is available."""
     if not HAVE_CREATE_MSGS:
-        print("[teleop] irobot_create_msgs not available; skipping undock action.")
+        print("[teleop] irobot_create_msgs not available; cannot verify undock.")
         return False
+
+    deadline = time.monotonic() + timeout
+    while not node.dock_status_received and time.monotonic() < deadline:
+        rclpy.spin_once(node, timeout_sec=min(.1, deadline - time.monotonic()))
+    if not node.dock_status_received:
+        print('[teleop] Dock status unavailable; cannot verify undock.')
+        return False
+    if not node.is_docked:
+        print('[teleop] Robot is already undocked.')
+        return True
 
     action_name = f'/{node.namespace}/undock' if node.namespace else '/undock'
     client = ActionClient(node, Undock, action_name)
+    def finish(success, message):
+        print(message)
+        client.destroy()
+        return success
     print(f"[teleop] Connecting to undock action server '{action_name}'...")
-    if not client.wait_for_server(timeout_sec=timeout):
-        print(f"[teleop] Undock server not found on {action_name}.")
-        return False
+    if not client.wait_for_server(timeout_sec=max(0., deadline - time.monotonic())):
+        return finish(False, f"[teleop] Undock server not found on {action_name}.")
 
     print("[teleop] Sending undock goal...")
     goal_msg = Undock.Goal()
     future = client.send_goal_async(goal_msg)
-    rclpy.spin_until_future_complete(node, future, timeout_sec=timeout)
-    if not future.done() or not future.result().accepted:
-        print("[teleop] Undock goal rejected or timed out.")
-        return False
+    rclpy.spin_until_future_complete(node, future, timeout_sec=max(0., deadline - time.monotonic()))
+    if not future.done() or future.result() is None or not future.result().accepted:
+        return finish(False, "[teleop] Undock goal rejected or timed out.")
 
     print("[teleop] Undock goal accepted. Waiting for result...")
     result_future = future.result().get_result_async()
-    rclpy.spin_until_future_complete(node, result_future, timeout_sec=timeout)
-    print("[teleop] Undock completed.")
-    return True
+    rclpy.spin_until_future_complete(node, result_future, timeout_sec=max(0., deadline - time.monotonic()))
+    if not result_future.done() or result_future.result() is None or result_future.result().status != GoalStatus.STATUS_SUCCEEDED:
+        return finish(False, '[teleop] Undock action failed or timed out.')
+    while time.monotonic() < deadline:
+        rclpy.spin_once(node, timeout_sec=min(.1, deadline - time.monotonic()))
+        if node.dock_status_received and not node.is_docked:
+            return finish(True, '[teleop] Undock completed; dock_status confirms is_docked=false.')
+    return finish(False, '[teleop] Undock action succeeded but dock_status still reports docked.')
 
 
 def get_key_nonblocking(settings=None, timeout: float = 0.1) -> str:
@@ -242,7 +265,9 @@ def main(argv=None):
     node = TeleopNode(namespace=args.namespace, cmd_topic=args.cmd_topic)
     try:
         if args.undock:
-            undock_robot(node)
+            if not undock_robot(node):
+                print('[teleop] FAIL: robot did not undock.', file=sys.stderr)
+                return 1
 
         if not args.non_interactive:
             run_interactive_loop(node, linear, angular)
@@ -252,7 +277,8 @@ def main(argv=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

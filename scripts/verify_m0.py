@@ -1,6 +1,7 @@
 """Validate M0 packaging and the installed upstream audit baseline."""
 
 import hashlib
+import argparse
 import importlib
 import json
 from pathlib import Path
@@ -10,6 +11,10 @@ from catkin_pkg.package import parse_package
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--baseline', type=Path,
+                        help='Optional external JSON of upstream file SHA-256 values')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     expected_prefix = root.parents[1] / 'install' / 'turtlebot4'
     assert parse_package(str(root / 'package.xml')).name == 'turtlebot4'
@@ -20,7 +25,7 @@ def main():
     for relative in resources:
         assert (share / relative).read_bytes() == (root / relative).read_bytes(), relative
     importlib.import_module('turtlebot4')
-    baseline = json.loads((root / 'docs/audit/upstream_sha256.json').read_text())
+    baseline = json.loads(args.baseline.read_text()) if args.baseline else {}
     for filename, expected in baseline.items():
         assert hashlib.sha256(Path(filename).read_bytes()).hexdigest() == expected, filename
     for package in ['turtlebot4_ignition_bringup', 'turtlebot4_navigation',

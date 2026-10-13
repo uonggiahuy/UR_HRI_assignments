@@ -54,7 +54,7 @@ def check_no_duplicate_localization(node_names: list[str]) -> bool:
 
 def default_map_yaml_path() -> Path:
     """Locate the default M2 saved map in source tree or installed package share."""
-    src_map = Path('/root/ros2_ws/src/turtlebot4/maps/map.yaml')
+    src_map = Path(__file__).resolve().parents[1] / 'maps' / 'map.yaml'
     if src_map.is_file():
         return src_map
     share_map = Path(get_package_share_directory('turtlebot4')) / 'maps' / 'map.yaml'
@@ -73,7 +73,10 @@ def default_localization_params_path() -> Path:
 
 def resolve_saved_map_path(map_arg: str | Path | None = None) -> Path:
     """Resolve and validate the map YAML file and its referenced PGM image."""
-    yaml_path = Path(map_arg) if map_arg else default_map_yaml_path()
+    selection = map_arg if map_arg else os.environ.get('TURTLEBOT4_MAP')
+    yaml_path = Path(selection).expanduser() if selection else default_map_yaml_path()
+    if selection and not yaml_path.is_absolute() and yaml_path.parent == Path('.'):
+        yaml_path = default_map_yaml_path().parent / yaml_path
     if not yaml_path.is_file():
         raise FileNotFoundError(f"Specified map YAML file does not exist: {yaml_path}")
 

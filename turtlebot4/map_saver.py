@@ -333,7 +333,7 @@ def transactional_map_replace(
 
 
 def save_map_atomic(
-    output_dir: Path | str = '/root/ros2_ws/src/turtlebot4/maps',
+    output_dir: Path | str | None = None,
     map_name: str = 'map',
     map_topic: str = '/map',
     timeout: float = 20.0,
@@ -344,7 +344,7 @@ def save_map_atomic(
     validate_thresholds(free_thresh, occ_thresh)
     if [classify_pgm_pixel(p, free_thresh, occ_thresh) for p in (254, 0, 205)] != [0, 100, -1]:
         raise ValueError('Saver thresholds must preserve free/occupied/unknown PGM pixels')
-    out_dir = Path(output_dir)
+    out_dir = Path(output_dir) if output_dir else Path(__file__).resolve().parents[1] / 'maps'
     out_dir.mkdir(parents=True, exist_ok=True)
     target_yaml = out_dir / f'{map_name}.yaml'
     target_pgm = out_dir / f'{map_name}.pgm'
@@ -400,8 +400,8 @@ def main(argv=None):
         description='Safely and atomically save live SLAM map for TurtleBot 4.'
     )
     parser.add_argument(
-        '--output-dir', default='/root/ros2_ws/src/turtlebot4/maps',
-        help='Target output directory (default: /root/ros2_ws/src/turtlebot4/maps)'
+        '--output-dir', default=None,
+        help='Target output directory (default: package source maps/)'
     )
     parser.add_argument(
         '--map-name', default='map',

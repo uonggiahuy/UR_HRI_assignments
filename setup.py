@@ -40,6 +40,7 @@ setup(
         'set_initial_pose = turtlebot4.initial_pose:main',
         'check_localization = turtlebot4.localization_diagnostics:main',
         'start_navigation = turtlebot4.navigation_runner:main',
+        'prepare_navigation = turtlebot4.prepare_navigation:main',
         'check_navigation = turtlebot4.navigation_diagnostics:main',
     ]},
 )
