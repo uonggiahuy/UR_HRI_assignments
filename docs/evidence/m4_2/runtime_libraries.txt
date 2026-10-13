@@ -1,34 +1,14 @@
-/opt/ros/humble/lib/rviz2/rviz2 -d /root/ros2_ws/install/turtlebot4/share/turtlebot4/rviz/navigation.rviz --ros-args -r __node:=rviz2 -r __ns:=/ -p use_sim_time:=True --params-file /root/ros2_ws/install/turtlebot4/share/turtlebot4/config/simulation.yaml --params-file /tmp/launch_params_gxkivszk -r joint_state_publisher:joint_states:=joint_states_visualization -r joint_state_publisher:joint_states_input:=joint_states -r robot_state_publisher:joint_states:=joint_states_visualization -r /tf:=tf -r /tf_static:=tf_static 
+/opt/ros/humble/lib/rviz2/rviz2 -d /root/ros2_ws/install/turtlebot4/share/turtlebot4/rviz/navigation.rviz --ros-args -r __node:=rviz2 -r __ns:=/ -p use_sim_time:=True --params-file /root/ros2_ws/install/turtlebot4/share/turtlebot4/config/simulation.yaml --params-file /tmp/launch_params_gxkivszk -r joint_state_publisher:joint_states:=joint_states_visualization -r joint_state_publisher:joint_states_input:=joint_states -r robot_state_publisher:joint_states:=joint_states_visualization -r /tf:=tf -r /tf_static:=tf_static
 70a3b3785000-70a3b378f000 r--p 00000000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 70a3b378f000-70a3b37a5000 r-xp 0000a000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 70a3b37a5000-70a3b37a9000 r--p 00020000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 70a3b37a9000-70a3b37aa000 ---p 00024000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 70a3b37aa000-70a3b37ab000 r--p 00024000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 70a3b37ab000-70a3b37ac000 rw-p 00025000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
-/opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl -r __ns:=/ --params-file /tmp/launch_params_dtm6ox12 -r /tf:=tf -r /tf_static:=tf_static 
+/opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl -r __ns:=/ --params-file /tmp/launch_params_dtm6ox12 -r /tf:=tf -r /tf_static:=tf_static
 742ff85ba000-742ff85c4000 r--p 00000000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 742ff85c4000-742ff85da000 r-xp 0000a000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 742ff85da000-742ff85de000 r--p 00020000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 742ff85de000-742ff85df000 ---p 00024000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 742ff85df000-742ff85e0000 r--p 00024000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
 742ff85e0000-742ff85e1000 rw-p 00025000 00:3c 1862393                    /root/.cache/turtlebot4/tf2-0.25.24/install/tf2/lib/libtf2.so
-/bin/bash -c python3 - <<'PY'
-from pathlib import Path
-lines=[]
-for p in Path('/proc').glob('[0-9]*/cmdline'):
- try:
-  cmd=p.read_bytes().replace(b'\0',b' ').decode()
-  if '/lib/nav2_amcl/amcl ' in cmd or '/lib/rviz2/rviz2 ' in cmd:
-   lines.append(cmd)
-   lines.extend(line for line in (p.parent/'maps').read_text().splitlines() if 'libtf2.so' in line)
- except (OSError,UnicodeError):pass
-Path('/tmp/m4_2/runtime_libraries.txt').write_text('\n'.join(lines))
-PY
-python3 - <<'PY'
-exec(open('/tmp/m4_1/ui.py').read().split("if sys.argv[1]=='expand'")[0])
-click(10,220)
-g=w.get_geometry();raw=w.get_image(0,0,g.width,g.height,X.ZPixmap,0xffffffff)
-Image.frombytes('RGB',(g.width,g.height),raw.data,'raw','BGRX').save('/tmp/m4_2/final_rviz_status.png')
-PY
-sha256sum src/turtlebot4/maps/map.{yaml,pgm}
-git -C src/turtlebot4 diff --check 

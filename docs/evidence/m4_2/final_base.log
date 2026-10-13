@@ -110,10 +110,10 @@ ign_args is deprecated, migrate to gz_args!
 [static_transform_publisher-6] rotation: ('0.000000', '0.000000', '1.000000', '0.000000')
 [static_transform_publisher-6] from 'odom' to 'std_dock_link'
 [create-7] [ros_ign_gazebo] is deprecated! Redirecting to use [ros_gz_sim] instead!
-[create-7] 
+[create-7]
 [create-7] [INFO] [1791864460.738763850] [ros_gz_sim]: Requesting list of world names.
 [create-8] [ros_ign_gazebo] is deprecated! Redirecting to use [ros_gz_sim] instead!
-[create-8] 
+[create-8]
 [create-8] [INFO] [1791864460.738115935] [ros_gz_sim]: Requesting list of world names.
 [parameter_bridge-9] [INFO] [1791864460.737700388] [cmd_vel_bridge]: Creating GZ->ROS Bridge: [/cmd_vel (ignition.msgs.Twist) -> /cmd_vel (geometry_msgs/msg/Twist)] (Lazy 0)
 [parameter_bridge-9] [INFO] [1791864460.750217971] [cmd_vel_bridge]: Creating ROS->GZ Bridge: [/model/turtlebot4/cmd_vel (geometry_msgs/msg/Twist) -> /model/turtlebot4/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
@@ -337,7 +337,7 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1] [INFO] [1791864463.023556689] [gz_ros2_control]: Loading sensor: imu
 [ign gazebo-1] [INFO] [1791864463.023565603] [gz_ros2_control]: 	State:
 [ign gazebo-1] [WARN] [1791864463.023575426] [gz_ros2_control]: IMU sensor 'imu' not found in hardware_info, skipping.
-[ign gazebo-1] [INFO] [1791864463.023639256] [resource_manager]: Initialize hardware 'left_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023639256] [resource_manager]: Initialize hardware 'left_wheel_controller'
 [ign gazebo-1] [WARN] [1791864463.023659563] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
 [ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
 [ign gazebo-1] <hardware>
@@ -349,10 +349,10 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1]   </plugin>
 [ign gazebo-1] </gazebo>
 [ign gazebo-1] [INFO] [1791864463.023695193] [resource_manager]: Successful initialization of hardware 'left_wheel_controller'
-[ign gazebo-1] [INFO] [1791864463.023718467] [resource_manager]: 'configure' hardware 'left_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023718467] [resource_manager]: 'configure' hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023721547] [gz_ros2_control]: System Successfully configured!
 [ign gazebo-1] [INFO] [1791864463.023730716] [resource_manager]: Successful 'configure' of hardware 'left_wheel_controller'
-[ign gazebo-1] [INFO] [1791864463.023734261] [resource_manager]: 'activate' hardware 'left_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023734261] [resource_manager]: 'activate' hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023738452] [resource_manager]: Successful 'activate' of hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023867411] [gz_ros2_control]: The position_proportional_gain has been set to: 0.1
 [ign gazebo-1] [INFO] [1791864463.023884585] [gz_ros2_control]: Loading joint: right_wheel_joint
@@ -364,7 +364,7 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1] [INFO] [1791864463.023914024] [gz_ros2_control]: Loading sensor: imu
 [ign gazebo-1] [INFO] [1791864463.023919095] [gz_ros2_control]: 	State:
 [ign gazebo-1] [WARN] [1791864463.023922701] [gz_ros2_control]: IMU sensor 'imu' not found in hardware_info, skipping.
-[ign gazebo-1] [INFO] [1791864463.023926927] [resource_manager]: Initialize hardware 'right_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023926927] [resource_manager]: Initialize hardware 'right_wheel_controller'
 [ign gazebo-1] [WARN] [1791864463.023932600] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
 [ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
 [ign gazebo-1] <hardware>
@@ -376,10 +376,10 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1]   </plugin>
 [ign gazebo-1] </gazebo>
 [ign gazebo-1] [INFO] [1791864463.023939405] [resource_manager]: Successful initialization of hardware 'right_wheel_controller'
-[ign gazebo-1] [INFO] [1791864463.023944475] [resource_manager]: 'configure' hardware 'right_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023944475] [resource_manager]: 'configure' hardware 'right_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023946259] [gz_ros2_control]: System Successfully configured!
 [ign gazebo-1] [INFO] [1791864463.023951822] [resource_manager]: Successful 'configure' of hardware 'right_wheel_controller'
-[ign gazebo-1] [INFO] [1791864463.023954930] [resource_manager]: 'activate' hardware 'right_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864463.023954930] [resource_manager]: 'activate' hardware 'right_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023958519] [resource_manager]: Successful 'activate' of hardware 'right_wheel_controller'
 [ign gazebo-1] [INFO] [1791864463.023961666] [gz_ros2_control]: Loading controller_manager
 [ign gazebo-1] [1;33m[Wrn] [OBJLoader.cc:91] [0m[1;33mBoth `d` and `Tr` parameters defined for "Chair". Use the value of `d` for dissolve (line 8 in .mtl.)[0m
@@ -724,13 +724,13 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1] [INFO] [1791864760.123744765] [controller_manager]: Shutting down controller 'joint_state_broadcaster'
 [ign gazebo-1] [INFO] [1791864760.123785935] [controller_manager]: Deactivating controller 'diffdrive_controller'
 [ign gazebo-1] [INFO] [1791864760.123822060] [controller_manager]: Shutting down controller 'diffdrive_controller'
-[ign gazebo-1] [INFO] [1791864760.123861904] [resource_manager]: 'deactivate' hardware 'right_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864760.123861904] [resource_manager]: 'deactivate' hardware 'right_wheel_controller'
 [ign gazebo-1] [INFO] [1791864760.123879219] [resource_manager]: Successful 'deactivate' of hardware 'right_wheel_controller'
-[ign gazebo-1] [INFO] [1791864760.123884465] [resource_manager]: 'shutdown' hardware 'right_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864760.123884465] [resource_manager]: 'shutdown' hardware 'right_wheel_controller'
 [ign gazebo-1] [INFO] [1791864760.123889550] [resource_manager]: Successful 'shutdown' of hardware 'right_wheel_controller'
-[ign gazebo-1] [INFO] [1791864760.123895208] [resource_manager]: 'deactivate' hardware 'left_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864760.123895208] [resource_manager]: 'deactivate' hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864760.123899962] [resource_manager]: Successful 'deactivate' of hardware 'left_wheel_controller'
-[ign gazebo-1] [INFO] [1791864760.123903427] [resource_manager]: 'shutdown' hardware 'left_wheel_controller' 
+[ign gazebo-1] [INFO] [1791864760.123903427] [resource_manager]: 'shutdown' hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864760.123907641] [resource_manager]: Successful 'shutdown' of hardware 'left_wheel_controller'
 [ign gazebo-1] [INFO] [1791864760.123911441] [controller_manager]: Shutting down the controller manager.
 [wheel_status_publisher-36] [INFO] [1791864760.125810472] [rclcpp]: signal_handler(SIGINT/SIGTERM)
@@ -740,26 +740,26 @@ ign_args is deprecated, migrate to gz_args!
 [turtlebot4_ignition_hmi_node-31] [INFO] [1791864760.145743686] [rclcpp]: signal_handler(SIGINT/SIGTERM)
 [ign gazebo-1] Stack trace (most recent call last):
 [ign gazebo-1] #31   Object "/usr/lib/x86_64-linux-gnu/libc.so.6", at 0x700e3b584e3f, in __libc_start_main
-[ign gazebo-1] #30   Object "/usr/lib/x86_64-linux-gnu/libc.so.6", at 0x700e3b584d8f, in 
-[ign gazebo-1] #29   Object "ign gazebo gui", at 0x650166a1917e, in 
+[ign gazebo-1] #30   Object "/usr/lib/x86_64-linux-gnu/libc.so.6", at 0x700e3b584d8f, in
+[ign gazebo-1] #29   Object "ign gazebo gui", at 0x650166a1917e, in
 [ign gazebo-1] #28   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b82ce19, in ruby_run_node
-[ign gazebo-1] #27   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b829317, in 
+[ign gazebo-1] #27   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b829317, in
 [ign gazebo-1] #26   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9be30c, in rb_vm_exec
-[ign gazebo-1] #25   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b8c96, in 
-[ign gazebo-1] #24   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b5fc5, in 
-[ign gazebo-1] #23   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b3c34, in 
-[ign gazebo-1] #22   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b8ffa4e, in 
+[ign gazebo-1] #25   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b8c96, in
+[ign gazebo-1] #24   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b5fc5, in
+[ign gazebo-1] #23   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b3c34, in
+[ign gazebo-1] #22   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b8ffa4e, in
 [ign gazebo-1] #21   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b82a9ac, in rb_protect
 [ign gazebo-1] #20   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9c2c61, in rb_yield
 [ign gazebo-1] #19   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9be30c, in rb_vm_exec
-[ign gazebo-1] #18   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b8c96, in 
-[ign gazebo-1] #17   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b5fc5, in 
-[ign gazebo-1] #16   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b3c34, in 
-[ign gazebo-1] #15   Object "/usr/lib/x86_64-linux-gnu/ruby/3.0.0/fiddle.so", at 0x700e37d7744b, in 
+[ign gazebo-1] #18   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b8c96, in
+[ign gazebo-1] #17   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b5fc5, in
+[ign gazebo-1] #16   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b9b3c34, in
+[ign gazebo-1] #15   Object "/usr/lib/x86_64-linux-gnu/ruby/3.0.0/fiddle.so", at 0x700e37d7744b, in
 [ign gazebo-1] #14   Object "/usr/lib/x86_64-linux-gnu/libruby-3.0.so.3.0", at 0x700e3b981088, in rb_nogvl
-[ign gazebo-1] #13   Object "/usr/lib/x86_64-linux-gnu/ruby/3.0.0/fiddle.so", at 0x700e37d76d6b, in 
-[ign gazebo-1] #12   Object "/usr/lib/x86_64-linux-gnu/libffi.so.8", at 0x700e37d1f492, in 
-[ign gazebo-1] #11   Object "/usr/lib/x86_64-linux-gnu/libffi.so.8", at 0x700e37d22e2d, in 
+[ign gazebo-1] #13   Object "/usr/lib/x86_64-linux-gnu/ruby/3.0.0/fiddle.so", at 0x700e37d76d6b, in
+[ign gazebo-1] #12   Object "/usr/lib/x86_64-linux-gnu/libffi.so.8", at 0x700e37d1f492, in
+[ign gazebo-1] #11   Object "/usr/lib/x86_64-linux-gnu/libffi.so.8", at 0x700e37d22e2d, in
 [ign gazebo-1] #10   Object "/usr/lib/x86_64-linux-gnu/libignition-gazebo6-ign.so.6.18.0", at 0x700e37271bac, in runGui
 [ign gazebo-1] #9    Object "/usr/lib/x86_64-linux-gnu/libignition-gazebo6-gui.so.6", at 0x700e37046c56, in ignition::gazebo::v6::gui::runGui(int&, char**, char const*, char const*, int, char const*)
 [ign gazebo-1] #8    Object "/usr/lib/x86_64-linux-gnu/libignition-gui6.so.6", at 0x700e35c1bb2c, in ignition::gui::Application::~Application()
@@ -770,7 +770,7 @@ ign_args is deprecated, migrate to gz_args!
 [ign gazebo-1] #3    Object "/usr/lib/x86_64-linux-gnu/libQt5Qml.so.5", at 0x700e34dd0b63, in QQmlMetaType::freeUnusedTypesAndCaches()
 [ign gazebo-1] #2    Object "/usr/lib/x86_64-linux-gnu/libQt5Qml.so.5", at 0x700e34def44c, in QQmlPropertyCache::~QQmlPropertyCache()
 [ign gazebo-1] #1    Object "/usr/lib/x86_64-linux-gnu/libQt5Qml.so.5", at 0x700e34def108, in QQmlPropertyCache::~QQmlPropertyCache()
-[ign gazebo-1] #0    Object "/usr/lib/x86_64-linux-gnu/libQt5Qml.so.5", at 0x700e34d8aff0, in 
+[ign gazebo-1] #0    Object "/usr/lib/x86_64-linux-gnu/libQt5Qml.so.5", at 0x700e34d8aff0, in
 [ign gazebo-1] Segmentation fault (Address not mapped to object [0x700e0036df80])
 [robot_state_publisher-5] [INFO] [1791864760.271808914] [rclcpp]: signal_handler(SIGINT/SIGTERM)
 [robot_state_publisher-3] [INFO] [1791864760.285770768] [rclcpp]: signal_handler(SIGINT/SIGTERM)

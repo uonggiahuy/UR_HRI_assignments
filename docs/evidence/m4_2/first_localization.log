@@ -5,13 +5,13 @@
 [INFO] [lifecycle_manager-3]: process started with pid [20056]
 [lifecycle_manager-3] [INFO] [1791863489.402530656] [lifecycle_manager_localization]: Creating
 [lifecycle_manager-3] [INFO] [1791863489.403776283] [lifecycle_manager_localization]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
-[amcl-2] [INFO] [1791863489.406810857] [amcl]: 
-[amcl-2] 	amcl lifecycle node launched. 
+[amcl-2] [INFO] [1791863489.406810857] [amcl]:
+[amcl-2] 	amcl lifecycle node launched.
 [amcl-2] 	Waiting on external lifecycle transitions to activate
 [amcl-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [amcl-2] [INFO] [1791863489.407258021] [amcl]: Creating
-[map_server-1] [INFO] [1791863489.413325177] [map_server]: 
-[map_server-1] 	map_server lifecycle node launched. 
+[map_server-1] [INFO] [1791863489.413325177] [map_server]:
+[map_server-1] 	map_server lifecycle node launched.
 [map_server-1] 	Waiting on external lifecycle transitions to activate
 [map_server-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [map_server-1] [INFO] [1791863489.413415610] [map_server]: Creating

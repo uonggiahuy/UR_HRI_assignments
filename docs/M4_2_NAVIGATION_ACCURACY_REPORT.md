@@ -348,3 +348,14 @@ values. The incomplete runtime acceptance above remains unchanged.
 Owned-process cleanup: bounded foreground sessions stopped (normal timeout/launch
 cleanup); final no-daemon ROS graph is empty and no Gazebo, RViz, AMCL or Nav2
 process remains. No user-owned process was signalled.
+
+Evidence formatting: trailing whitespace was removed from copied text logs;
+no runtime errors were removed. The final bounded base shutdown records a Gazebo
+GUI teardown stack trace and Ruby ESRCH while children exit. Final process/graph
+checks are empty, but this is not a claim of error-free upstream shutdown. The
+AMCL/RViz library audit excludes the inspecting shell's own command text.
+
+Verified implementation commit: `8ebcd1ab60094914b666c3672e53bea7801138c1`
+(`fix(assignment4): reject uncertain localization and retain RViz map`).
+Overall M4.2 remains FAIL; this commit contains software corrections and truthful
+incomplete acceptance evidence, not an accepted navigation demonstration.
