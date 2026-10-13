@@ -1,0 +1,11 @@
+{
+  "mode": "stationary",
+  "status": "FAIL",
+  "samples": [],
+  "physical_accuracy_status": "NOT VERIFIED",
+  "hazards": [
+    0
+  ],
+  "bumper_contacts": 0,
+  "error": "required graph"
+}

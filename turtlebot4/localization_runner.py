@@ -67,8 +67,8 @@ def default_map_yaml_path() -> Path:
 
 
 def default_localization_params_path() -> Path:
-    nav_share = Path(get_package_share_directory('turtlebot4_navigation'))
-    return nav_share / 'config' / 'localization.yaml'
+    share = Path(get_package_share_directory('turtlebot4'))
+    return share / 'config' / 'localization.yaml'
 
 
 def resolve_saved_map_path(map_arg: str | Path | None = None) -> Path:

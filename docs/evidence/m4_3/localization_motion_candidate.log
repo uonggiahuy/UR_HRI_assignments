@@ -1,0 +1,115 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-13-04-35-24-434348-CHOCONADYNEubuntu-56819
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [map_server-1]: process started with pid [56823]
+[INFO] [amcl-2]: process started with pid [56825]
+[INFO] [lifecycle_manager-3]: process started with pid [56827]
+[lifecycle_manager-3] [INFO] [1791866124.500524872] [lifecycle_manager_localization]: Creating
+[lifecycle_manager-3] [INFO] [1791866124.501642800] [lifecycle_manager_localization]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[amcl-2] [INFO] [1791866124.503849214] [amcl]:
+[amcl-2] 	amcl lifecycle node launched.
+[amcl-2] 	Waiting on external lifecycle transitions to activate
+[amcl-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[amcl-2] [INFO] [1791866124.504470294] [amcl]: Creating
+[map_server-1] [INFO] [1791866124.512604338] [map_server]:
+[map_server-1] 	map_server lifecycle node launched.
+[map_server-1] 	Waiting on external lifecycle transitions to activate
+[map_server-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-1] [INFO] [1791866124.512708536] [map_server]: Creating
+[lifecycle_manager-3] [INFO] [1791866124.538119219] [lifecycle_manager_localization]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-3] [INFO] [1791866124.538166671] [lifecycle_manager_localization]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1791866124.540064078] [map_server]: Configuring
+[map_server-1] [INFO] [1791866124.540134199] [map_io]: Loading yaml file: /root/ros2_ws/src/turtlebot4/maps/map.yaml
+[map_server-1] [INFO] [1791866124.540336889] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1791866124.540343290] [map_io]: origin[0]: -15
+[map_server-1] [INFO] [1791866124.540346137] [map_io]: origin[1]: -25.1
+[map_server-1] [INFO] [1791866124.540348214] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1791866124.540350389] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1791866124.540352455] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1791866124.540354934] [map_io]: mode: trinary
+[map_server-1] [INFO] [1791866124.540357684] [map_io]: negate: 0
+[map_server-1] [INFO] [1791866124.540501790] [map_io]: Loading image_file: /root/ros2_ws/src/turtlebot4/maps/map.pgm
+[map_server-1] [INFO] [1791866124.571867675] [map_io]: Read map /root/ros2_ws/src/turtlebot4/maps/map.pgm: 603 X 1002 map @ 0.05 m/cell
+[lifecycle_manager-3] [INFO] [1791866124.575360859] [lifecycle_manager_localization]: [34m[1mConfiguring amcl[0m[0m
+[amcl-2] [INFO] [1791866124.575567596] [amcl]: Configuring
+[amcl-2] [INFO] [1791866124.575658869] [amcl]: initTransforms
+[amcl-2] [INFO] [1791866124.583332958] [amcl]: initPubSub
+[amcl-2] [INFO] [1791866124.585088518] [amcl]: Subscribed to map topic.
+[lifecycle_manager-3] [INFO] [1791866124.587233512] [lifecycle_manager_localization]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1791866124.587411818] [map_server]: Activating
+[map_server-1] [INFO] [1791866124.588322671] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791866124.592870318] [amcl]: Received a 603 X 1002 map @ 0.050 m/pix
+[lifecycle_manager-3] [INFO] [1791866124.691898339] [lifecycle_manager_localization]: Server map_server connected with bond.
+[lifecycle_manager-3] [INFO] [1791866124.691937269] [lifecycle_manager_localization]: [34m[1mActivating amcl[0m[0m
+[amcl-2] [INFO] [1791866124.692087702] [amcl]: Activating
+[amcl-2] [INFO] [1791866124.692116271] [amcl]: Creating bond (amcl) to lifecycle manager.
+[amcl-2] [INFO] [1791866124.704362576] [amcl]: createLaserObject
+[lifecycle_manager-3] [INFO] [1791866124.794241980] [lifecycle_manager_localization]: Server amcl connected with bond.
+[lifecycle_manager-3] [INFO] [1791866124.794287132] [lifecycle_manager_localization]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-3] [INFO] [1791866124.794301721] [lifecycle_manager_localization]: [34m[1mCreating bond timer...[0m[0m
+[amcl-2] [INFO] [1791866125.589098675] [amcl]: Message Filter dropping message: frame 'turtlebot4/rplidar_link/rplidar' at time 32.337 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-2] [WARN] [1791866126.602352180] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866128.677558127] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866130.709180728] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866132.763544972] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866134.790781197] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866136.837546363] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866138.883160794] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866140.918284432] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866142.974120295] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866145.004306864] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866147.062387675] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866149.102036648] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866151.133704372] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866153.173056296] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866155.216949459] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866157.251094202] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866159.296691311] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866161.315314552] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866163.356641913] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866165.390484310] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866167.532457605] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866169.616171207] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866171.685169704] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866173.703438844] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866175.729638277] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866177.768568126] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866179.806579492] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866181.841476215] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866183.867283248] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866185.916476319] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866187.956692286] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [INFO] [1791866189.072501070] [amcl]: initialPoseReceived
+[amcl-2] [WARN] [1791866189.072622624] [amcl]: Failed to transform initial pose in time (Lookup would require extrapolation into the future.  Requested time 95.679000 but the latest data is at time 95.670000, when looking up transform from frame [base_link] to frame [odom])
+[amcl-2] [INFO] [1791866189.072643957] [amcl]: Setting pose (95.679000): 0.148 0.016 -0.000
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [lifecycle_manager-3]: sending signal 'SIGINT' to process[lifecycle_manager-3]
+[INFO] [amcl-2]: sending signal 'SIGINT' to process[amcl-2]
+[INFO] [map_server-1]: sending signal 'SIGINT' to process[map_server-1]
+[lifecycle_manager-3] [INFO] [1791866358.664823186] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[lifecycle_manager-3] [INFO] [1791866358.664984557] [lifecycle_manager_localization]: Running Nav2 LifecycleManager rcl preshutdown (lifecycle_manager_localization)
+[lifecycle_manager-3] [INFO] [1791866358.665064869] [lifecycle_manager_localization]: [34m[1mTerminating bond timer...[0m[0m
+[amcl-2] [INFO] [1791866358.665955523] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[amcl-2] [INFO] [1791866358.666077726] [amcl]: Running Nav2 LifecycleNode rcl preshutdown (amcl)
+[amcl-2] [INFO] [1791866358.666173369] [amcl]: Deactivating
+[amcl-2] [INFO] [1791866358.666203624] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[map_server-1] [INFO] [1791866358.667197822] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[map_server-1] [INFO] [1791866358.667379523] [map_server]: Running Nav2 LifecycleNode rcl preshutdown (map_server)
+[map_server-1] [INFO] [1791866358.667466390] [map_server]: Deactivating
+[map_server-1] [INFO] [1791866358.667491728] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791866358.676644867] [amcl]: Cleaning up
+[map_server-1] [INFO] [1791866358.677853463] [map_server]: Cleaning up
+[map_server-1] [INFO] [1791866358.678042805] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791866358.690334069] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[map_server-1] [INFO] [1791866358.797454599] [map_server]: Destroying
+[lifecycle_manager-3] [INFO] [1791866358.800812488] [lifecycle_manager_localization]: Destroying lifecycle_manager_localization
+[amcl-2] [INFO] [1791866358.864184842] [amcl]: Destroying
+[INFO] [lifecycle_manager-3]: process has finished cleanly [pid 56827]
+[INFO] [map_server-1]: process has finished cleanly [pid 56823]
+[INFO] [amcl-2]: process has finished cleanly [pid 56825]
+[start_localization] Verified saved map: /root/ros2_ws/src/turtlebot4/maps/map.yaml
+[start_localization] Checking base simulator readiness (timeout 30.0s)...
+[start_localization] Base simulator verified (/clock, LiDAR, odometry active).
+[start_localization] Launching: ros2 launch turtlebot4_navigation localization.launch.py use_sim_time:=true map:=/root/ros2_ws/src/turtlebot4/maps/map.yaml params:=/tmp/m4_3/candidate_motion.yaml
+
+[start_localization] Received shutdown signal. Stopping Map Server & AMCL cleanly...
+[start_localization] Localization stopped. Persistent simulator and RViz remain running.

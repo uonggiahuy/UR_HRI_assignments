@@ -25,7 +25,7 @@ from sensor_msgs.msg import LaserScan
 from tf2_ros import Buffer, TransformListener, TransformException
 import yaml
 
-from turtlebot4.localization_health import covariance_health, pose_time_health, yaw, transform_pose
+from turtlebot4.localization_health import covariance_health, pose_time_health, yaw, transform_pose, reference_accuracy, validate_reference_for_map, validate_registration
 from turtlebot4.diagnostics import scan_valid, odometry_valid, seconds
 from turtlebot4.localization_diagnostics import validate_amcl_pose_msg, validate_map_compatibility
 from turtlebot4.localization_runner import bounded_timeout, resolve_saved_map_path
@@ -175,11 +175,15 @@ def classify_path_rejection(overlap, fresh=True):
 
 
 class NavigationProbe(Node):
-    def __init__(self, namespace=''):
+    def __init__(self, namespace='', registration=None):
+        reference = json.loads(Path(registration).read_text()) if registration else None
+        if reference is not None:
+            validate_registration(reference)
         normalized = validate_namespace(namespace)
         super().__init__('turtlebot4_navigation_probe_' + uuid.uuid4().hex[:8],
                          namespace=normalized, cli_args=['--ros-args', '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'])
         self.set_parameters([Parameter('use_sim_time', value=True)])
+        self.registration = reference
         self.namespace = validate_namespace(namespace)
         self.prefix = '/' + self.namespace if self.namespace else ''
         self.service_clients = {}
@@ -194,6 +198,7 @@ class NavigationProbe(Node):
         self.subscriptions_owned = []
         for key, cls, topic, qos in [
             ('clock', Clock, '/clock', 10),
+            ('truth', Odometry, '/sim_ground_truth_pose', qos_profile_sensor_data),
             ('scan', LaserScan, self.topic('scan'), qos_profile_sensor_data),
             ('odom', Odometry, self.topic('odom'), qos_profile_sensor_data),
             ('map', OccupancyGrid, self.topic('map'), map_qos()),
@@ -322,9 +327,17 @@ class NavigationProbe(Node):
         stats = validate_map_compatibility(self.messages['map'], expected)
         if self.messages['map'].data[cell_index(tf.transform.translation.x, tf.transform.translation.y, self.messages['map'])] != 0:
             raise RuntimeError('Localized robot is outside saved-map free space')
+        accuracy = None
+        if self.registration is not None:
+            validate_reference_for_map(self.registration, map_path)
+            accuracy = reference_accuracy((tf.transform.translation.x, tf.transform.translation.y, yaw(tf.transform.rotation)),
+                                          self.messages.get('truth'), now, self.registration)
+            if not accuracy['verified']:
+                raise RuntimeError('Registered physical localization exceeds 0.30 m uncertainty bound')
         return {'lifecycle': lifecycle, 'map': stats, 'pose': pose,
+                'reference_accuracy': accuracy,
                 'covariance_health': covariance, 'timestamp_health': timing,
-                'ground_truth_accuracy_verified': False, 'navigation_safe': True,
+                'ground_truth_accuracy_verified': accuracy is not None, 'navigation_safe': True,
                 'clock': now, 'tf_stamp': stamp, 'stable_observation_seconds': self.tf_samples[-1][0] - self.tf_samples[0][0]}
 
     def navigation(self, deadline):
@@ -433,6 +446,7 @@ def parser():
     result.add_argument('--namespace', default='')
     result.add_argument('--map', default=None)
     result.add_argument('--timeout', type=bounded_timeout, default=30.0)
+    result.add_argument('--registration', help='Reviewed simulation world-to-map reference JSON')
     result.add_argument('--json', action='store_true')
     return result
 
@@ -440,7 +454,7 @@ def parser():
 def main(argv=None):
     args = parser().parse_args(argv)
     rclpy.init()
-    probe = NavigationProbe(args.namespace)
+    probe = NavigationProbe(args.namespace, args.registration)
     try:
         report = wait_for_readiness(probe, resolve_saved_map_path(args.map), args.timeout, navigation=True)
         report['status'] = 'PASS'
@@ -458,6 +472,30 @@ def main(argv=None):
         print(json.dumps(report, indent=2))
         print('Readiness does not prove autonomous goal success.')
     return code
+
+
+
+
+def path_overlap_at_costmap_time(buffer, path, costmap):
+    """Return None until asynchronous TF delivery covers the exact grid stamp."""
+    stamp = rclpy.time.Time.from_msg(costmap.header.stamp)
+    if not buffer.can_transform(costmap.header.frame_id, path.header.frame_id, stamp):
+        return None
+    tf = buffer.lookup_transform(costmap.header.frame_id, path.header.frame_id, stamp)
+    overlap = path_costmap_overlap(path, costmap, tf)
+    overlap.update(classification=classify_path_rejection(overlap),
+                   tf_stamp=seconds(tf.header.stamp), costmap_stamp=costmap_stamp(costmap),
+                   transform=[tf.transform.translation.x,tf.transform.translation.y,yaw(tf.transform.rotation)])
+    return overlap
+
+
+def log_severity(level):
+    """Humble byte constants and received integer log levels share one meaning."""
+    if isinstance(level, (bytes, bytearray)):
+        if len(level) != 1:
+            raise ValueError('Expected one byte for ROS log severity')
+        return level[0]
+    return int(level)
 
 
 if __name__ == '__main__':

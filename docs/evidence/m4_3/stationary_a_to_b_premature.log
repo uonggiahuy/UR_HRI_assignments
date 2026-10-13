@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/root/ros2_ws/src/turtlebot4/scripts/observe_amcl_convergence.py", line 158, in <module>
+    main()
+  File "/root/ros2_ws/src/turtlebot4/scripts/observe_amcl_convergence.py", line 94, in main
+    wait(lambda:all(k in n.messages for k in ('clock','scan','odom','pose','map')) and 'truth' in extra and 'dock' in extra and n.buffer.can_transform('map','base_link',Time()),10,'required graph')
+  File "/root/ros2_ws/src/turtlebot4/scripts/observe_amcl_convergence.py", line 54, in wait
+    raise TimeoutError(label)
+TimeoutError: required graph

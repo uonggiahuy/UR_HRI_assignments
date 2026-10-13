@@ -1,73 +1,133 @@
-# Bài tập lớn 4 — Mô phỏng TurtleBot 4, Lập bản đồ SLAM & Định vị AMCL (M4.2 — chẩn đoán an toàn, nghiệm thu chưa đạt)
+# Bài tập lớn 4 — TurtleBot 4, SLAM, AMCL và Nav2 (M4.3)
 
-Tài liệu hướng dẫn thực hành chi tiết bằng tiếng Việt cho gói phần mềm `turtlebot4` trên nền tảng **ROS 2 Humble** và **Ubuntu 22.04**.
+Tài liệu tiếng Việt cho ROS 2 Humble / Ubuntu 22.04 trong container hiện có.
 
----
+## Trạng thái hiện tại — M4.3: một A→B
 
-## Trạng thái hiện tại — M4.2
+**Một action A→B đã SUCCEEDED; M4.3 vẫn FAIL / chưa xác nhận tolerance vật lý.**
+Robot đi thực 1,034 m, không recovery, không tiếp xúc bumper hay hazard bị cấm,
+và dừng. Sai số pose Nav2 0,239 m / 0,246 rad nằm trong tolerance giữ nguyên
+0,25 m / 0,25 rad. Sai số vị trí vật lý đối chiếu độc lập là **0,312 m**, cộng
+bất định tham chiếu 0,15 m nên chưa chứng minh đến trong tolerance.
+Không gửi goal khác để che kết quả. **M4.3 chỉ yêu cầu một goal A→B**, không yêu
+cầu ba goal. M5/M6 chưa triển khai.
 
-**M4.2 chưa PASS.** Bản đồ người dùng 603 × 1002 được giữ nguyên. Trong thử nghiệm
-mới, sau undock và di chuyển giới hạn 0,32 m, độ lệch chuẩn vị trí lớn nhất của
-AMCL vẫn khoảng 0,38 m. Hai lệnh chẩn đoán đều từ chối trạng thái này. Chưa gửi
-ba goal mới; kết quả M4 Recovery trên bản đồ cũ chỉ là lịch sử.
-Xem [báo cáo M4.2](docs/M4_2_NAVIGATION_ACCURACY_REPORT.md).
+AMCL đã hội tụ qua hai phiên restart với quy trình undock/quay giới hạn; chỉ
+đứng yên sau initialization vẫn có thể cho covariance nhỏ nhưng pose sai.
+Config assignment đổi đúng hai tham số: `laser_model_type=likelihood_field_prob`
+và `transform_tolerance=0.2`; noise odom, seed covariance, safety, Unknown và goal
+tolerance giữ nguyên. **Build PASS, 195 tests PASS (168 cũ + 27 mới).**
+Bản đồ người dùng 603 × 1002 giữ nguyên byte và không commit.
+Xem [báo cáo M4.3](docs/M4_3_AMCL_CONVERGENCE_NAVIGATION_REPORT.md),
+[bằng chứng action](docs/evidence/m4_3/a_to_b.json) và
+[nghiệm thu vật lý](docs/evidence/m4_3/acceptance.json).
+Các kết quả ba goal M4 Recovery bên dưới là lịch sử trên bản đồ cũ.
 
-Trong mọi terminal: source Humble, workspace, rồi TF2 0.25.24 như mục M4 bên dưới.
-Để tránh Map retained bị loại trước khi có TF, **Terminal 1** khởi chạy từ đầu:
+### Quy trình đã kiểm chứng trong mô phỏng
+
+Trong **mọi terminal**, source theo thứ tự, đặc biệt source TF2 sau mỗi build:
+
+```bash
+cd /root/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+source /root/.cache/turtlebot4/tf2-0.25.24/install/setup.bash
+```
+
+**Terminal 1**, giữ chạy, sở hữu một Gazebo/robot/RViz:
 
 ```bash
 ros2 launch turtlebot4 turtlebot4.launch.py rviz:=true rviz_fixed_frame:=map
 ```
 
-Lệnh giữ chạy và sở hữu Gazebo/robot/RViz. Không chạy thêm base khi chuyển stack.
-Map hiển thị sau khi Map Server ACTIVE và AMCL được initialization; LaserScan/RobotModel có thể cảnh báo TF
-trước initialization. Mặc định không truyền `rviz_fixed_frame` vẫn là `odom` để
-bảo toàn M1. Navigation 2 Panel và Nav2 Goal được giữ trong cấu hình.
-
-**Terminal 2**: `ros2 run turtlebot4 start_localization`, giữ chạy sau khi đã dừng
-SLAM. **Terminal 4**: nhập pose hiện tại đã xác minh trong hệ map rồi chạy
-`set_initial_pose` như M4.1; không mặc định lấy Gazebo (0,0) làm tọa độ map.
-`set_initial_pose` PASS chỉ xác nhận AMCL nhận initialization và xuất dữ liệu mới.
+**Terminal 2**, sau khi SLAM đã dừng, giữ chạy, sở hữu Map Server/AMCL:
 
 ```bash
-ros2 run turtlebot4 check_localization --timeout 6 --json
+ros2 run turtlebot4 start_localization --timeout 60
 ```
 
-Đây là lệnh một lần. Readiness yêu cầu covariance hợp lệ, độ lệch chuẩn trục lớn
-XY ≤ 0,30 m và yaw ≤ 15°, clock/scan/odom/TF mới, bản đồ đúng và quan sát TF ổn định.
-Ngưỡng là điều kiện cần, **không chứng minh sai số vật lý ≤ 0,30 m**.
-Covariance giữ nguyên từ AMCL; không chỉnh covariance để vượt kiểm tra.
-Pose retained cũ chỉ được chấp nhận khi có ≥ 2 giây đứng yên, cảm biến/TF hiện tại
-và pose còn phù hợp TF; nhận message mới không làm timestamp cũ trở nên mới.
-
-Các trường `checks` tách ACTIVE, map hợp lệ, TF kết nối, cảm biến mới, pose có sẵn,
-covariance chấp nhận được, hội tụ và `navigation_safe`. Trường
-`ground_truth_accuracy_verified=false` nghĩa là chưa có chứng cứ sai số vật lý.
-Nếu FAIL, không gửi Nav2 Goal. Dừng teleop, xác minh vị trí/hướng và scan/map;
-không tăng tolerance, tắt inflation hoặc biến Unknown thành Free.
-
-Chỉ sau localization và scan/map đã đạt: **Terminal 3** chạy
-`ros2 run turtlebot4 start_navigation --timeout 45`, giữ chạy; **Terminal 4** chạy
-`ros2 run turtlebot4 check_navigation --timeout 10 --json` một lần.
-Cùng chính sách covariance/timestamp được dùng trong cả hai diagnostics.
-Trong phiên M4.2 hiện tại readiness vẫn FAIL nên quy trình ba goal ở mục M4 là
-điều kiện cho lần nghiệm thu sau, chưa được kiểm chứng lại trên map mới.
-
-Script `verify_navigation.py` yêu cầu `--registration` là JSON đăng ký tọa độ đã
-được kiểm chứng độc lập, gồm landmark không thẳng hàng và sai số tham chiếu
-≤ 0,15 m. Artifact thử nghiệm M4.2 có residual lớn nhất 0,19 m nên **không đủ điều
-kiện** và không được dùng để chạy script. Không tự đặt `verified=true`.
-Map origin không chứng minh quan hệ world/map. Chỉ kiểm tra giao diện, không gây motion:
+**Terminal 4**, lệnh một lần: đợi cả hai node ACTIVE trước initialization.
+Không khởi chạy base/localization lần thứ hai khi chuyển stack.
 
 ```bash
-python3 /root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py --help
+ros2 lifecycle get /amcl
+ros2 lifecycle get /map_server
 ```
 
-Kết thúc: Ctrl+C Terminal 3 (nếu có Nav2), rồi Terminal 2 và cuối cùng Terminal 1.
-Chỉ dừng process thuộc terminal mình. Kịch bản restart vẫn phải kiểm tra lại pose
-mới trong map; không dùng pose cuối phiên trước. Video nghiệm thu phải ghi đủ
-covariance, scan/map, reference registration, ba action SUCCEEDED, sai số vật lý,
-recovery, hazard và robot dừng. M4.2 chưa có video hoặc ba goal PASS mới.
+Xác định pose map **hiện tại** độc lập. Chỉ với default spawn mới restart đã
+được xác minh trong báo cáo M4.3, lệnh đã chạy là:
+
+```bash
+ros2 run turtlebot4 set_initial_pose --x 0.18782 --y 0.04360 --yaw-deg -0.1463 --timeout 20
+```
+
+Không dùng tọa độ này khi robot đã di chuyển hoặc cho phiên mapping đang tiếp tục.
+Map origin [-15,-25.1,0] không chứng minh world=map. `set_initial_pose` PASS chỉ
+xác nhận initialization, chưa xác nhận hội tụ.
+
+**Terminal 4**, chỉ trong mô phỏng và sau kiểm tra môi trường/dock an toàn:
+
+```bash
+ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}' --feedback
+python3 src/turtlebot4/scripts/observe_amcl_convergence.py --mode rotate --duration 12 --registration src/turtlebot4/docs/evidence/m4_3/registration.json --output /tmp/rotation.json
+python3 src/turtlebot4/scripts/observe_amcl_convergence.py --mode stationary --duration 10 --registration src/turtlebot4/docs/evidence/m4_3/registration.json --output /tmp/stability.json
+ros2 run turtlebot4 check_localization --timeout 8 --registration src/turtlebot4/docs/evidence/m4_3/registration.json --json
+```
+
+Observer là công cụ thử nghiệm có motion rõ ràng, chặn nếu dock/clearance/sensor/
+hazard không hợp lệ, xuất zero và kiểm tra odometry dừng. Không dùng để ép PASS.
+Đọc `convergence.pass` trong JSON: hoàn tất experiment không đồng nghĩa hội tụ.
+Không chạy observer motion/teleop khi Nav2 đang điều khiển. Các ngưỡng XY sigma
+≤ 0,30 m, yaw sigma ≤ 15° và freshness vẫn giữ nguyên; gate reference còn cộng
+bất định vào residual vị trí và yêu cầu bound ≤ 0,30 m.
+
+Reference độc lập dùng SDF/mesh và scan held-out; chỉ kiểm chứng vùng map
+x∈[-4,4], y∈[-4,2], gắn với SHA-256 của map này. Không tự đổi `verified`, origin,
+covariance hoặc tạo TF giả. Chưa kiểm chứng toàn warehouse. Nếu localization,
+scan/map hay reference FAIL, **dừng trước goal**.
+
+Một phiên trước dừng sau translation còn pose retained lệch TF do update_min_d.
+Sau xác nhận robot đã dừng, có thể cần **một** measurement thật qua service đã
+phát hiện; không gọi lặp để thu nhỏ covariance:
+
+```bash
+ros2 service call /request_nomotion_update std_srvs/srv/Empty '{}'
+```
+
+Phiên A→B cuối đạt mà không cần lệnh refresh này. Luôn chẩn đoán lại sau refresh.
+
+**Terminal 3**, chỉ sau toàn bộ gate PASS, giữ chạy và sở hữu Nav2:
+
+```bash
+ros2 run turtlebot4 start_navigation --registration src/turtlebot4/docs/evidence/m4_3/registration.json --timeout 45
+```
+
+**Terminal 4**, readiness một lần rồi một action A→B trong mô phỏng:
+
+```bash
+ros2 run turtlebot4 check_navigation --registration src/turtlebot4/docs/evidence/m4_3/registration.json --timeout 30 --json
+python3 src/turtlebot4/scripts/verify_navigation.py --registration src/turtlebot4/docs/evidence/m4_3/registration.json --goals src/turtlebot4/docs/evidence/m4_3/destination.json --goal-timeout 100 --output /tmp/a_to_b.json
+```
+
+A là pose hiện tại được đo ngay trước action; file destination có đúng một B
+mong muốn. Script chọn ô Free lân cận đủ clearance, kiểm tra Global Path và phạm
+vi reference, ghi TF/costmap đúng timestamp, motion, DWB/recovery, action result,
+final pose và dừng. Không retry tự động. Lần chạy thật đã SUCCEEDED; reporting
+cuối còn tách tolerance vật lý với pose Nav2 và trả NOT VERIFIED khi chưa đủ
+chứng cứ. Mở rộng reporting này đã regression test, không gửi thêm action.
+Không coi status PASS trong raw evidence cũ là PASS toàn milestone.
+
+Ctrl+C **Terminal 3 → Terminal 2 → Terminal 1**, chỉ dừng process mình sở hữu.
+Giữ các owner sống lâu hơn deadline goal; timeout AMCL trước Nav2 có thể gây lỗi
+TF giả tạo trong phép thử. Restart riêng phải khởi động lại base/localization,
+xác minh spawn và chạy lại gate; không lấy pose cuối phiên trước. Quy trình
+mapping liên tục ở các mục M2/M3 vẫn giữ nguyên, nhưng chưa được nghiệm thu
+end-to-end trên map hiện tại trong M4.3.
+
+Video M4.3 cần cho thấy một A→B: covariance và scan/map trước goal, registration,
+Global Path/costmap, robot đi thật, action SUCCEEDED, sai số pose Nav2 **và**
+sai số vật lý, hazard/recovery và dừng. Hiện chưa có link video nghiệm thu; không
+quay hoặc mô tả residual 0,312 m như đã đạt tolerance 0,25 m.
 
 ## 1. Tổng quan và Kiến trúc Hệ thống
 
@@ -449,7 +509,8 @@ ros2 run turtlebot4 start_localization
 
 Trong RViz, chuyển **Global Options → Fixed Frame → map**, rồi dùng
 **2D Pose Estimate** tại vị trí/hướng thực tế của robot. Nếu vừa restart mô phỏng,
-điểm xuất phát gần `(0,0,0)`; không dùng điểm này cho robot đã di chuyển.
+spawn world gần (0,0,0) vẫn phải được đăng ký sang hệ map; không giả định
+world=map. Dùng gate và reference M4.3 ở đầu README cho bản đồ hiện tại.
 
 **Terminal 3 — undock trước khi bật Nav2:**
 
@@ -497,7 +558,7 @@ thành công một goal. Bản đồ người dùng hiện tại có **505.728 F
 83.337 Unknown**; số liệu M4 cũ chỉ là lịch sử. Costmap có thể có số lượng Unknown khác do layer cảm biến và
 inflation; không sửa PGM/YAML để biến vùng chưa quan sát thành Free.
 
-### RViz và xác minh ba goal — chỉ thực hiện khi readiness và định vị ổn định
+### RViz và xác minh một A→B — chỉ thực hiện khi mọi gate đạt
 
 RViz hiện có **Global Path**, **Global Costmap**, **Local Costmap** và công cụ
 **Nav2 Goal**. Không cần mở RViz thứ hai. Khi các điều kiện an toàn đều đạt:
@@ -510,7 +571,7 @@ RViz hiện có **Global Path**, **Global Costmap**, **Local Costmap** và công
    kết quả action, final pose, dừng xe và dữ liệu va chạm.
 4. Chỉ ghi PASS nếu action trả `SUCCEEDED`, robot thực sự tịnh tiến và final pose
    đạt tolerance thực của controller (mặc định 0,25 m / 0,25 rad).
-5. Lặp với ba điểm đến khác nhau, cách nhau đủ lớn. Không dùng teleop trong goal.
+5. M4.3 chạy đúng một A→B có ý nghĩa; không dùng teleop trong goal.
    Goal được nhận, có đường đi, quay tại chỗ hoặc timeout đều không phải thành công.
 
 `GridBased.allow_unknown=false`, `track_unknown_space=true` và planner
@@ -520,12 +581,13 @@ Occupied hoặc chi phí collision. Không tăng tolerance TF để che dữ li�
 
 Script kiểm chứng thực **có gửi action làm robot mô phỏng di chuyển**, chỉ dùng
 khi đã undock, AMCL đáng tin cậy và readiness đạt. Nó chọn tọa độ từ bản đồ thật,
-kiểm tra clearance/planner và ghi JSON; kết quả hiện tại chưa đạt ba goal:
+kiểm tra clearance/planner và ghi JSON. Dùng quy trình M4.3 ở đầu README; một action đã
+SUCCEEDED nhưng tolerance vật lý chưa được xác nhận:
 
 ```bash
 cd /root/ros2_ws
 python3 src/turtlebot4/scripts/verify_navigation.py --help
-# Chưa chạy goal: cần reference registration được xác minh và readiness PASS.
+# Trước action luôn cần reference registration hợp lệ và readiness PASS.
 ```
 
 Không chạy script này để cố vượt qua lỗi readiness. Không dùng trên robot thật.
@@ -540,17 +602,18 @@ có thể dùng lại lệnh M2 `ros2 run turtlebot4 start_slam`, rồi teleop v
 không khởi chạy thêm Gazebo. Trước khi đóng toàn bộ, dừng stack chức năng trước,
 cuối cùng `Ctrl+C` ở Terminal 1. Quy trình restart ở phần M3 vẫn giữ nguyên.
 
-### Hướng dẫn quay video (chưa có video ba goal thành công)
+### Hướng dẫn quay video M4.3 (chưa có video nghiệm thu)
 
 Ghi đồng thời Gazebo, RViz và terminal diagnostics/action result. Cho thấy một
 robot, một simulator và một RViz; bản đồ Unknown vẫn còn. Quay bước initialize,
 undock, kiểm tra định vị khi di chuyển, start_navigation và tham số thực. Với
-mỗi goal A/B/C, quay mũi tên goal, Global Path, costmap, chuyển động, `SUCCEEDED`,
+một A→B, quay mũi tên goal, Global Path, costmap, chuyển động, `SUCCEEDED`,
 final pose và xe dừng; không cắt bỏ lỗi/va chạm. Nếu lỗi TF/costmap hoặc cancel,
 ghi rõ FAIL thay vì ghi video như đã thành công. Ảnh hiện có ở
 [RViz thử nghiệm thất bại](docs/evidence/m4/rviz_failed_trial.png) và
 [Gazebo thử nghiệm thất bại](docs/evidence/m4/gazebo_failed_trial.png) là ảnh thật,
-không phải minh chứng ba goal PASS. Chưa có link video thành công.
+không phải minh chứng M4.3 PASS. Chưa có link video nghiệm thu.
 
 M5/M6 chưa triển khai. Các ảnh M4 cũ giữ nguyên trạng thái FAIL; chỉ evidence
-`m4_recovery` chứa lần chạy ba goal thành công. Chưa có video nghiệm thu mới.
+`m4_recovery` chứa lần chạy ba goal lịch sử. `m4_3` ghi một A→B SUCCEEDED và
+sai số vật lý chưa đạt chứng nhận tolerance. Chưa có video nghiệm thu mới.

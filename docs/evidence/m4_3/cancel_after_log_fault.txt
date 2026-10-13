@@ -1,0 +1,4 @@
+requester: making request: action_msgs.srv.CancelGoal_Request(goal_info=action_msgs.msg.GoalInfo(goal_id=unique_identifier_msgs.msg.UUID(uuid=array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=uint8)), stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0)))
+
+response:
+action_msgs.srv.CancelGoal_Response(return_code=0, goals_canceling=[])

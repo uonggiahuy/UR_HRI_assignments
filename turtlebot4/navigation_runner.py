@@ -97,6 +97,7 @@ def parser():
     result.add_argument('--namespace', default='')
     result.add_argument('--params', default=None)
     result.add_argument('--map', default=None)
+    result.add_argument('--registration', help='Reviewed simulation reference, required for physical accuracy checks')
     result.add_argument('--timeout', type=bounded_timeout, default=45.0)
     return result
 
@@ -106,7 +107,8 @@ def main(argv=None):
     cmd = build_navigation_launch_cmd(args.params, args.namespace)
     map_path = resolve_saved_map_path(args.map)
     rclpy.init()
-    probe = NavigationProbe(args.namespace)
+    probe = (NavigationProbe(args.namespace, args.registration) if args.registration
+             else NavigationProbe(args.namespace))
     process = None
     handlers = {}
     def interrupted(signum, frame):

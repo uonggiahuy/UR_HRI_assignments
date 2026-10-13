@@ -18,7 +18,8 @@ from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import LaserScan
 from tf2_msgs.msg import TFMessage
 
-from turtlebot4.localization_health import (covariance_health, pose_time_health, transform_pose, yaw, STATIONARY_OBSERVATION_SEC)
+from turtlebot4.localization_health import (covariance_health, pose_time_health, transform_pose, yaw, STATIONARY_OBSERVATION_SEC,
+    reference_accuracy, validate_reference_for_map)
 from turtlebot4.diagnostics import frame_chain, scan_valid, odometry_valid, seconds
 from turtlebot4.localization_runner import resolve_saved_map_path
 from turtlebot4.map_saver import occupancy_signature, validate_saved_map_files
@@ -141,6 +142,7 @@ class LocalizationDiagnosticsNode(Node):
         self.map_msg = None
         self.amcl_pose_msg = None
         self.amcl_pose_count = 0
+        self.truth_msg = None
 
         self.tf_parents = {}
         self.tf_times = {}
@@ -166,6 +168,8 @@ class LocalizationDiagnosticsNode(Node):
             depth=10,
         )
 
+        self.sub_truth = self.create_subscription(Odometry, '/sim_ground_truth_pose',
+            lambda msg: setattr(self, 'truth_msg', msg), best_effort_qos)
         self.sub_clock = self.create_subscription(Clock, '/clock', self._clock_cb, 10)
         self.sub_scan = self.create_subscription(
             LaserScan, f'{prefix}/scan' if prefix else '/scan', self._scan_cb, best_effort_qos
@@ -236,11 +240,15 @@ def run_localization_diagnostics(
     map_yaml_path: Path | str | None = None,
     namespace: str = '',
     timeout: float = 10.0,
+    registration_path: Path | str | None = None,
 ) -> dict:
     resolved_map = resolve_saved_map_path(map_yaml_path)
     image_ref = yaml.safe_load(resolved_map.read_text())['image']
     expected_meta = validate_saved_map_files(resolved_map, resolved_map.parent / image_ref)
 
+    registration = json.loads(Path(registration_path).read_text()) if registration_path else None
+    if registration is not None:
+        validate_reference_for_map(registration, resolved_map)
     node = LocalizationDiagnosticsNode(namespace=namespace)
     start_time = time.monotonic()
 
@@ -370,6 +378,14 @@ def run_localization_diagnostics(
     results['amcl']['covariance_health'] = covariance
     results['amcl']['timestamp_health'] = timing
     results['ground_truth'] = {'status': 'NOT VERIFIED', 'reason': 'Requires independently validated world-to-map registration and synchronized measurements'}
+    if registration is not None:
+        try:
+            accuracy = reference_accuracy(tf_pose, node.truth_msg, node.clock_time, registration)
+            results['ground_truth'] = accuracy
+            checks['ground_truth_accuracy_verified'] = accuracy['verified']
+        except (ValueError, UnboundLocalError) as exc:
+            results['ground_truth'] = {'status': 'NOT VERIFIED', 'reason': str(exc)}
+        checks['navigation_safe'] &= checks['ground_truth_accuracy_verified']
     results['overall_pass'] = checks['navigation_safe']
     node.destroy_node()
     return results
@@ -387,6 +403,7 @@ def main(argv=None):
         '--timeout', type=bounded_timeout, default=10.0,
         help='Observation timeout in seconds (1..120)'
     )
+    parser.add_argument('--registration', help='Reviewed simulation world-to-map reference JSON')
     parser.add_argument('--json', action='store_true', help='Output JSON report')
 
     args = parser.parse_args(argv)
@@ -397,6 +414,7 @@ def main(argv=None):
             map_yaml_path=args.map,
             namespace=args.namespace,
             timeout=args.timeout,
+            registration_path=args.registration,
         )
     finally:
         if rclpy.ok():

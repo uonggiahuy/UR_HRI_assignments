@@ -1,0 +1,23 @@
+{
+  "method": "COLLADA visible slice full mesh surface to occupancy distance, two outside shelves fit and central shelf held out",
+  "transform": [
+    0.1873024797310297,
+    0.043600423782273,
+    -0.0025586280877224143
+  ],
+  "training": {
+    "points": 1448,
+    "median": 0.015008389908975772,
+    "p90": 0.0689725371478744,
+    "p95": 0.09957080029853957,
+    "max": 0.14567360448189043
+  },
+  "heldout": {
+    "points": 724,
+    "median": 0.009060765804775883,
+    "p90": 0.06842736623597769,
+    "p95": 0.0870091394809356,
+    "max": 0.12611964833044864
+  },
+  "verified": false
+}

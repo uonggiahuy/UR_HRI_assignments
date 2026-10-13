@@ -102,7 +102,38 @@ def validate_registration(registration):
         predicted = transform_pose((*world, 0.), transform)
         if not all(math.isfinite(v) for v in mapped) or math.dist(predicted[:2], mapped) > uncertainty:
             raise ValueError('Landmark residual exceeds reference uncertainty')
+    bounds = registration.get('scope_map_bounds')
+    if bounds is not None:
+        if (len(bounds) != 4 or not all(math.isfinite(v) for v in bounds)
+                or bounds[0] >= bounds[1] or bounds[2] >= bounds[3]):
+            raise ValueError('Invalid registration scope')
+    for check in registration.get('heldout_scans', []):
+        if not math.isfinite(check['max_m']) or check['max_m'] > uncertainty:
+            raise ValueError('Held-out registration validation exceeds uncertainty')
     return transform
+
+
+def require_reference_scope(x, y, registration):
+    bounds = registration.get('scope_map_bounds')
+    if bounds and not (bounds[0] <= x <= bounds[1] and bounds[2] <= y <= bounds[3]):
+        raise ValueError('Coordinate outside validated reference scope')
+
+
+def validate_reference_for_map(registration, map_path):
+    """Bind a reviewed reference to its exact immutable occupancy files."""
+    import hashlib
+    from pathlib import Path
+    import yaml
+    validate_registration(registration)
+    expected = registration.get('map_sha256')
+    if not expected:
+        raise ValueError('Registration must identify the map SHA-256 hashes')
+    path = Path(map_path)
+    image = path.parent / yaml.safe_load(path.read_text())['image']
+    actual = {name: hashlib.sha256(file.read_bytes()).hexdigest()
+              for name, file in (('yaml', path), ('pgm', image))}
+    if actual != expected:
+        raise ValueError('Registration map hashes differ from the current map')
 
 
 def aligned_truth(msg, registration):
@@ -110,4 +141,20 @@ def aligned_truth(msg, registration):
     if msg.header.frame_id != registration['world_frame']:
         raise ValueError('Ground-truth frame differs from registered source frame')
     p = msg.pose.pose
-    return transform_pose((p.position.x, p.position.y, yaw(p.orientation)), transform)
+    pose = transform_pose((p.position.x, p.position.y, yaw(p.orientation)), transform)
+    require_reference_scope(*pose[:2], registration)
+    return pose
+
+
+def reference_accuracy(pose, truth, now, registration):
+    """Simulation reference check; include uncertainty rather than covariance alone."""
+    if truth is None or not stamp_fresh(truth.header.stamp, now, max_age=.10):
+        raise ValueError('Ground truth absent or not synchronized within 0.10 s')
+    reference = aligned_truth(truth, registration)
+    error = math.dist(pose[:2], reference[:2])
+    heading = abs(math.remainder(pose[2]-reference[2], 2*math.pi))
+    bound = error + registration['reference_uncertainty_m']
+    return {'verified': bound <= .30 and heading <= .25,
+            'position_residual_m': error, 'position_error_bound_m': bound,
+            'yaw_residual_rad': heading, 'aligned_truth': reference,
+            'reference_uncertainty_m': registration['reference_uncertainty_m']}

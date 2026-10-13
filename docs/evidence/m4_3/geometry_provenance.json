@@ -1,0 +1,5 @@
+{
+  "/opt/ros/humble/share/turtlebot4_ignition_bringup/worlds/warehouse.sdf": "76ba74461f8f0d0a0eff29b02789faea15f95bdab3f016f4b04a229b40c2fb2a",
+  "/root/.ignition/fuel/fuel.gazebosim.org/movai/models/shelf_big/2/model.sdf": "0fb3e7441418919d3feb561f33b6d1088c862f9bc4b095e1313bdc5bfe9e49d7",
+  "/root/.ignition/fuel/fuel.gazebosim.org/movai/models/shelf_big/2/meshes/shelf_big_movai.dae": "2ade1557766e2bdda0325f6cfce6924c33f3434a8c74379c4764743c21a877bb"
+}

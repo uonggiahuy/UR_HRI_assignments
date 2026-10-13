@@ -1,0 +1,59 @@
+Traceback (most recent call last):
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 243, in execute
+    rclpy.spin_once(self, timeout_sec=0.05)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 208, in spin_once
+    executor.spin_once(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 812, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 809, in _spin_once_impl
+    raise handler.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 309, in _execute_coroutine_step
+    result = coro.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+    await await_or_execute(sub.callback, msg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+    return callback(*args)
+  File "/root/ros2_ws/build/turtlebot4/turtlebot4/navigation_diagnostics.py", line 213, in <lambda>
+    cls, topic, lambda msg, key=key: self.record(key, msg), qos))
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 103, in record
+    tf = self.buffer.lookup_transform(local.header.frame_id, msg.header.frame_id,
+  File "/opt/ros/humble/lib/python3.10/site-packages/tf2_ros/buffer.py", line 136, in lookup_transform
+    return self.lookup_transform_core(target_frame, source_frame, time)
+tf2.ExtrapolationException: Lookup would require extrapolation into the future.  Requested time 653.505000 but the latest data is at time 653.369000, when looking up transform from frame [map] to frame [odom]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 346, in <module>
+    main()
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 330, in main
+    result = node.execute(name, desired, args.goal_timeout)
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 295, in execute
+    self.await_future(future, 10)
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 143, in await_future
+    rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 256, in spin_until_future_complete
+    executor.spin_until_future_complete(future, timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 349, in spin_until_future_complete
+    self.spin_once_until_future_complete(future, timeout_left)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 819, in spin_once_until_future_complete
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 809, in _spin_once_impl
+    raise handler.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 309, in _execute_coroutine_step
+    result = coro.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+    await await_or_execute(sub.callback, msg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+    return callback(*args)
+  File "/root/ros2_ws/build/turtlebot4/turtlebot4/navigation_diagnostics.py", line 213, in <lambda>
+    cls, topic, lambda msg, key=key: self.record(key, msg), qos))
+  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 103, in record
+    tf = self.buffer.lookup_transform(local.header.frame_id, msg.header.frame_id,
+  File "/opt/ros/humble/lib/python3.10/site-packages/tf2_ros/buffer.py", line 136, in lookup_transform
+    return self.lookup_transform_core(target_frame, source_frame, time)
+tf2.ExtrapolationException: Lookup would require extrapolation into the future.  Requested time 653.505000 but the latest data is at time 653.369000, when looking up transform from frame [map] to frame [odom]

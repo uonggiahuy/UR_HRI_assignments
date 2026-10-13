@@ -1,0 +1,91 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-13-04-39-41-640440-CHOCONADYNEubuntu-60684
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [map_server-1]: process started with pid [60685]
+[INFO] [amcl-2]: process started with pid [60687]
+[INFO] [lifecycle_manager-3]: process started with pid [60689]
+[amcl-2] [INFO] [1791866381.711413414] [amcl]:
+[amcl-2] 	amcl lifecycle node launched.
+[amcl-2] 	Waiting on external lifecycle transitions to activate
+[amcl-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[amcl-2] [INFO] [1791866381.711899949] [amcl]: Creating
+[lifecycle_manager-3] [INFO] [1791866381.713559855] [lifecycle_manager_localization]: Creating
+[lifecycle_manager-3] [INFO] [1791866381.714814440] [lifecycle_manager_localization]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[map_server-1] [INFO] [1791866381.715869828] [map_server]:
+[map_server-1] 	map_server lifecycle node launched.
+[map_server-1] 	Waiting on external lifecycle transitions to activate
+[map_server-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-1] [INFO] [1791866381.715948800] [map_server]: Creating
+[lifecycle_manager-3] [INFO] [1791866381.820785348] [lifecycle_manager_localization]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-3] [INFO] [1791866381.820902133] [lifecycle_manager_localization]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1791866381.821263620] [map_server]: Configuring
+[map_server-1] [INFO] [1791866381.821372216] [map_io]: Loading yaml file: /root/ros2_ws/src/turtlebot4/maps/map.yaml
+[map_server-1] [INFO] [1791866381.821795164] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1791866381.821814197] [map_io]: origin[0]: -15
+[map_server-1] [INFO] [1791866381.821821119] [map_io]: origin[1]: -25.1
+[map_server-1] [INFO] [1791866381.821842989] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1791866381.821851581] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1791866381.821859283] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1791866381.821868054] [map_io]: mode: trinary
+[map_server-1] [INFO] [1791866381.821877695] [map_io]: negate: 0
+[map_server-1] [INFO] [1791866381.822167695] [map_io]: Loading image_file: /root/ros2_ws/src/turtlebot4/maps/map.pgm
+[map_server-1] [INFO] [1791866381.876194569] [map_io]: Read map /root/ros2_ws/src/turtlebot4/maps/map.pgm: 603 X 1002 map @ 0.05 m/cell
+[lifecycle_manager-3] [INFO] [1791866381.879740389] [lifecycle_manager_localization]: [34m[1mConfiguring amcl[0m[0m
+[amcl-2] [INFO] [1791866381.879916391] [amcl]: Configuring
+[amcl-2] [INFO] [1791866381.879982828] [amcl]: initTransforms
+[amcl-2] [INFO] [1791866381.885991777] [amcl]: initPubSub
+[amcl-2] [INFO] [1791866381.887757913] [amcl]: Subscribed to map topic.
+[lifecycle_manager-3] [INFO] [1791866381.890015663] [lifecycle_manager_localization]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1791866381.890120828] [map_server]: Activating
+[map_server-1] [INFO] [1791866381.891184957] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791866381.894555340] [amcl]: Received a 603 X 1002 map @ 0.050 m/pix
+[lifecycle_manager-3] [INFO] [1791866381.994222501] [lifecycle_manager_localization]: Server map_server connected with bond.
+[lifecycle_manager-3] [INFO] [1791866381.994273504] [lifecycle_manager_localization]: [34m[1mActivating amcl[0m[0m
+[amcl-2] [INFO] [1791866381.994459132] [amcl]: Activating
+[amcl-2] [INFO] [1791866381.994495465] [amcl]: Creating bond (amcl) to lifecycle manager.
+[amcl-2] [INFO] [1791866381.995772077] [amcl]: createLaserObject
+[lifecycle_manager-3] [INFO] [1791866382.097416646] [lifecycle_manager_localization]: Server amcl connected with bond.
+[lifecycle_manager-3] [INFO] [1791866382.097476918] [lifecycle_manager_localization]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-3] [INFO] [1791866382.097487309] [lifecycle_manager_localization]: [34m[1mCreating bond timer...[0m[0m
+[amcl-2] [WARN] [1791866383.922443168] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866385.962045891] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866388.015738284] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866390.058638298] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866392.108362188] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866394.148808031] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [WARN] [1791866396.169199006] [amcl]: AMCL cannot publish a pose or update the transform. Please set the initial pose...
+[amcl-2] [INFO] [1791866396.299909402] [amcl]: initialPoseReceived
+[amcl-2] [WARN] [1791866396.299990900] [amcl]: Failed to transform initial pose in time (Lookup would require extrapolation into the future.  Requested time 14.922000 but the latest data is at time 14.910000, when looking up transform from frame [base_link] to frame [odom])
+[amcl-2] [INFO] [1791866396.300000511] [amcl]: Setting pose (14.922000): 0.148 0.016 -0.000
+[amcl-2] [INFO] [1791867342.746880900] [amcl]: createLaserObject
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [lifecycle_manager-3]: sending signal 'SIGINT' to process[lifecycle_manager-3]
+[INFO] [amcl-2]: sending signal 'SIGINT' to process[amcl-2]
+[INFO] [map_server-1]: sending signal 'SIGINT' to process[map_server-1]
+[lifecycle_manager-3] [INFO] [1791867407.033968250] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[lifecycle_manager-3] [INFO] [1791867407.034026639] [lifecycle_manager_localization]: Running Nav2 LifecycleManager rcl preshutdown (lifecycle_manager_localization)
+[lifecycle_manager-3] [INFO] [1791867407.034050671] [lifecycle_manager_localization]: [34m[1mTerminating bond timer...[0m[0m
+[amcl-2] [INFO] [1791867407.034321172] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[amcl-2] [INFO] [1791867407.034453052] [amcl]: Running Nav2 LifecycleNode rcl preshutdown (amcl)
+[amcl-2] [INFO] [1791867407.034526551] [amcl]: Deactivating
+[amcl-2] [INFO] [1791867407.034548316] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[map_server-1] [INFO] [1791867407.034573880] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[map_server-1] [INFO] [1791867407.034669215] [map_server]: Running Nav2 LifecycleNode rcl preshutdown (map_server)
+[map_server-1] [INFO] [1791867407.034715420] [map_server]: Deactivating
+[map_server-1] [INFO] [1791867407.034728462] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791867407.044785160] [amcl]: Cleaning up
+[map_server-1] [INFO] [1791867407.044966546] [map_server]: Cleaning up
+[map_server-1] [INFO] [1791867407.045062090] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[amcl-2] [INFO] [1791867407.051580907] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[map_server-1] [INFO] [1791867407.213479233] [map_server]: Destroying
+[lifecycle_manager-3] [INFO] [1791867407.219869414] [lifecycle_manager_localization]: Destroying lifecycle_manager_localization
+[amcl-2] [INFO] [1791867407.224649242] [amcl]: Destroying
+[INFO] [lifecycle_manager-3]: process has finished cleanly [pid 60689]
+[INFO] [map_server-1]: process has finished cleanly [pid 60685]
+[INFO] [amcl-2]: process has finished cleanly [pid 60687]
+[start_localization] Verified saved map: /root/ros2_ws/src/turtlebot4/maps/map.yaml
+[start_localization] Checking base simulator readiness (timeout 45.0s)...
+[start_localization] Base simulator verified (/clock, LiDAR, odometry active).
+[start_localization] Launching: ros2 launch turtlebot4_navigation localization.launch.py use_sim_time:=true map:=/root/ros2_ws/src/turtlebot4/maps/map.yaml params:=/tmp/m4_3/candidate_sensor.yaml
+
+[start_localization] Received shutdown signal. Stopping Map Server & AMCL cleanly...
+[start_localization] Localization stopped. Persistent simulator and RViz remain running.

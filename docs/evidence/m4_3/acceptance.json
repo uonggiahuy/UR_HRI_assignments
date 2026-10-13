@@ -1,0 +1,18 @@
+{
+  "requirement": "Exactly one A-to-B autonomous NavigateToPose demonstration",
+  "nav2_execution_pass": true,
+  "physical_arrival_position_residual_m": 0.31161419948630914,
+  "physical_arrival_position_error_interval_m": [
+    0.16161419948630915,
+    0.4616141994863091
+  ],
+  "physical_arrival_yaw_residual_rad": 0.24989175144656395,
+  "physical_arrival_yaw_error_bound_rad": 0.25489175144656395,
+  "configured_tolerances": {
+    "general_goal_checker.xy_goal_tolerance": 0.25,
+    "general_goal_checker.yaw_goal_tolerance": 0.25
+  },
+  "physical_arrival_within_tolerance_verified": false,
+  "overall_m4_3": "FAIL / physical arrival tolerance NOT VERIFIED",
+  "note": "Raw a_to_b.json PASS refers to original recorder execution checks. Final acceptance separately includes physical reference uncertainty. No action was repeated for this assessment."
+}

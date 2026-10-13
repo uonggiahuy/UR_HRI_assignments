@@ -1,0 +1,192 @@
+{
+  "localization": {
+    "lifecycle": {
+      "map_server": "active",
+      "amcl": "active"
+    },
+    "map": {
+      "width": 603,
+      "height": 1002,
+      "resolution": 0.05000000074505806,
+      "origin": [
+        -15.0,
+        -25.1,
+        0.0
+      ],
+      "total_cells": 604206,
+      "free_cells": 505728,
+      "occupied_cells": 15141,
+      "unknown_cells": 83337
+    },
+    "pose": {
+      "frame_id": "map",
+      "stamp_sec": 530.337,
+      "position": [
+        0.046,
+        -0.387,
+        0.0
+      ],
+      "yaw_rad": -0.922,
+      "yaw_deg": -52.8,
+      "variance": {
+        "x": 0.00254,
+        "y": 0.00152,
+        "yaw": 0.00016
+      },
+      "covariance_diagonal": [
+        0.00254,
+        0.00152,
+        0.0,
+        0.0,
+        0.0,
+        0.00016
+      ]
+    },
+    "reference_accuracy": {
+      "verified": true,
+      "position_residual_m": 0.09148458124131884,
+      "position_error_bound_m": 0.24148458124131883,
+      "yaw_residual_rad": 0.0022567657420506926,
+      "aligned_truth": [
+        0.12063750844057812,
+        -0.3338861844866203,
+        -0.9239354983471607
+      ],
+      "reference_uncertainty_m": 0.15
+    },
+    "covariance_health": {
+      "acceptable": true,
+      "positive_semidefinite": true,
+      "position_major_std_m": 0.0585000741431992,
+      "yaw_std_rad": 0.012807338439701676,
+      "limits": {
+        "position_major_std_m": 0.3,
+        "yaw_std_rad": 0.2617993877991494
+      }
+    },
+    "timestamp_health": {
+      "acceptable": true,
+      "age_sec": 458.241,
+      "retained_stationary": true,
+      "sensor_freshness_pass": true,
+      "pose_tf_agreement": true
+    },
+    "ground_truth_accuracy_verified": true,
+    "navigation_safe": true,
+    "clock": 988.578,
+    "tf_stamp": 988.566,
+    "stable_observation_seconds": 2.000064541000029
+  },
+  "navigation": {
+    "lifecycle": {
+      "controller_server": "active",
+      "smoother_server": "active",
+      "planner_server": "active",
+      "behavior_server": "active",
+      "bt_navigator": "active",
+      "waypoint_follower": "active",
+      "velocity_smoother": "active",
+      "global_costmap/global_costmap": "active",
+      "local_costmap/local_costmap": "active"
+    },
+    "parameters": {
+      "planner": {
+        "use_sim_time": true,
+        "GridBased.allow_unknown": false,
+        "GridBased.plugin": "nav2_navfn_planner/NavfnPlanner",
+        "GridBased.tolerance": 0.0
+      },
+      "global": {
+        "global_frame": "map",
+        "robot_base_frame": "base_link",
+        "use_sim_time": true,
+        "track_unknown_space": true,
+        "robot_radius": 0.175,
+        "plugins": [
+          "static_layer",
+          "obstacle_layer",
+          "inflation_layer"
+        ],
+        "static_layer.map_subscribe_transient_local": true,
+        "obstacle_layer.scan.topic": "scan",
+        "inflation_layer.inflation_radius": 0.45
+      },
+      "local": {
+        "global_frame": "odom",
+        "robot_base_frame": "base_link",
+        "rolling_window": true,
+        "width": 3,
+        "height": 3,
+        "use_sim_time": true,
+        "robot_radius": 0.175,
+        "plugins": [
+          "static_layer",
+          "voxel_layer",
+          "inflation_layer"
+        ],
+        "voxel_layer.scan.topic": "scan",
+        "inflation_layer.inflation_radius": 0.45
+      },
+      "controller": {
+        "use_sim_time": true,
+        "FollowPath.plugin": "dwb_core::DWBLocalPlanner",
+        "general_goal_checker.xy_goal_tolerance": 0.25,
+        "general_goal_checker.yaw_goal_tolerance": 0.25
+      }
+    },
+    "costmaps": {
+      "global": {
+        "frame": "map",
+        "origin": [
+          -15.0,
+          -25.1
+        ],
+        "stamp": 988.431,
+        "width": 603,
+        "height": 1002,
+        "resolution": 0.05000000074505806,
+        "unknown": 62334,
+        "lethal": 15149,
+        "free": 414646,
+        "inflated": 112077
+      },
+      "local": {
+        "frame": "odom",
+        "origin": [
+          -1.44,
+          -1.74
+        ],
+        "stamp": 988.62,
+        "width": 50,
+        "height": 50,
+        "resolution": 0.05999999865889549,
+        "unknown": 0,
+        "lethal": 91,
+        "free": 1871,
+        "inflated": 538
+      }
+    },
+    "navigate_to_pose_available": true,
+    "interfaces": {
+      "plan": [
+        "planner_server"
+      ],
+      "cmd_vel": [
+        "velocity_smoother",
+        "cmd_vel_bridge",
+        "behavior_server",
+        "behavior_server",
+        "behavior_server",
+        "behavior_server",
+        "behavior_server"
+      ],
+      "cmd_vel_nav": [
+        "controller_server"
+      ]
+    },
+    "last_path": null,
+    "local_path_overlap": null,
+    "autonomous_goals_verified": false
+  },
+  "status": "PASS"
+}
