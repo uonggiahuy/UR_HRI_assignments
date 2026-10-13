@@ -1,2 +1,0 @@
-FAIL: /amcl lifecycle is inactive, expected ACTIVE
-[ros2run]: Process exited with failure 1

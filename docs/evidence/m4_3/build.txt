@@ -1,4 +1,0 @@
-Starting >>> turtlebot4
-Finished <<< turtlebot4 [0.81s]
-
-Summary: 1 package finished [0.96s]

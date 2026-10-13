@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/m4_3/observe.py", line 109, in <module>
-    current=snapshot();assert abs(current['tf_age'])<1.5
-  File "/tmp/m4_3/observe.py", line 60, in snapshot
-    scan_tf=n.buffer.lookup_transform('map','base_link',Time.from_msg(n.messages['scan'].header.stamp)).transform
-  File "/opt/ros/humble/lib/python3.10/site-packages/tf2_ros/buffer.py", line 136, in lookup_transform
-    return self.lookup_transform_core(target_frame, source_frame, time)
-tf2.ExtrapolationException: Lookup would require extrapolation into the future.  Requested time 728.433000 but the latest data is at time 728.427000, when looking up transform from frame [base_link] to frame [map]

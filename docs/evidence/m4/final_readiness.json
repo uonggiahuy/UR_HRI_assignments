@@ -1,4 +1,0 @@
-{
-  "status": "FAIL",
-  "error": "Readiness failed after 3.0s: Require exactly one existing amcl"
-}

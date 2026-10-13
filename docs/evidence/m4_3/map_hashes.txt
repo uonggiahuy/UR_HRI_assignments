@@ -1,2 +1,0 @@
-b1be9283ae2c966e54ce6000133263b62fcf7daa2a84cce61c94b210622bf8c9  src/turtlebot4/maps/map.yaml
-915c88f67974aa4e160f2679cc17c538efceddc1e2ed2f9eb0cf05000b3a4955  src/turtlebot4/maps/map.pgm

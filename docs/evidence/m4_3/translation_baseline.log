@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/m4_3/observe.py", line 89, in <module>
-    assert free_clearance.ravel()[i]>.45
-AssertionError

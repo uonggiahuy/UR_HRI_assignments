@@ -1,2 +1,0 @@
-[92mjoint_state_broadcaster[0m joint_state_broadcaster/JointStateBroadcaster  [92mactive[0m
-[92mdiffdrive_controller   [0m diff_drive_controller/DiffDriveController      [92mactive[0m

@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 250, in <module>
-    main()
-  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 234, in main
-    result = node.execute(name, desired, args.goal_timeout)
-  File "/root/ros2_ws/src/turtlebot4/scripts/verify_navigation.py", line 178, in execute
-    raise RuntimeError('Localization drift exceeded safety bound')
-RuntimeError: Localization drift exceeded safety bound

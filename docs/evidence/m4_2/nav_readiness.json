@@ -1,4 +1,0 @@
-{
-  "status": "FAIL",
-  "error": "Readiness failed after 10.0s: AMCL pose is uninitialized or uncertain"
-}

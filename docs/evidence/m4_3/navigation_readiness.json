@@ -1,4 +1,0 @@
-{
-  "status": "FAIL",
-  "error": "Readiness failed after 30.0s: AMCL estimate timestamp inconsistent; establish current initial pose"
-}

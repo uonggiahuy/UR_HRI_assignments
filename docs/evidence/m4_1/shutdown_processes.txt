@@ -1,1 +1,0 @@
-No Gazebo server/GUI, AMCL, Map Server, SLAM or RViz test process remains.

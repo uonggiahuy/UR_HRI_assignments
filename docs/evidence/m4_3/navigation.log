@@ -1,4 +1,0 @@
-[start_navigation] Checking existing localization and sensors...
-[start_navigation] FAIL: Readiness failed after 45.0s: AMCL estimate timestamp inconsistent; establish current initial pose
-[start_navigation] Navigation stopped; localization and base remain owned by their terminals.
-[ros2run]: Process exited with failure 1

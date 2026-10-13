@@ -1,3 +1,0 @@
-Action: /navigate_to_pose
-Action clients: 0
-Action servers: 0
