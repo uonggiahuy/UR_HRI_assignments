@@ -450,3 +450,19 @@ Initial/final map hashes, unchanged:
 Implementation commit/push verification is recorded below after those actions.
 Only assignment-owned source, truthful evidence and documentation are eligible;
 the two original modified map files are explicitly excluded.
+
+
+Verified implementation commit: `4635dca284a9e2eeeef022a13795bbe5126bd29e`
+(`fix(assignment4): recover AMCL convergence and record one A-to-B result`).
+`git push origin HEAD:assignments_4` succeeded without force, advancing
+`8d2820b..4635dca`. Independent `git ls-remote origin refs/heads/assignments_4`
+returned `4635dca284a9e2eeeef022a13795bbe5126bd29e`, identical to that local HEAD.
+`git show --format= --name-only HEAD -- maps` was empty. Only the user's two
+original modified map files remained unstaged; their exact hashes still match.
+
+This Git-result entry and copied push verification are a documentation-only
+follow-up. Obtain its containing SHA with
+`git log -1 --format=%H -- docs/M4_3_AMCL_CONVERGENCE_NAVIGATION_REPORT.md`.
+No executable behavior changed after the 195-test run; subsequent formatting
+removed trailing whitespace only. The one-action SUCCEEDED result and incomplete
+physical acceptance remain unchanged.
