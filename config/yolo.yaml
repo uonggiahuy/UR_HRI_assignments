@@ -1,0 +1,13 @@
+yolo_detector:
+  ros__parameters:
+    use_sim_time: true
+    image_topic: /oakd/rgb/preview/image_raw
+    output_topic: /assignment5/yolo/image_annotated
+    model: yolo11n.pt
+    image_size: 640
+    confidence: 0.35
+    device: cpu
+    threads: 2
+    max_fps: 5.0
+    max_frame_age: 1.0
+    camera_timeout: 8.0

@@ -2,9 +2,10 @@
 <package format="3">
   <name>turtlebot4</name>
   <version>0.0.1</version>
-  <description>Assignment 4 TurtleBot 4 SLAM and autonomous navigation foundation.</description>
+  <description>TurtleBot 4 SLAM, three-goal Nav2 navigation and concurrent YOLO detection.</description>
   <maintainer email="uonggiahuy0411@gmail.com">uonggiahuy</maintainer>
   <license>Apache-2.0</license>
+  <license>AGPL-3.0-or-later</license>
   <buildtool_depend>ament_python</buildtool_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
@@ -31,6 +32,12 @@
   <exec_depend>irobot_create_msgs</exec_depend>
   <exec_depend>ros_gz_interfaces</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
   <test_depend>python3-pytest</test_depend>
   <test_depend>lifecycle_msgs</test_depend>
   <test_depend>tf2</test_depend>

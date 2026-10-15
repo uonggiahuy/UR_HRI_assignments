@@ -1,0 +1,12 @@
+# Gazebo warehouse coordinates, metres/radians. Original dock: (.157, 0, pi).
+# North of shelf_7; objects remain beside, rather than across, the route.
+world: warehouse
+objects:
+  - name: assignment5_chair
+    model: assignment5_chair
+    pose: [2.5, 0.8, 0.0, 2.8]
+    expected_class: chair
+  - name: assignment5_person
+    model: assignment5_person
+    pose: [-2.0, 2.5, 0.0, -0.7]
+    expected_class: person

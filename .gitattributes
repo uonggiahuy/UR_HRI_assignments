@@ -1,0 +1,2 @@
+# Preserve original third-party mesh/material formatting and line endings.
+models/** -text -whitespace

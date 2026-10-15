@@ -106,6 +106,9 @@ def compose(context):
         raise ValueError('Unsupported installed world or robot model')
     if rviz not in ('true', 'false'):
         raise ValueError('rviz must be true or false')
+    objects = context.launch_configurations.get('assignment5_objects', 'false')
+    if objects == 'true' and (world != 'warehouse' or model != 'standard' or namespace):
+        raise ValueError('Assignment 5 scene requires warehouse, standard and empty namespace')
 
     def include(filename, arguments):
         path = share / 'launch' / filename
@@ -138,6 +141,9 @@ def compose(context):
             'x': '0.0', 'y': '0.0', 'z': '0.0', 'yaw': '0.0',
         }),
     ]
+    if objects == 'true':
+        actions.append(Node(package='turtlebot4', executable='spawn_assignment5_models',
+                            name='assignment5_scene', output='screen'))
     if rviz == 'true':
         # The upstream RViz launch hardcodes a map-frame navigation config.
         # Reuse upstream rviz2 with an assignment-owned simulator-only config.

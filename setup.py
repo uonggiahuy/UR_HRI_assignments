@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 
 package_name = 'turtlebot4'
-resource_directories = ('launch', 'config', 'maps', 'rviz')
+resource_directories = ('launch', 'config', 'maps', 'rviz', 'models', 'licenses')
 data_files = [
     ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
     ('share/' + package_name, ['package.xml', 'README.md', 'LICENSE']),
@@ -20,16 +20,16 @@ for directory in resource_directories:
 setup(
     name=package_name,
     version='0.0.1',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(exclude=['test', 'tests']),
     data_files=data_files,
     install_requires=['setuptools'],
     tests_require=['pytest'],
     zip_safe=True,
     maintainer='uonggiahuy',
     maintainer_email='uonggiahuy0411@gmail.com',
-    description='Assignment 4 TurtleBot 4 package foundation.',
+    description='TurtleBot 4 mapping, three-goal navigation and concurrent YOLO detection.',
     license='Apache-2.0',
-    url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_4',
+    url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_5',
     entry_points={'console_scripts': [
         'check_simulation = turtlebot4.diagnostics:main',
         'start_slam = turtlebot4.slam_runner:main',
@@ -42,5 +42,8 @@ setup(
         'start_navigation = turtlebot4.navigation_runner:main',
         'prepare_navigation = turtlebot4.prepare_navigation:main',
         'check_navigation = turtlebot4.navigation_diagnostics:main',
+        'spawn_assignment5_models = turtlebot4.assignment5_scene:main',
+        'waypoint_navigator = turtlebot4.waypoint_navigator:main',
+        'yolo_detector = turtlebot4.yolo_detector:main',
     ]},
 )
