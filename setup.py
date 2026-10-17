@@ -44,6 +44,7 @@ setup(
         'check_navigation = turtlebot4.navigation_diagnostics:main',
         'spawn_assignment5_models = turtlebot4.assignment5_scene:main',
         'waypoint_navigator = turtlebot4.waypoint_navigator:main',
+        'yolo_viewer = turtlebot4.yolo_viewer:main',
         'yolo_detector = turtlebot4.yolo_detector:main',
     ]},
 )
