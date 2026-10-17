@@ -1,12 +1,10 @@
 # 1. Giới thiệu Assignment 5
 
-TurtleBot 4 Standard dùng lại bản đồ warehouse của Assignment 4, định vị bằng AMCL, tự hành tuần tự **Goal 1 → Goal 2 → Goal 3** qua Nav2 và nhận diện vật thể bằng YOLO11n từ camera RGB thật trong mô phỏng Gazebo Fortress. Luồng tự động là chức năng chính; không cần bấm đích bằng chuột. RViz2 và cửa sổ camera YOLO riêng giúp quan sát đồng thời đường đi và kết quả nhận diện.
-
-Mã nguồn ROS 2 Humble: [nhánh assignments_5](https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_5). Không cần tạo package hay workspace mới.
+TurtleBot 4 Standard dùng lại bản đồ warehouse của Assignment 4, định vị bằng AMCL, tự hành tuần tự **Goal 1 → Goal 2 → Goal 3** qua Nav2 và nhận diện vật thể bằng YOLO11n từ camera RGB thật trong mô phỏng Gazebo. Luồng tự động là chức năng chính; không cần bấm đích bằng chuột. RViz2 và cửa sổ camera YOLO riêng giúp quan sát đồng thời đường đi và kết quả nhận diện.
 
 ## 2. Cài đặt và chuẩn bị môi trường lần đầu
 
-Thực hiện **trong container ROS Ubuntu 22.04**, không cài ROS Humble lên host Ubuntu 24.04. Cần các gói TurtleBot 4 Simulator, Ignition Fortress, Nav2, AMCL và RViz2. Với tài khoản `root`, bỏ `sudo` trong hai lệnh cài đặt:
+Thực hiện **trên ROS Ubuntu 22.04**. Cần các gói TurtleBot 4 Simulator, Ignition Fortress, Nav2, AMCL và RViz2.
 
 ```bash
 cd /root/ros2_ws
@@ -33,7 +31,7 @@ source /root/ros2_ws/install/setup.bash
 source "${XDG_CACHE_HOME:-$HOME/.cache}/turtlebot4/tf2-0.25.24/install/setup.bash"
 ```
 
-## 3. Chạy tự động 3 Goal + YOLO — CHỨC NĂNG CHÍNH
+## 3. Chạy tự động 3 Goal + YOLO 
 
 ### Terminal 1 — Gazebo + TurtleBot 4 + vật thể + RViz2
 
@@ -94,20 +92,8 @@ Launch khởi động `waypoint_navigator`, `yolo_detector` và viewer tùy ch�
 
 Có thể thêm nhãn ba đích trong RViz bằng `assignment5.launch.py show_goal_markers:=true`. Marker đọc cùng `config/goals.yaml`, chỉ hiển thị tâm đích và số thứ tự; không thay thế Global Path và không gửi goal.
 
-Các pose thuộc frame `map`; tuyến được kiểm tra với hash bản đồ, vùng Free và costmap đang chạy. Không sửa tọa độ, dung sai hay cấu hình tránh vật cản để ép thành công. Navigator kiểm tra readiness, camera mới, robot undocked và không có teleop cạnh tranh trước khi chạy. Mỗi goal có timeout 120 giây; readiness có timeout 60 giây. Goal lỗi không được bỏ qua.
 
-**Cách quan sát và xác nhận:**
-
-- Trong Gazebo: robot thực sự di chuyển qua ba đích, người/ghế có mặt và không xảy ra va chạm.
-- Trong RViz: Fixed Frame `map`, robot/scan/costmap hợp lý, **Global Path** hiện khi Nav2 lập đường.
-- Trong cửa sổ **TurtleBot 4 — YOLO Object Detection**: ảnh camera sống có khung, tên lớp và confidence. Có thể xếp Gazebo, RViz và camera cạnh nhau để quay video.
-- Trong Terminal 4: cả **Goal 1, Goal 2, Goal 3 phải trả về `SUCCEEDED`**. Đường vẽ trên RViz chưa chứng minh goal thành công. Robot phải dừng sau goal cuối; launch kết thúc detector và viewer, ba terminal đầu vẫn chạy.
-
-Báo cáo JSON tại `~/.local/state/turtlebot4/assignment5/latest.json` chứa kết quả action, recoveries, vận tốc dừng và detection khớp timestamp odometry. PASS của nhiệm vụ còn yêu cầu detection lớp mục tiêu khi robot đang chuyển động. Action thành công không chứng nhận sai số vật lý tuyệt đối. Khi camera/TF/costmap mất hoặc có nguy cơ va chạm, nhiệm vụ dừng theo kiểm tra hiện có.
-
-Để kiểm tra lại từ đầu: dừng sạch bốn terminal theo mục 6, mở lại cùng world/map, undock, đặt initial pose đúng vị trí hiện tại, chờ READY rồi chạy nhiệm vụ. Không dùng trạng thái AMCL của phiên trước làm bằng chứng restart thành công.
-
-## 4. Điều hướng thủ công bằng Nav2 Goal trên RViz2 — CHỨC NĂNG PHỤ
+## 4. Điều hướng thủ công bằng Nav2 Goal trên RViz2 
 
 Chế độ này dùng để gỡ lỗi và kiểm tra điều hướng bằng tay. **Dùng cùng Terminal 1, 2, 3 như mục 3**, gồm preparation và chờ Nav2 READY. **Không chạy `assignment5.launch.py`** khi thử thủ công; `waypoint_navigator` phải không hoạt động.
 
@@ -164,21 +150,6 @@ ros2 launch turtlebot4 assignment5.launch.py \
 
 Lệnh này vẫn chạy suy luận, xuất ảnh chú thích và điều hướng tự động. Nó không tắt Gazebo/RViz do Terminal 1 sở hữu. Muốn tắt RViz, dùng `rviz:=false` ở Terminal 1; tùy chọn viewer không thay đổi cấu hình GUI của Gazebo. Nếu GUI không truy cập được, viewer cảnh báo rồi thoát độc lập; việc viewer thoát không hủy nhiệm vụ.
 
-### Docker/X11
-
-Môi trường kiểm tra hiện tại có `DISPLAY=:1`, socket `/tmp/.X11-unix/X1`, `XAUTHORITY` không được đặt và OpenCV hệ thống dùng **GTK3**. Giữ nguyên cấu hình GUI đang dùng cho Gazebo/RViz; không cần cấp quyền host bổ sung khi các cửa sổ mở bình thường.
-
-Nếu chuyển sang container khác, lấy **giá trị thật** của `DISPLAY` và `XAUTHORITY` từ terminal phiên đồ họa host. Container cần chuyển tiếp `DISPLAY`, mount `/tmp/.X11-unix:/tmp/.X11-unix:rw` và quyền X11 hợp lệ. Khi host dùng cookie, mount file `$XAUTHORITY` của host vào `/tmp/host.xauthority:ro` và đặt `XAUTHORITY=/tmp/host.xauthority` trong container. Không mặc định file cookie luôn tồn tại, không dùng `xhost +` để mở quyền toàn cục. Đây là cấu hình lúc tạo container; không tạo lại container đang làm việc chỉ để chạy viewer.
-
-Kiểm tra trong container:
-
-```bash
-printenv DISPLAY XAUTHORITY
-ls -l /tmp/.X11-unix
-python3 -c "import cv2; print([s for s in cv2.getBuildInformation().splitlines() if 'GUI:' in s])"
-```
-
-Viewer tự thử mở/đóng HighGUI trong tiến trình con có timeout trước khi mở cửa sổ chính, tránh lỗi native của backend làm ảnh hưởng các node khác. Không đặt OpenCV headless làm thư viện của viewer nếu muốn có cửa sổ.
 
 ## 6. Dừng chương trình và xử lý lỗi
 
@@ -206,4 +177,3 @@ colcon test-result --test-result-base build/turtlebot4 --verbose
 python3 -m pytest -q src/turtlebot4/tests
 ```
 
-Khi quay video: bắt đầu trước Terminal 4; ghi Gazebo có người/ghế, RViz có map và Global Path, cửa sổ YOLO có nhãn/confidence, ba lần SUCCEEDED và robot dừng cuối nhiệm vụ. Chỉ ghi các cửa sổ liên quan, tránh ứng dụng riêng tư. Dùng kết quả/log thật; không đưa video, logs, weights hoặc tệp tạm vào Git.
