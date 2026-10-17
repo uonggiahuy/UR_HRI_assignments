@@ -1,6 +1,8 @@
-# Launch resources
+# Các launch
 
-- `turtlebot4.launch.py`: persistent base simulator launch (Gazebo, TurtleBot 4, sensor bridges, TF, optional RViz2).
-- `simulation.launch.py`: backward-compatible simulator-only bringup entrypoint.
+- `turtlebot4.launch.py`: Gazebo, một robot, bridges, TF và RViz tùy chọn.
+- `simulation.launch.py`: lệnh mô phỏng tương thích Assignment 4.
+- `assignment5.launch.py`: navigator ba goal, detector và viewer tùy chọn;
+  `show_goal_markers:=true` thêm nhãn đích từ cấu hình thật.
 
-See the package README for terminal-by-terminal usage and runtime checks.
+Xem README gốc để chạy theo từng terminal.

@@ -92,6 +92,8 @@ Launch khởi động `waypoint_navigator`, `yolo_detector` và viewer tùy ch�
 | 2 | chair_view | 0.775 | 1.325 | -0.30 |
 | 3 | person_view | -0.525 | 2.425 | 3.10 |
 
+Có thể thêm nhãn ba đích trong RViz bằng `assignment5.launch.py show_goal_markers:=true`. Marker đọc cùng `config/goals.yaml`, chỉ hiển thị tâm đích và số thứ tự; không thay thế Global Path và không gửi goal.
+
 Các pose thuộc frame `map`; tuyến được kiểm tra với hash bản đồ, vùng Free và costmap đang chạy. Không sửa tọa độ, dung sai hay cấu hình tránh vật cản để ép thành công. Navigator kiểm tra readiness, camera mới, robot undocked và không có teleop cạnh tranh trước khi chạy. Mỗi goal có timeout 120 giây; readiness có timeout 60 giây. Goal lỗi không được bỏ qua.
 
 **Cách quan sát và xác nhận:**

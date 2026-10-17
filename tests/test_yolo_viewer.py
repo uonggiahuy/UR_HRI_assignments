@@ -106,7 +106,7 @@ def test_optional_viewer_launch_does_not_own_mission_shutdown():
     spec.loader.exec_module(module)
     entities = module.generate_launch_description().entities
     nodes = [entity for entity in entities if isinstance(entity, Node)]
-    assert len(nodes) == 3
+    assert len(nodes) == 4
     optional = next(node for node in nodes if node.node_executable == 'yolo_viewer')
     context = LaunchContext()
     for value in ('true', 'false'):

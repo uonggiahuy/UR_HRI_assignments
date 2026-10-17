@@ -1,4 +1,5 @@
-# Map resources
+# Bản đồ warehouse
 
-Reserved for saved map YAML and image pairs in later milestones.
-Keep relative image paths valid when installed together.
+`map.yaml` và `map.pgm` là bản đồ đã lưu của Assignment 4, được Assignment 5
+dùng lại nguyên vẹn. Giữ hai tệp cùng thư mục để đường dẫn ảnh tương đối hợp lệ.
+Không tạo lại map khi chạy nhiệm vụ ba goal.

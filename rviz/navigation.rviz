@@ -125,6 +125,15 @@ Visualization Manager:
         Durability Policy: Transient Local
       Color Scheme: costmap
       Alpha: 0.5
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Assignment 5 Goals
+      Enabled: true
+      Topic:
+        Value: /assignment5/goal_markers
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
   Views:
     Current:
       Class: rviz_default_plugins/Orbit

@@ -24,7 +24,13 @@ def generate_launch_description():
     viewer = Node(package='turtlebot4', executable='yolo_viewer', name='yolo_viewer',
                   condition=IfCondition(LaunchConfiguration('show_yolo_window')),
                   parameters=[{'use_sim_time': True}], output='screen')
+    markers = Node(package='turtlebot4', executable='goal_markers', name='goal_markers',
+                   condition=IfCondition(LaunchConfiguration('show_goal_markers')),
+                   parameters=[{'use_sim_time': True,
+                                'goals_file': LaunchConfiguration('goals_file')}], output='screen')
     return LaunchDescription([
+        DeclareLaunchArgument('show_goal_markers', default_value='false',
+                              description='Show actual mission goal labels in RViz'),
         DeclareLaunchArgument('show_yolo_window', default_value='true',
                               description='Open optional annotated-camera HighGUI window'),
         DeclareLaunchArgument('image_topic', default_value='/oakd/rgb/preview/image_raw'),
@@ -33,5 +39,5 @@ def generate_launch_description():
             EmitEvent(event=Shutdown(reason='YOLO exited; cancel mission'))])),
         RegisterEventHandler(OnProcessExit(target_action=navigator, on_exit=[
             EmitEvent(event=Shutdown(reason='Mission ended; stop detector'))])),
-        detector, navigator, viewer,
+        detector, navigator, viewer, markers,
     ])

@@ -10,3 +10,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Local model weights and report captures are not source assets.
+*.pt
+/report_images/
