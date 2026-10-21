@@ -4,12 +4,13 @@ from pathlib import Path
 import os
 import re
 import signal
+import uuid
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument, EmitEvent, GroupAction, IncludeLaunchDescription,
-    OpaqueFunction, RegisterEventHandler,
+    OpaqueFunction, RegisterEventHandler, SetEnvironmentVariable,
 )
 from launch.event_handlers import OnProcessExit, OnProcessStart, OnShutdown
 from launch.events import Shutdown
@@ -17,6 +18,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.logging import get_logger
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, SetParameter, SetParametersFromFile, SetRemap
+from turtlebot4.simulation_processes import SESSION_ENV, stop_owned_servers
 
 
 def upstream_share():
@@ -24,7 +26,9 @@ def upstream_share():
 
 
 def supported_worlds():
-    return sorted(path.stem for path in (upstream_share() / 'worlds').glob('*.sdf'))
+    local = Path(get_package_share_directory('turtlebot4')) / 'worlds'
+    return sorted({path.stem for root in (upstream_share() / 'worlds', local)
+                   for path in root.glob('*.sdf')})
 
 
 def validate_namespace(value):
@@ -71,6 +75,7 @@ class GazeboLifecycle:
 
     def __init__(self):
         self.launchers = {}
+        self.session = uuid.uuid4().hex
 
     def started(self, event, context):
         if 'ign gazebo' in ' '.join(event.cmd):
@@ -93,12 +98,15 @@ class GazeboLifecycle:
                     os.kill(pid, signal.SIGINT)
                 except ProcessLookupError:
                     pass
+        stop_owned_servers(self.session)
         return []
 
 
 def compose(context):
     share = upstream_share()
     world = LaunchConfiguration('world').perform(context)
+    local_world = Path(get_package_share_directory('turtlebot4')) / 'worlds' / f'{world}.sdf'
+    world_file = str(local_world.with_suffix('')) if local_world.is_file() else world
     model = LaunchConfiguration('model').perform(context)
     rviz = LaunchConfiguration('rviz').perform(context)
     namespace = validate_namespace(LaunchConfiguration('namespace').perform(context))
@@ -131,7 +139,7 @@ def compose(context):
         SetRemap(src='joint_state_publisher:joint_states_input', dst='joint_states'),
         SetRemap(src='robot_state_publisher:joint_states', dst='joint_states_visualization'),
         include('ignition.launch.py', {
-            'world': world, 'model': model, 'use_sim_time': 'true',
+            'world': world_file, 'model': model, 'use_sim_time': 'true',
             'on_exit_shutdown': 'true',
         }),
         include('turtlebot4_spawn.launch.py', {
@@ -160,6 +168,7 @@ def compose(context):
 def generate_launch_description():
     lifecycle = GazeboLifecycle()
     return LaunchDescription([
+        SetEnvironmentVariable(SESSION_ENV, lifecycle.session),
         DeclareLaunchArgument('world', default_value='warehouse', choices=supported_worlds()),
         DeclareLaunchArgument('model', default_value='standard', choices=['standard', 'lite']),
         DeclareLaunchArgument('namespace', default_value='', description='Robot ROS namespace'),

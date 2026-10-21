@@ -254,11 +254,16 @@ def test_ros_packet_duplicate_cannot_renew_watchdog_or_reselect(controller):
     assert node.seen['signal'] == seen and node.behavior.selected == 'Victory'
 
 
-def test_backup_limit_blocks_reverse_without_disabling_upstream_safety(controller):
+def test_backup_warning_defers_to_upstream_and_detects_measured_stop(controller):
+    import time
     node, commands = controller
     node.behavior = executing('Pointing_Up')
     node.behavior.index = 1  # Actual reverse segment of the four-cycle plan.
     node.backup_limit = True
+    node.tick()
+    assert node.behavior.state == 'EXECUTING'
+    assert commands[-1][0] < 0  # Warning is not the upstream zero-buffer limit.
+    node.progress_time = time.monotonic()-1.1
     node.tick()
     assert node.behavior.state == 'STOPPED'
     assert commands[-1] == (0., 0.)
@@ -303,13 +308,100 @@ def test_launch_preflight_rejects_missing_camera_before_simulation(monkeypatch):
         module.preflight_webcam(context)
 
 
-def test_shutdown_zero_is_published_even_while_docked(controller, monkeypatch):
+@pytest.mark.parametrize('docked', [True, False])
+def test_shutdown_zero_is_published_without_idle_interference(controller, monkeypatch, docked):
     from turtlebot4.robot_behavior_node import RobotBehavior
     node, _ = controller
     messages = []
     monkeypatch.setattr(node.publisher, 'publish', messages.append)
-    node.docked = True
+    node.docked = docked
     RobotBehavior.command(node, 0., 0.)
     assert messages == []  # Idle commands must not interfere with undocking.
     RobotBehavior.command(node, 0., 0., force=True)
     assert len(messages) == 1 and messages[0].linear.x == messages[0].angular.z == 0.
+
+
+def test_own_motion_is_followed_by_bounded_repeated_stop(controller, monkeypatch):
+    from turtlebot4.robot_behavior_node import RobotBehavior
+    node, _ = controller
+    messages = []
+    monkeypatch.setattr(node.publisher, 'publish', messages.append)
+    RobotBehavior.command(node, .06, 0.)
+    RobotBehavior.command(node, 0., 0.)
+    RobotBehavior.command(node, 0., 0.)
+    assert len(messages) == 3
+    node.stop_until = -math.inf
+    RobotBehavior.command(node, 0., 0.)
+    assert len(messages) == 3
+
+
+def test_wave_survives_canned_classifier_flicker_with_real_open_hand_landmarks():
+    f = GestureFilter(smoothing=1., stable_frames=1)
+    xs = [.3, .35, .4, .5, .6, .5, .4, .3, .4, .5, .6, .5, .4, .3]
+    results = [f.update('None', .1, x, i*.08, open_hand=True, hand_confidence=.95)
+               for i, x in enumerate(xs)]
+    assert any(label == 'Wave' and event for label, event in results)
+
+
+def test_wave_accepts_small_natural_sweep_with_brief_landmark_dropout():
+    f = GestureFilter()
+    labels = []
+    for i in range(45):
+        now = i*.05
+        if i in (12, 26):
+            labels.append(f.update('None', 0., None, now)[0])
+        else:
+            x = .5+.065*math.sin(2*math.pi*1.6*now)
+            labels.append(f.update('None', .1, x, now, open_hand=True, hand_confidence=.95)[0])
+    assert 'Wave' in labels
+
+
+def test_closed_hand_clears_wave_history_immediately():
+    f = GestureFilter()
+    for i in range(10):
+        f.update('Open_Palm', .95, .5+i*.01, i*.05)
+    assert f.samples
+    f.update('Closed_Fist', .95, .6, .5)
+    assert not f.samples and f.wave_progress() == 0
+
+
+def test_wave_rejects_closed_hand_movement_and_unconfident_landmarks():
+    for open_hand, confidence in ((False, .95), (True, .1)):
+        f = GestureFilter(smoothing=1., stable_frames=1)
+        for i in range(40):
+            label, _ = f.update('None', .1, .5+.2*math.sin(i), i*.03,
+                                open_hand=open_hand, hand_confidence=confidence)
+            assert label != 'Wave'
+
+
+def test_geometrically_open_hand_stops_execution_despite_wave_label(controller):
+    import json
+    import time
+    from std_msgs.msg import String
+    node, commands = controller
+    node.session = 'test'
+    node.behavior = executing('Victory')
+    packet = dict(version=1, session='test', sequence=1, stamp=time.time(), gesture='Wave',
+                  confidence=.9, event=True, camera_ok=True, hand_present=True, open_hand=True)
+    node.gesture(String(data=json.dumps(packet)))
+    assert node.behavior.state == 'STOPPED' and commands[-1] == (0., 0.)
+
+
+def test_gazebo_process_detection_is_scoped_by_session(tmp_path):
+    from turtlebot4.simulation_processes import gazebo_servers, SESSION_ENV
+    for pid, name, session in ((10, 'ign gazebo server', 'ours'), (20, 'ign gazebo server', 'other'), (30, 'python3', 'ours')):
+        path = tmp_path/str(pid)
+        path.mkdir()
+        (path/'cmdline').write_bytes(name.encode()+b'\0')
+        (path/'environ').write_bytes(f'{SESSION_ENV}={session}'.encode()+b'\0')
+    assert sorted(gazebo_servers(proc=tmp_path)) == [10, 20]
+    assert gazebo_servers(proc=tmp_path, session='ours') == [10]
+
+
+def test_lightweight_world_has_real_collisions_and_no_network_assets():
+    import xml.etree.ElementTree as ET
+    root = Path(__file__).resolve().parents[1]
+    world = ET.parse(root/'worlds/assignment6_open.sdf').getroot().find('world')
+    assert world.attrib['name'] == 'assignment6_open'
+    assert len(world.findall('.//collision')) == 5
+    assert not world.findall('.//uri')

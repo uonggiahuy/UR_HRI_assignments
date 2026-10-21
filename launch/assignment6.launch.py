@@ -18,6 +18,10 @@ from launch_ros.parameter_descriptions import ParameterValue
 def guard_simulator(context):
     if LaunchConfiguration('start_simulation').perform(context) != 'true':
         return []
+    from turtlebot4.simulation_processes import gazebo_servers
+    servers = gazebo_servers()
+    if servers:
+        raise RuntimeError(f'Gazebo server already running (PIDs {servers}); stop its owning terminal before restarting')
     import rclpy
     from rclpy.executors import SingleThreadedExecutor
     ros_context = rclpy.Context()
@@ -69,7 +73,7 @@ def generate_launch_description():
                                                    'model': 'standard', 'namespace': '',
                                                    'assignment5_objects': 'false',
                                                    'rviz_fixed_frame': 'odom'}.items())])
-    args = dict(webcam_device='0', show_camera='true', world='depot', start_simulation='true',
+    args = dict(webcam_device='0', show_camera='true', world='assignment6_open', start_simulation='true',
                 model_path=str(cache/'turtlebot4/models/gesture_recognizer.task'),
                 speed='0.06', distance='0.12', radius='0.35', angular_speed='0.25', signal_timeout='0.7')
     return LaunchDescription([

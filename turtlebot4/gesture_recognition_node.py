@@ -37,11 +37,15 @@ def main(args=None):
             cache = Path(os.environ.get('XDG_CACHE_HOME', Path.home()/'.cache'))
             defaults = dict(webcam_device=0, model_path=str(cache/'turtlebot4/models/gesture_recognizer.task'),
                             show_camera=True, width=640, height=480, fps=20., camera_timeout=.7,
+                            opencv_threads=2,
                             confidence=.65, stable_frames=3, cooldown=.7, rearm_frames=4,
-                            lost_interval=.3, wave_window=1.6, wave_amplitude=.09,
-                            wave_reversals=3, smoothing=.6)
+                            lost_interval=.3, wave_window=2.4, wave_amplitude=.045,
+                            wave_reversals=3, smoothing=.8)
             self.o = {k: self.declare_parameter(k, v).value for k, v in defaults.items()}
             o = self.o
+            if not 1 <= o['opencv_threads'] <= 4:
+                raise ValueError('opencv_threads must be between 1 and 4')
+            cv2.setNumThreads(o['opencv_threads'])
             if o['webcam_device'] < 0 or o['width'] < 64 or o['height'] < 64 or not 1 <= o['fps'] <= 60 or not .1 <= o['camera_timeout'] <= 2:
                 raise ValueError('Invalid webcam settings')
             self.filter = GestureFilter(**{k: o[k] for k in (
@@ -70,7 +74,8 @@ def main(args=None):
             self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             try:
                 options = mp.tasks.vision.GestureRecognizerOptions(
-                    base_options=mp.tasks.BaseOptions(model_asset_path=str(Path(o['model_path']).expanduser())),
+                    base_options=mp.tasks.BaseOptions(model_asset_path=str(Path(o['model_path']).expanduser()),
+                                                     delegate=mp.tasks.BaseOptions.Delegate.CPU),
                     running_mode=mp.tasks.vision.RunningMode.VIDEO, num_hands=1,
                     min_hand_detection_confidence=o['confidence'],
                     min_hand_presence_confidence=o['confidence'],
@@ -104,12 +109,12 @@ def main(args=None):
             except Exception as exc:
                 self.fatal = str(exc)
 
-        def publish(self, label='None', confidence=0., event=False, hand=False, camera=True, raw='None'):
+        def publish(self, label='None', confidence=0., event=False, hand=False, camera=True, raw='None', open_hand=False):
             self.sequence += 1
             self.publisher.publish(String(data=json.dumps(dict(
                 version=1, session=self.session, sequence=self.sequence, stamp=time.time(),
                 gesture=label, raw_gesture=raw, confidence=float(confidence), event=bool(event),
-                hand_present=bool(hand), camera_ok=bool(camera)))))
+                hand_present=bool(hand), camera_ok=bool(camera), open_hand=bool(open_hand)))))
 
         def process(self):
             item = self.slot.take(timeout=0)
@@ -132,15 +137,25 @@ def main(args=None):
             hand = bool(result.hand_landmarks)
             category = result.gestures[0][0] if result.gestures and result.gestures[0] else None
             raw, score = (category.category_name, category.score) if category else ('None', 0.)
-            wrist = result.hand_landmarks[0][0].x if hand else None
-            label, event = self.filter.update(raw, score, wrist, captured, shift)
+            # Palm/finger center also moves when a person waves by pivoting
+            # their wrist while keeping the wrist itself nearly stationary.
+            wrist = sum(result.hand_landmarks[0][i].x for i in (0, 9, 12))/3 if hand else None
+            open_hand = False
+            hand_score = result.handedness[0][0].score if result.handedness and result.handedness[0] else 0.
+            if hand:
+                points = result.hand_landmarks[0]
+                distance = lambda i: (points[i].x-points[0].x)**2 + (points[i].y-points[0].y)**2
+                open_hand = sum(distance(tip) > 1.3*distance(pip) for tip, pip in ((8, 6), (12, 10), (16, 14), (20, 18))) >= 3
+            label, event = self.filter.update(raw, score, wrist, captured, shift, open_hand, hand_score)
+            if label == 'Wave':
+                score = hand_score
             # During execution a visible open palm always stops, including Wave.
-            if self.state.get('state') == 'EXECUTING' and raw == 'Open_Palm':
+            if self.state.get('state') == 'EXECUTING' and (raw == 'Open_Palm' or open_hand):
                 label, event = 'Open_Palm', True
             if time.monotonic()-captured > self.o['camera_timeout']:
                 self.publish(camera=False)
                 return
-            self.publish(label, score, event, hand, raw=raw)
+            self.publish(label, score, event, hand, raw=raw, open_hand=open_hand)
             now = time.monotonic()
             fps = 1/max(.001, now-self.last_output)
             self.last_output = now
@@ -154,6 +169,8 @@ def main(args=None):
                 lines = [f'Gesture: {label} ({score:.2f}) | {fps:.1f} FPS',
                          f'Selected: {self.state.get("selected") or "None"}',
                          f'State: {self.state.get("state")}', str(self.state.get('reason', '')),
+                         'Ready: '+str(self.state.get('readiness_reason', 'Waiting for behavior node')),
+                         f'Wave: {self.filter.wave_progress()}/{self.filter.reversals} direction changes',
                          'Open Palm: STOP | Closed Fist: CANCEL | q: exit']
                 color = (0, 0, 255) if self.state.get('state') == 'STOPPED' else (0, 220, 255)
                 for i, line in enumerate(lines):

@@ -18,13 +18,14 @@ gesture_recognition_node:
     width: 640
     height: 480
     fps: 20.0
+    opencv_threads: 2
     camera_timeout: 0.7
     confidence: 0.65
     stable_frames: 3
     cooldown: 0.7
     rearm_frames: 4
     lost_interval: 0.3
-    smoothing: 0.6
-    wave_window: 1.6
-    wave_amplitude: 0.09
+    smoothing: 0.8
+    wave_window: 2.4
+    wave_amplitude: 0.045
     wave_reversals: 3

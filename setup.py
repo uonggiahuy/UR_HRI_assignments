@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 
 package_name = 'turtlebot4'
-resource_directories = ('launch', 'config', 'maps', 'rviz', 'models', 'licenses')
+resource_directories = ('launch', 'config', 'maps', 'rviz', 'models', 'licenses', 'worlds')
 data_files = [
     ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
     ('share/' + package_name, ['package.xml', 'README.md', 'LICENSE']),

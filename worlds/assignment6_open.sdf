@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="assignment6_open">
+    <physics name="default" type="ignored">
+      <max_step_size>0.003</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <scene><ambient>0.65 0.65 0.65 1</ambient><background>0.75 0.8 0.85 1</background><shadows>false</shadows></scene>
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose><direction>-0.5 0.2 -1</direction>
+      <diffuse>0.8 0.8 0.8 1</diffuse><specular>0.1 0.1 0.1 1</specular>
+      <cast_shadows>false</cast_shadows>
+    </light>
+    <model name="floor">
+      <static>true</static><link name="floor">
+        <collision name="collision"><geometry><box><size>12 12 0.1</size></box></geometry><pose>0 0 -0.05 0 0 0</pose></collision>
+        <visual name="visual"><geometry><box><size>12 12 0.1</size></box></geometry><pose>0 0 -0.05 0 0 0</pose><material><ambient>0.65 0.65 0.65 1</ambient><diffuse>0.65 0.65 0.65 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="north"><static>true</static><pose>0 4 0.5 0 0 0</pose><link name="wall"><collision name="collision"><geometry><box><size>8.2 0.1 1</size></box></geometry></collision><visual name="visual"><geometry><box><size>8.2 0.1 1</size></box></geometry></visual></link></model>
+    <model name="south"><static>true</static><pose>0 -4 0.5 0 0 0</pose><link name="wall"><collision name="collision"><geometry><box><size>8.2 0.1 1</size></box></geometry></collision><visual name="visual"><geometry><box><size>8.2 0.1 1</size></box></geometry></visual></link></model>
+    <model name="east"><static>true</static><pose>4 0 0.5 0 0 0</pose><link name="wall"><collision name="collision"><geometry><box><size>0.1 8.2 1</size></box></geometry></collision><visual name="visual"><geometry><box><size>0.1 8.2 1</size></box></geometry></visual></link></model>
+    <model name="west"><static>true</static><pose>-4 0 0.5 0 0 0</pose><link name="wall"><collision name="collision"><geometry><box><size>0.1 8.2 1</size></box></geometry></collision><visual name="visual"><geometry><box><size>0.1 8.2 1</size></box></geometry></visual></link></model>
+  </world>
+</sdf>
