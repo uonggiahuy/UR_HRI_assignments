@@ -1,179 +1,201 @@
-# 1. Giới thiệu Assignment 5
+# Assignment 6 — Điều khiển TurtleBot 4 bằng cử chỉ tay
 
-TurtleBot 4 Standard dùng lại bản đồ warehouse của Assignment 4, định vị bằng AMCL, tự hành tuần tự **Goal 1 → Goal 2 → Goal 3** qua Nav2 và nhận diện vật thể bằng YOLO11n từ camera RGB thật trong mô phỏng Gazebo. Luồng tự động là chức năng chính; không cần bấm đích bằng chuột. RViz2 và cửa sổ camera YOLO riêng giúp quan sát đồng thời đường đi và kết quả nhận diện.
+ROS 2 Humble / Ubuntu 22.04, Gazebo Fortress, webcam laptop/USB thật và
+MediaPipe Tasks Gesture Recognizer. Chọn hành vi trước, giơ ngón cái để xác nhận;
+robot không di chuyển chỉ vì vừa nhận ra một cử chỉ chọn.
 
-## 2. Cài đặt và chuẩn bị môi trường lần đầu
+**Trạng thái kiểm chứng:** phần mềm có kiểm thử tự động; demo webcam thực tế
+**BLOCKED** trong container hiện tại vì không có `/dev/video*`. Chưa xác nhận
+nhận dạng sáu cử chỉ ngoài đời hoặc hoàn thành các chuyển động trong Gazebo.
+Không dùng camera OAK-D mô phỏng hay video ghi sẵn để thay thế webcam.
 
-Thực hiện **trên ROS Ubuntu 22.04**. Cần các gói TurtleBot 4 Simulator, Ignition Fortress, Nav2, AMCL và RViz2.
+## Kiến trúc
+
+```text
+Webcam V4L2 thật → gesture_recognition_node (MediaPipe + cửa sổ OpenCV)
+                          ↓ /detected_gesture (String chứa JSON)
+                  robot_behavior_node (FSM + watchdog)
+                          ↓ /cmd_vel (Twist)
+                  Create 3 motion_control → TurtleBot 4 / Gazebo
+                          ↑ /odom /scan /clock /dock_status /hazard_detection
+```
+
+Launch riêng không khởi động SLAM, AMCL, Nav2 hoặc YOLO. Bộ nhận dạng dùng
+môi trường Python riêng, độc lập với môi trường YOLO đang có.
+
+## Cài đặt và build
+
+Thực hiện **trong container ROS**, tại workspace hiện có:
 
 ```bash
 cd /root/ros2_ws
 source /opt/ros/humble/setup.bash
-sudo apt-get update
-sudo apt-get install -y python3.10-venv python3-pip
-rosdep install --ignore-src --from-paths src/turtlebot4 -r -y
-bash src/turtlebot4/scripts/prepare_tf2_runtime.sh
-bash src/turtlebot4/scripts/prepare_yolo_runtime.sh
+bash src/turtlebot4/scripts/prepare_gesture_runtime.sh
 colcon build --symlink-install --packages-select turtlebot4
 source install/setup.bash
+# Các regression kế thừa dùng bản TF2 đã chuẩn bị của workspace (nếu có).
+if [ -f "$HOME/.cache/turtlebot4/tf2-0.25.24/install/setup.bash" ]; then
+  source "$HOME/.cache/turtlebot4/tf2-0.25.24/install/setup.bash"
+fi
+colcon test --packages-select turtlebot4
+colcon test-result --test-result-base build/turtlebot4 --verbose
 ```
 
-TF2 **0.25.24** được build ngoài repository để khắc phục lỗi callback của phiên bản cũ. YOLO dùng venv riêng có quyền đọc package ROS hệ thống, không nâng cấp NumPy/OpenCV toàn cục. Các phiên bản đã dùng: NumPy 1.26.4, OpenCV 4.10.0.84, PyTorch 2.5.1 CPU, torchvision 0.20.1, Ultralytics 8.3.40. Viewer dùng OpenCV hệ thống có HighGUI; chỉ detector chạy trong venv. Không cần kích hoạt venv cho cả terminal.
+Script tạo `~/.cache/turtlebot4/gesture-venv` với Python 3.10,
+MediaPipe **0.10.21**, NumPy **1.26.4**, OpenCV contrib **4.10.0.84**.
+Model chính thức `gesture_recognizer/float16/1` được tải từ Google Storage,
+kiểm SHA256, lưu tại `~/.cache/turtlebot4/models/gesture_recognizer.task`.
+Không nâng cấp pip/packages của ROS toàn cục hoặc venv YOLO.
+Cần có `python3-venv`, pip, kết nối mạng và quyền ghi thư mục cache.
 
-Lần đầu cần Internet để tải YOLO11n vào `~/.cache/turtlebot4/models/yolo11n.pt`. Không đưa weights vào Git. Detector dùng hai luồng CPU, giới hạn khoảng 5 ảnh/giây. Mã detector áp dụng AGPL-3.0-or-later (`licenses/AGPL-3.0.txt`); mã nền Apache-2.0. Nguồn và giấy phép CC BY 4.0 của người/ghế có trong `models/ATTRIBUTION.md`.
+Trước khi chạy, kiểm tra **trong container**:
 
-**Chạy đoạn sau trong mỗi terminal mới**, theo đúng thứ tự source:
+```bash
+ls -l /dev/video*
+echo "$DISPLAY"
+~/.cache/turtlebot4/gesture-venv/bin/python -c 'import cv2; c=cv2.VideoCapture(0, cv2.CAP_V4L2); ok,f=c.read(); print("Live frame:",ok, None if f is None else f.shape); c.release()'
+```
+
+Chỉ tiếp tục demo khi đọc được ảnh thật. Host hiện liệt kê **Integrated Camera**
+qua sysfs (`video0`, `video1`), nhưng container chưa có các device node đó.
+Chưa đo được FPS/độ phân giải thật. Script trên phải báo `Live frame: True`.
+
+## Chạy chương trình
+
+Terminal 1, giữ chạy; đóng simulator cũ trước:
 
 ```bash
 cd /root/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch turtlebot4 assignment6.launch.py
+```
+
+Mặc định dùng world `depot`, một TurtleBot 4 Standard và một cửa sổ
+**TurtleBot 4 — Hand Gesture Control**. Đây là giao diện đã triển khai;
+luồng demo đầy đủ vẫn cần kiểm chứng sau khi webcam được truyền vào container.
+Không chạy đồng thời teleop, navigator hoặc publisher vận tốc khác.
+Launch kiểm tra device webcam, môi trường Python và model trước khi khởi động
+Gazebo; thiếu điều kiện sẽ thoát sớm với thông báo rõ ràng.
+
+Terminal 2, sau khi Gazebo đã sẵn sàng: quan sát vùng sau dock trống, gửi
+lệnh undock chính thức, đợi kết quả `SUCCEEDED` và `/dock_status` báo false:
+
+```bash
 source /opt/ros/humble/setup.bash
 source /root/ros2_ws/install/setup.bash
-source "${XDG_CACHE_HOME:-$HOME/.cache}/turtlebot4/tf2-0.25.24/install/setup.bash"
+ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}' --feedback
+ros2 topic echo /dock_status --once
 ```
 
-## 3. Chạy tự động 3 Goal + YOLO 
+Đây là thao tác một lần, không phải teleop. Không gửi hành vi trước khi undock
+thành công. Controller không gửi Twist rỗng khi đang dock để tránh can thiệp
+action undock. Nếu vùng hiện tại thiếu khoảng trống, controller từ chối chạy;
+không tắt bảo vệ, dịch chuyển robot tức thời hoặc giả lập tín hiệu cảm biến.
+World `depot` chưa được xác nhận đủ trống cho toàn bộ vòng tròn ở vị trí undock.
 
-### Terminal 1 — Gazebo + TurtleBot 4 + vật thể + RViz2
+Có thể đổi camera, model hoặc giới hạn riêng cho lần chạy:
 
 ```bash
-ros2 launch turtlebot4 turtlebot4.launch.py \
-  rviz:=true rviz_fixed_frame:=map assignment5_objects:=true
+ros2 launch turtlebot4 assignment6.launch.py webcam_device:=0 show_camera:=true \
+  world:=depot speed:=0.06 distance:=0.12 radius:=0.35 angular_speed:=0.25
 ```
 
-Giữ terminal này chạy suốt buổi demo. Đợi warehouse, một robot, một người và một ghế xuất hiện; `/clock`, LiDAR và odometry phải hoạt động. Trước khi AMCL chạy, RViz có thể tạm báo chưa có frame `map`. Scene Assignment 5 dùng `warehouse`, model `standard`, namespace rỗng. Không khởi động thêm simulator. Lệnh `simulation.launch.py` của Assignment 4 vẫn được giữ.
-
-### Terminal 2 — Map Server + AMCL
+Các giá trị nhận dạng, làm mượt, cooldown, tái kích hoạt và watchdog nằm trong
+`config/assignment6.yaml`. `signal_timeout` mặc định 0,7 giây.
+Để debug với **một simulator đã chạy**, dùng `start_simulation:=false`.
+Hai executable riêng:
 
 ```bash
-ros2 run turtlebot4 start_localization
+ros2 run turtlebot4 gesture_recognition_node
+ros2 run turtlebot4 robot_behavior_node
 ```
 
-Giữ terminal này chạy. Đợi Map Server và AMCL đạt trạng thái ACTIVE; không chạy SLAM đồng thời. Dùng đúng cặp `maps/map.yaml` và `maps/map.pgm` của warehouse Assignment 4, không tạo lại bản đồ.
+Không chạy hai executable này cùng lúc với các node tương ứng trong launch.
 
-### Terminal 3 — Chuẩn bị định vị, rồi khởi động Nav2
+## Sáu cử chỉ và xác nhận
 
-```bash
-ros2 run turtlebot4 prepare_navigation
-```
-
-Đây là lệnh **chạy một lần**: undock nếu cần và kiểm tra định vị. Nếu chưa biết initial pose, sau khi undock kết thúc hãy dùng **2D Pose Estimate** trong RViz đặt vị trí và hướng **hiện tại** của robot, rồi chạy lại lệnh trên. Undock có thể đổi hướng robot; tọa độ world Gazebo không mặc nhiên bằng tọa độ map.
-
-Nếu AMCL chưa hội tụ, kiểm tra LiDAR chồng đúng vật cản trên map. Chỉ khi Nav2 chưa chạy và vùng quanh robot trống, có thể dùng `ros2 run turtlebot4 teleop` để quay chậm/đi ngắn; nhấn `q` để dừng và thoát, rồi chạy lại preparation. Không bỏ qua kiểm tra covariance/freshness.
-
-**Chỉ sau thông báo `LOCALIZATION READY`**, chạy:
-
-```bash
-ros2 run turtlebot4 start_navigation
-```
-
-Giữ terminal này chạy; đợi **READY** của Nav2, gồm lifecycle, action server và costmaps. Nếu định vị chưa sẵn sàng, navigator không gửi goal.
-
-### Terminal 4 — Tự động ba đích và YOLO
-
-Có thể kiểm tra sẵn sàng bằng lệnh một lần:
-
-```bash
-ros2 run turtlebot4 check_navigation --timeout 30
-```
-
-Sau khi kiểm tra đạt, chạy:
-
-```bash
-ros2 launch turtlebot4 assignment5.launch.py
-```
-
-Launch khởi động `waypoint_navigator`, `yolo_detector` và viewer tùy chọn. Python đọc tọa độ/yaw từ `config/goals.yaml`, gửi lần lượt các goal bằng action **Nav2 NavigateToPose**. YOLO chạy đồng thời trên ảnh RGB của robot; viewer chỉ đọc ảnh đã được detector vẽ bounding boxes.
-
-| Goal | Tên | x (m) | y (m) | yaw (rad) |
-| --- | --- | --- | --- | --- |
-| 1 | north_of_dock | -0.525 | 1.225 | -0.14 |
-| 2 | chair_view | 0.775 | 1.325 | -0.30 |
-| 3 | person_view | -0.525 | 2.425 | 3.10 |
-
-Có thể thêm nhãn ba đích trong RViz bằng `assignment5.launch.py show_goal_markers:=true`. Marker đọc cùng `config/goals.yaml`, chỉ hiển thị tâm đích và số thứ tự; không thay thế Global Path và không gửi goal.
-
-
-## 4. Điều hướng thủ công bằng Nav2 Goal trên RViz2 
-
-Chế độ này dùng để gỡ lỗi và kiểm tra điều hướng bằng tay. **Dùng cùng Terminal 1, 2, 3 như mục 3**, gồm preparation và chờ Nav2 READY. **Không chạy `assignment5.launch.py`** khi thử thủ công; `waypoint_navigator` phải không hoạt động.
-
-1. Mở cửa sổ RViz2 đã có từ Terminal 1, không mở thêm một RViz khác.
-2. Đặt **Fixed Frame = map**.
-3. Chọn **Navigation 2 Panel**; nếu chưa có, vào Panels → Add New Panel → Navigation 2.
-4. Chọn công cụ **Nav2 Goal** trên thanh công cụ.
-5. Nhấn vào một đích trong vùng **Free** trên map, tránh vật cản/vùng Unknown; kéo chuột để chọn hướng rồi thả.
-6. Quan sát **Global Path**, costmaps và robot di chuyển trong Gazebo.
-7. Xác nhận kết quả **NavigateToPose = SUCCEEDED** trong panel/log Nav2 và robot đã dừng. Có thể quan sát status action từ terminal trống:
-
-```bash
-ros2 topic echo /navigate_to_pose/_action/status
-```
-
-Mã status `4` là SUCCEEDED; phải đối chiếu UUID của goal vừa gửi, tránh nhầm với kết quả lưu của goal cũ. Kết thúc lệnh theo dõi bằng Ctrl+C.
-
-**Không gửi goal Nav2 thủ công từ RViz trong khi nhiệm vụ tự động ba goal đang chạy.** Không dùng teleop trong lúc Nav2 đang thực hiện goal. Nếu cần hủy, dùng Cancel trong panel và chờ robot dừng.
-
-Muốn quan sát YOLO khi thử thủ công, chỉ chạy detector/viewer riêng trong các terminal đã source môi trường; hai lệnh này giữ terminal chạy và không gửi goal:
-
-```bash
-ros2 run turtlebot4 yolo_detector --ros-args -p use_sim_time:=true
-```
-
-```bash
-ros2 run turtlebot4 yolo_viewer
-```
-
-## 5. Camera và YOLO
-
-Camera OAK-D của TurtleBot 4 phát ảnh RGB 320×240 từ mô phỏng, không dùng video thay thế:
-
-| Nội dung | Topic | Kiểu |
+| Cử chỉ | Cách làm | Kết quả |
 | --- | --- | --- |
-| Ảnh RGB đầu vào | `/oakd/rgb/preview/image_raw` | `sensor_msgs/msg/Image`, rgb8 |
-| Ảnh có chú thích | `/assignment5/yolo/image_annotated` | `sensor_msgs/msg/Image`, bgr8 |
-| Detections dạng JSON | `/assignment5/yolo/detections` | `std_msgs/msg/String` |
-| Trạng thái nhiệm vụ | `/assignment5/mission/status` | `std_msgs/msg/String` |
+| Wave | Xòe tay, vẫy ngang qua lại rõ ràng, ít nhất 3 lần đổi chiều | Chọn chào hỏi |
+| Pointing_Up | Chỉ ngón trỏ lên | Chọn **4 chu kỳ** tiến–lùi, mỗi đoạn 0,12 m |
+| Victory | Giơ hai ngón hình V | Chọn một vòng tròn bán kính 0,35 m |
+| Thumb_Up | Giơ ngón cái sau khi đã chọn | Xác nhận, thực thi đúng một lần |
+| Open_Palm | Xòe tay | Dừng và xóa lựa chọn ngay, không cần xác nhận |
+| Closed_Fist | Nắm tay | Hủy, xóa lựa chọn, về IDLE |
 
-YOLO11n dùng các lớp COCO; mục tiêu demo là **person** và **chair**, không chỉ giới hạn hai lớp này. Khung, tên lớp và confidence đều là kết quả suy luận thật; có thể có nhãn nhầm như bench/kite, cần đối chiếu cảnh thực tế. Cấu hình tại `config/yolo.yaml`: confidence 0.35, ảnh suy luận 640, CPU, tối đa 5 FPS. Giữ nguyên timestamp/frame ID của camera.
+Cửa sổ hiển thị ảnh thật, landmarks, nhãn, confidence, FPS, lựa chọn và trạng thái.
+Sau khi chọn, chờ `PENDING_CONFIRMATION / WAITING FOR THUMBS UP`, rồi giơ ngón cái
+trong 8 giây. Giữ nguyên cử chỉ không tạo thêm lần chạy. Hạ tay hoặc đưa về cử
+chỉ trung tính để tái kích hoạt; giữ tay trong vùng nhìn khi robot đang chạy.
+Mất tay sẽ dừng hành vi, không tự tiếp tục.
 
-**Hai cách hiển thị cùng hoạt động:**
+Wave được suy ra từ chuyển động landmark cổ tay theo thời gian, có bù dịch
+chuyển nền ảnh, không phải nhãn có sẵn trong model. Xòe tay đứng yên vẫn là STOP.
+**Trong lúc robot chạy, xòe tay luôn ưu tiên STOP kể cả khi đang vẫy.**
+Chào hỏi quay trái 0,35 rad, phải 0,70 rad rồi trái 0,35 rad về hướng ban đầu.
 
-- **RViz2 — YOLO Camera**: display Image có sẵn. Nếu thêm lại, chọn topic `/assignment5/yolo/image_annotated`, Reliability **Best Effort**, Durability **Volatile**.
-- **Cửa sổ OpenCV riêng**: tự mở mặc định cùng launch Assignment 5; ảnh 320×240 được phóng thành 640×480, giữ tỉ lệ. Viewer dùng sensor-data QoS, hàng đợi một ảnh, xử lý sự kiện GUI trên luồng chính. Không chạy YOLO lần hai và không xuất `/cmd_vel`. Nhấn **q**, **Esc** hoặc nút đóng cửa sổ chỉ tắt viewer, nhiệm vụ và detector tiếp tục.
+## Cơ chế an toàn
 
-Tắt riêng cửa sổ khi chạy không có màn hình:
+FSM: `IDLE → PENDING_CONFIRMATION → EXECUTING → SETTLING → IDLE`, hoặc `STOPPED` khi lỗi.
+Lệnh xác nhận thiếu lựa chọn, lựa chọn hết hạn và xác nhận lặp bị từ chối.
+Vận tốc mặc định 0,06 m/s, quay 0,25 rad/s. Hoàn tất dựa vào odometry;
+vòng tròn cần đủ góc quay, quãng đường và trở lại gần điểm đầu, không chỉ hết giờ.
+Sau đó phải quan sát odometry đứng yên trước khi báo hoàn tất.
+
+Watchdog dùng đồng hồ monotonic, vẫn hoạt động khi Gazebo pause. Mất webcam,
+mất tiến trình nhận dạng, mất tay, clock ngừng, odometry/scan/dock/hazard cũ,
+bumper/hazard hoặc publisher vận tốc cạnh tranh đều ngăn/dừng chuyển động.
+Kiểm tra toàn bộ LiDAR 360° trước và trong hành vi; vùng trống tối thiểu tính cả
+robot và toàn bộ quỹ đạo: khoảng 0,52 m cho tiến–lùi và 1,10 m cho vòng tròn
+mặc định. Dữ liệu scan không hợp lệ bị từ chối. Giới hạn lùi Create 3 được giữ.
+Các ngưỡng bảo thủ có thể từ chối vùng gần dock; đó là lý do phải kiểm chứng
+vùng chạy thật trước buổi trình diễn.
+
+## Kiểm tra ROS
+
+Terminal phụ, chỉ đọc:
 
 ```bash
-ros2 launch turtlebot4 assignment5.launch.py \
-  show_yolo_window:=false
+ros2 topic echo /detected_gesture
+ros2 topic echo /assignment6/state
+ros2 topic info /cmd_vel --verbose
+ros2 topic echo /odom --once
 ```
 
-Lệnh này vẫn chạy suy luận, xuất ảnh chú thích và điều hướng tự động. Nó không tắt Gazebo/RViz do Terminal 1 sở hữu. Muốn tắt RViz, dùng `rviz:=false` ở Terminal 1; tùy chọn viewer không thay đổi cấu hình GUI của Gazebo. Nếu GUI không truy cập được, viewer cảnh báo rồi thoát độc lập; việc viewer thoát không hủy nhiệm vụ.
+`/detected_gesture`: `std_msgs/msg/String`, JSON phiên bản 1 chứa `session`,
+`sequence`, `stamp` (Unix time), `gesture`, `raw_gesture`, `confidence`, `event`,
+`hand_present`, `camera_ok`. Mỗi frame xử lý là heartbeat; không thấy tay phát
+`gesture=None`, `hand_present=false`. `/assignment6/state` công bố lựa chọn,
+FSM, lý do và readiness. `/cmd_vel` là `geometry_msgs/msg/Twist`, robot nhận
+best-effort/volatile; bridge `cmd_vel_bridge` của simulator được cho phép.
+Không tự publish JSON giả để chứng minh webcam hoặc khởi động robot.
 
+## Dừng và xử lý lỗi
 
-## 6. Dừng chương trình và xử lý lỗi
+Xòe tay để STOP; nắm tay để CANCEL. Nhấn `q`/đóng cửa sổ hoặc Ctrl+C ở Terminal 1
+để dừng các tiến trình launch sở hữu. Kiểm tra odometry trở về vận tốc 0.
+Khi dùng simulator ngoài (`start_simulation:=false`), đóng nó ở terminal chủ.
 
-**Ctrl+C theo thứ tự Terminal 4 → Terminal 3 → Terminal 2 → Terminal 1.** Nếu đang chạy goal, đợi navigator xác nhận hủy goal và vận tốc dừng rồi mới tắt Nav2. Ở chế độ thủ công, hủy goal và chờ dừng trước khi tắt Terminal 3; dừng detector/viewer riêng nếu đã mở. Không để runner cũ còn sống rồi mở phiên trùng.
+- **Không có `/dev/video*`:** trên **host**, kiểm tra
+  `ls -l /dev/video*` và `docker inspect ros2_workspace`. Cần bổ sung đúng
+  `--device=/dev/video0:/dev/video0` vào cấu hình chạy container hiện hữu;
+  với Docker Compose thêm `devices: ["/dev/video0:/dev/video0"]`. Nếu chạy
+  non-root, thêm numeric group của device vào `group_add`. Device `video1`
+  thường là metadata, không mặc định dùng làm ảnh. Docker không thêm device
+  vào container đang chạy bằng `docker update`: người quản trị cần áp dụng
+  cấu hình khi tạo lại container theo cấu hình và volume đã lưu. Chưa thực
+  hiện thay đổi này; không xóa container hoặc mất dữ liệu để thử camera.
+- **Permission denied:** trên host xem group/quyền device, cấp group `video`
+  cho tài khoản phù hợp; tránh `chmod 777` và tránh `--privileged`.
+- **Camera bận:** đóng ứng dụng đang giữ webcam, chọn đúng `webcam_device`.
+- **Lỗi cửa sổ:** kiểm tra DISPLAY, mount `/tmp/.X11-unix`, quyền X11 của
+  container và thư viện xcb. `show_camera:=false` phục vụ debug, không chứng
+  minh đã đạt yêu cầu cửa sổ demo. Lỗi HighGUI kết thúc node và dừng launch.
+- **MediaPipe/model lỗi:** chạy lại script setup; model checksum phải đúng;
+  không cài lẫn `opencv-python` và `opencv-contrib-python` trong venv gesture.
+- **Readiness false:** kiểm tra dock, hazard, clock, scan và publisher `/cmd_vel`;
+  chọn lại rồi xác nhận sau khi xử lý nguyên nhân. Không có tự động tiếp tục.
 
-| Triệu chứng | Cách xử lý |
-| --- | --- |
-| AMCL chưa ACTIVE | Chờ lifecycle; kiểm tra map đúng world và không có SLAM chạy cùng. |
-| LOCALIZATION FAIL | Đặt initial pose hiện tại bằng 2D Pose Estimate, kiểm tra scan/map, dừng teleop rồi chạy lại preparation. Không nới covariance để ép READY. |
-| Không có ảnh YOLO | Kiểm tra camera đầu vào, venv/weights và log detector. Chạy lại script chuẩn bị YOLO nếu thiếu dependency. Mất camera có thể dừng nhiệm vụ. |
-| Viewer báo không mở được GUI | Kiểm tra DISPLAY/socket/cookie X11 và HighGUI; dùng `show_yolo_window:=false` nếu không cần cửa sổ. RViz vẫn nhận cùng topic chú thích khi detector chạy. |
-| Viewer đã đóng, muốn mở lại | Chạy `ros2 run turtlebot4 yolo_viewer` trong terminal mới khi detector còn hoạt động. |
-| RViz không có map/TF hoặc treo | Kiểm tra thứ tự source ROS → workspace → TF2 0.25.24; chờ AMCL tạo frame map, không thêm TF giả. |
-| Goal bị chặn hoặc thất bại | Kiểm tra pose, costmap và vật cản thực; không tắt tránh va chạm hoặc tăng dung sai để ép thành công. |
-
-Kiểm tra phần mềm sau thay đổi, trong terminal đã source môi trường và khi không có nhiệm vụ điều hướng đang chạy (regression suite có tạo node teleop tạm để kiểm tra QoS):
-
-```bash
-cd /root/ros2_ws
-python3 -m compileall -q src/turtlebot4/turtlebot4 src/turtlebot4/launch
-colcon build --symlink-install --packages-select turtlebot4
-source install/setup.bash
-colcon test --packages-select turtlebot4 --event-handlers console_direct+
-colcon test-result --test-result-base build/turtlebot4 --verbose
-python3 -m pytest -q src/turtlebot4/tests
-```
-
+Hướng dẫn API: [MediaPipe Tasks Gesture Recognizer](https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer/python).
+Mã nguồn: [nhánh assignments_6](https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_6).

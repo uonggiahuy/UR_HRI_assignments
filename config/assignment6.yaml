@@ -1,0 +1,30 @@
+robot_behavior_node:
+  ros__parameters:
+    cmd_topic: /cmd_vel
+    signal_timeout: 0.7
+    sensor_timeout: 1.0
+    speed: 0.06
+    angular_speed: 0.25
+    distance: 0.12
+    radius: 0.35
+    greeting_angle: 0.35
+    selection_timeout: 8.0
+    segment_timeout: 65.0
+    position_tolerance: 0.06
+gesture_recognition_node:
+  ros__parameters:
+    webcam_device: 0
+    show_camera: true
+    width: 640
+    height: 480
+    fps: 20.0
+    camera_timeout: 0.7
+    confidence: 0.65
+    stable_frames: 3
+    cooldown: 0.7
+    rearm_frames: 4
+    lost_interval: 0.3
+    smoothing: 0.6
+    wave_window: 1.6
+    wave_amplitude: 0.09
+    wave_reversals: 3

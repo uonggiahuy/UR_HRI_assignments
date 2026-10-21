@@ -27,9 +27,9 @@ setup(
     zip_safe=True,
     maintainer='uonggiahuy',
     maintainer_email='uonggiahuy0411@gmail.com',
-    description='TurtleBot 4 mapping, three-goal navigation and concurrent YOLO detection.',
+    description='TurtleBot 4 mapping, YOLO navigation and confirmed hand gesture control.',
     license='Apache-2.0',
-    url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_5',
+    url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_6',
     entry_points={'console_scripts': [
         'check_simulation = turtlebot4.diagnostics:main',
         'start_slam = turtlebot4.slam_runner:main',
@@ -47,5 +47,7 @@ setup(
         'goal_markers = turtlebot4.goal_markers:main',
         'yolo_viewer = turtlebot4.yolo_viewer:main',
         'yolo_detector = turtlebot4.yolo_detector:main',
+        'gesture_recognition_node = turtlebot4.gesture_recognition_node:main',
+        'robot_behavior_node = turtlebot4.robot_behavior_node:main',
     ]},
 )
