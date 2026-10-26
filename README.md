@@ -1,17 +1,10 @@
 # Assignment 6 — Điều khiển TurtleBot 4 bằng cử chỉ tay
 
-ROS 2 Humble / Ubuntu 22.04, Gazebo Fortress, webcam laptop/USB thật và
+ROS 2 Humble / Ubuntu 22.04, Gazebo, webcam laptop và
 MediaPipe Tasks Gesture Recognizer. Chọn hành vi trước, giơ ngón cái để xác nhận;
 robot không di chuyển chỉ vì vừa nhận ra một cử chỉ chọn.
 
-**Trạng thái kiểm chứng (21/10/2026):** webcam thật đã đọc ảnh 640×480,
-hiển thị landmarks và nhận đủ sáu cử chỉ từ thao tác người dùng. Wave → Thumb Up
-đã hoàn tất chào hỏi trong Gazebo (khoảng 6 giây, về hướng cũ, odometry dừng).
-Open Palm đã dừng một vòng tròn đang chạy; mất dấu tay cũng dừng và không tự chạy lại.
-Gazebo render bằng NVIDIA RTX 4060; đo đồng thời webcam khoảng 17–18 FPS,
-LiDAR khoảng 62 Hz, real-time factor khoảng 0,997 trong world `assignment6_open`.
-Chưa nghiệm thu đủ bốn chu kỳ và một vòng tròn khép kín bằng tay thật.
-Không dùng camera mô phỏng, video ghi sẵn hoặc JSON giả làm bằng chứng.
+
 
 ## Kiến trúc
 
@@ -204,49 +197,3 @@ FSM, lý do, readiness, `backup_warning` và `readiness_reason` cụ thể
 `geometry_msgs/msg/Twist`, robot nhận
 best-effort/volatile; bridge `cmd_vel_bridge` của simulator được cho phép.
 Không tự publish JSON giả để chứng minh webcam hoặc khởi động robot.
-
-## Dừng và xử lý lỗi
-
-Xòe tay để STOP; nắm tay để CANCEL. Nhấn `q`/đóng cửa sổ hoặc Ctrl+C ở Terminal 1
-để dừng các tiến trình launch sở hữu. Đợi launch thoát hoàn toàn trước khi chạy lại.
-Launch đánh dấu Gazebo server theo phiên và dọn cả server con bị tách khỏi launcher.
-Đã kiểm tra tắt/chạy lại không còn server cũ. Một node upstream TurtleBot có thể
-cần launch gửi SIGTERM sau 5 giây; không mở bản thứ hai trong lúc đang tắt.
-Kiểm tra odometry trở về vận tốc 0 trước khi đóng nếu cần ghi bằng chứng.
-Khi dùng simulator ngoài (`start_simulation:=false`), đóng nó ở terminal chủ.
-
-- **Lag/Gazebo đứng:** dùng world mặc định `assignment6_open`, đóng các demo cũ.
-  Xem `pgrep -af 'ign gazebo|gz sim'`, `nvidia-smi` và `glxinfo -B`.
-  Đã gặp `Texture memory budget exceeded. Stalling GPU.` ở world lớn dù render
-  đúng NVIDIA. Không khởi chạy thêm một Gazebo để chữa phiên đang treo.
-  Dừng ở terminal sở hữu bằng Ctrl+C; nếu có server cũ ngoài phiên, xác định đúng
-  PID/owner trước khi xử lý, tránh kill toàn bộ ROS hoặc ứng dụng NVIDIA.
-- **Chọn được nhưng không chạy/hay dừng:** xem dòng `Ready` và `/assignment6/state`.
-  `No live hand control signal` nghĩa là không thấy tay đủ tin cậy; giữ tay rõ,
-  không hạ tay sau xác nhận. `Docked` cần undock; dữ liệu cũ/clock dừng cần kiểm tra
-  simulator. Sau STOP phải chọn lại rồi xác nhận, không tự chạy tiếp.
-- **Wave khó nhận:** xòe ít nhất ba ngón, giữ bàn tay rõ và vẫy ngang qua lại 3–4 lần
-  trong khoảng 2,4 giây, biên độ rõ. Chờ thấy `Wave/PENDING_CONFIRMATION` rồi
-  chuyển nhanh sang Thumb Up trước khi lòng bàn tay đứng yên thành STOP.
-- **Không có `/dev/video*`:** trên **host**, kiểm tra
-  `ls -l /dev/video*` và `docker inspect ros2_workspace`. Cần bổ sung đúng
-  `--device=/dev/video0:/dev/video0` vào cấu hình chạy container hiện hữu;
-  với Docker Compose thêm `devices: ["/dev/video0:/dev/video0"]`. Nếu chạy
-  non-root, thêm numeric group của device vào `group_add`. Device `video1`
-  thường là metadata, không mặc định dùng làm ảnh. Docker không thêm device
-  vào container đang chạy bằng `docker update`: người quản trị cần áp dụng
-  cấu hình khi tạo lại container theo cấu hình và volume đã lưu. Chưa thực
-  hiện thay đổi này; không xóa container hoặc mất dữ liệu để thử camera.
-- **Permission denied:** trên host xem group/quyền device, cấp group `video`
-  cho tài khoản phù hợp; tránh `chmod 777` và tránh `--privileged`.
-- **Camera bận:** đóng ứng dụng đang giữ webcam, chọn đúng `webcam_device`.
-- **Lỗi cửa sổ:** kiểm tra DISPLAY, mount `/tmp/.X11-unix`, quyền X11 của
-  container và thư viện xcb. `show_camera:=false` phục vụ debug, không chứng
-  minh đã đạt yêu cầu cửa sổ demo. Lỗi HighGUI kết thúc node và dừng launch.
-- **MediaPipe/model lỗi:** chạy lại script setup; model checksum phải đúng;
-  không cài lẫn `opencv-python` và `opencv-contrib-python` trong venv gesture.
-- **Readiness false:** kiểm tra dock, hazard, clock, scan và publisher `/cmd_vel`;
-  chọn lại rồi xác nhận sau khi xử lý nguyên nhân. Không có tự động tiếp tục.
-
-Hướng dẫn API: [MediaPipe Tasks Gesture Recognizer](https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer/python).
-Mã nguồn: [nhánh assignments_6](https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_6).
