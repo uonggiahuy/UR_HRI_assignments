@@ -1,0 +1,385 @@
+version: 1
+frame_id: map
+map_sha256:
+  yaml: b1be9283ae2c966e54ce6000133263b62fcf7daa2a84cce61c94b210622bf8c9
+  pgm: 915c88f67974aa4e160f2679cc17c538efceddc1e2ed2f9eb0cf05000b3a4955
+map_metadata:
+  image: map.pgm
+  mode: trinary
+  resolution: 0.05
+  origin:
+  - -15
+  - -25.1
+  - 0
+  negate: 0
+  occupied_thresh: 0.65
+  free_thresh: 0.196
+image_size:
+- 603
+- 1002
+minimum_clearance: 0.55
+alignment: Reference clockwise view (u,v) -> PGM (v,1-u), exterior walls and three
+  racks
+regions:
+- id: A
+  name: Khu vực cửa ra vào
+  aliases:
+  - khu A
+  - khu vực A
+  - cửa ra vào
+  - khu cửa ra vào
+  - lối vào kho
+  description: Main warehouse entrance.
+  polygon_pixels:
+  - - 150.5
+    - 1001
+  - - 150.5
+    - 937.937
+  - - 457.52
+    - 937.937
+  - - 457.52
+    - 1001
+  polygon_map:
+  - - -7.449999999999999
+    - -25.075000000000003
+  - - -7.449999999999999
+    - -21.921850000000003
+  - - 7.901
+    - -21.921850000000003
+  - - 7.901
+    - -25.075000000000003
+  representative_point:
+    x: 0.22550000000000026
+    y: -23.498424999999997
+  approach_goal:
+    x: 0.22500000000000142
+    y: -23.225
+    yaw: -1.5689676738089953
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 0.55
+- id: B
+  name: Kệ linh kiện cảm biến
+  aliases:
+  - khu B
+  - khu cảm biến
+  - kệ cảm biến
+  - khu linh kiện cảm biến
+  description: Storage for LiDAR, cameras, IMU and encoders.
+  polygon_pixels:
+  - - 12.040000000000001
+    - 937.937
+  - - 12.040000000000001
+    - 565.5649999999999
+  - - 168.56
+    - 565.5649999999999
+  - - 168.56
+    - 937.937
+  polygon_map:
+  - - -14.373
+    - -21.921850000000003
+  - - -14.373
+    - -3.3032499999999985
+  - - -6.546999999999999
+    - -3.3032499999999985
+  - - -6.546999999999999
+    - -21.921850000000003
+  representative_point:
+    x: -10.459999999999999
+    y: -12.612549999999999
+  approach_goal:
+    x: -10.475
+    y: -12.625
+    yaw: 0.6927678353971503
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 0.5830951894845301
+- id: C
+  name: Kệ linh kiện truyền động
+  aliases:
+  - khu C
+  - khu truyền động
+  - kệ truyền động
+  - khu linh kiện truyền động
+  description: Storage for DC motors, servos, gearboxes and actuators.
+  polygon_pixels:
+  - - 168.56
+    - 937.937
+  - - 168.56
+    - 565.5649999999999
+  - - 325.08000000000004
+    - 565.5649999999999
+  - - 325.08000000000004
+    - 937.937
+  polygon_map:
+  - - -6.546999999999999
+    - -21.921850000000003
+  - - -6.546999999999999
+    - -3.3032499999999985
+  - - 1.2790000000000035
+    - -3.3032499999999985
+  - - 1.2790000000000035
+    - -21.921850000000003
+  representative_point:
+    x: -2.6339999999999986
+    y: -12.612549999999999
+  approach_goal:
+    x: -3.375
+    y: -12.625
+    yaw: 0.016800038699817745
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 0.55
+- id: D
+  name: Kệ linh kiện điều khiển
+  aliases:
+  - khu D
+  - khu điều khiển
+  - kệ điều khiển
+  - khu linh kiện điều khiển
+  description: Storage for microcontrollers, motor drivers and control electronics.
+  polygon_pixels:
+  - - 325.08000000000004
+    - 937.937
+  - - 325.08000000000004
+    - 565.5649999999999
+  - - 481.6
+    - 565.5649999999999
+  - - 481.6
+    - 937.937
+  polygon_map:
+  - - 1.2790000000000035
+    - -21.921850000000003
+  - - 1.2790000000000035
+    - -3.3032499999999985
+  - - 9.105000000000004
+    - -3.3032499999999985
+  - - 9.105000000000004
+    - -21.921850000000003
+  representative_point:
+    x: 5.192000000000004
+    y: -12.612549999999999
+  approach_goal:
+    x: 4.625
+    y: -12.625
+    yaw: 0.021954144092219192
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 0.55
+- id: E
+  name: Khu vực đóng gói và xuất kho
+  aliases:
+  - khu E
+  - khu đóng gói
+  - khu xuất kho
+  - khu đóng gói và xuất kho
+  description: Component packing and dispatch area.
+  polygon_pixels:
+  - - 481.6
+    - 937.937
+  - - 481.6
+    - 565.5649999999999
+  - - 602
+    - 565.5649999999999
+  - - 602
+    - 937.937
+  polygon_map:
+  - - 9.105000000000004
+    - -21.921850000000003
+  - - 9.105000000000004
+    - -3.3032499999999985
+  - - 15.125
+    - -3.3032499999999985
+  - - 15.125
+    - -21.921850000000003
+  representative_point:
+    x: 12.114999999999998
+    y: -12.612549999999999
+  approach_goal:
+    x: 12.125
+    y: -12.625
+    yaw: 2.247493256744061
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 2.0056171120131583
+- id: F
+  name: Khu vực trung tâm
+  aliases:
+  - khu F
+  - khu trung tâm
+  - khu vực trung tâm
+  - khu trung chuyển
+  - khu giữa
+  description: Central circulation and transfer area.
+  polygon_pixels:
+  - - 114.38
+    - 565.5649999999999
+  - - 114.38
+    - 356.356
+  - - 602
+    - 356.356
+  - - 602
+    - 565.5649999999999
+  polygon_map:
+  - - -9.256
+    - -3.3032499999999985
+  - - -9.256
+    - 7.157200000000003
+  - - 15.125
+    - 7.157200000000003
+  - - 15.125
+    - -3.3032499999999985
+  representative_point:
+    x: 2.9345
+    y: 1.9269749999999988
+  approach_goal:
+    x: 2.9250000000000007
+    y: 1.9250000000000007
+    yaw: 0.20497500035465854
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 3.3120990323358392
+- id: G
+  name: Kệ linh kiện nguồn và pin
+  aliases:
+  - khu G
+  - khu nguồn
+  - khu pin
+  - khu linh kiện nguồn
+  - khu pin và nguồn
+  description: Storage for batteries, power supplies, BMS and chargers.
+  polygon_pixels:
+  - - 102.34
+    - 356.356
+  - - 102.34
+    - 120.11999999999999
+  - - 602
+    - 120.11999999999999
+  - - 602
+    - 356.356
+  polygon_map:
+  - - -9.858
+    - 7.157200000000003
+  - - -9.858
+    - 18.969
+  - - 15.125
+    - 18.969
+  - - 15.125
+    - 7.157200000000003
+  representative_point:
+    x: 2.6335000000000015
+    y: 13.063099999999999
+  approach_goal:
+    x: 2.625
+    y: 13.075000000000003
+    yaw: -0.9505468408121599
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 3.0500000000000003
+- id: H
+  name: Sảnh vào phòng họp
+  aliases:
+  - khu H
+  - sảnh phòng họp
+  - sảnh vào phòng họp
+  - hành lang phòng họp
+  description: Hallway and waiting area near the meeting room.
+  polygon_pixels:
+  - - 0
+    - 120.11999999999999
+  - - 0
+    - 0
+  - - 602
+    - 0
+  - - 602
+    - 120.11999999999999
+  polygon_map:
+  - - -14.975
+    - 18.969
+  - - -14.975
+    - 24.975
+  - - 15.125
+    - 24.975
+  - - 15.125
+    - 18.969
+  representative_point:
+    x: 0.07500000000000107
+    y: 21.972
+  approach_goal:
+    x: 0.07500000000000107
+    y: 21.975
+    yaw: -1.5707963267948966
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 2.95
+- id: I
+  name: Phòng họp kỹ thuật
+  aliases:
+  - khu I
+  - phòng họp
+  - phòng họp kỹ thuật
+  description: Technical discussion and meeting room.
+  polygon_pixels:
+  - - 0
+    - 420.42
+  - - 0
+    - 120.11999999999999
+  - - 102.34
+    - 120.11999999999999
+  - - 102.34
+    - 420.42
+  polygon_map:
+  - - -14.975
+    - 3.953999999999997
+  - - -14.975
+    - 18.969
+  - - -9.858
+    - 18.969
+  - - -9.858
+    - 3.953999999999997
+  representative_point:
+    x: -12.4165
+    y: 11.461500000000001
+  approach_goal:
+    x: -12.425
+    y: 11.475000000000001
+    yaw: -1.0088747645380185
+  validation: VALID
+  reachability: GEOMETRIC_ONLY
+  reason: Inside semantic section; known-free aisle in largest 0.55 m clearance component;
+    Nav2 plan required
+  nav2_path: NOT TESTED
+  live_navigation: NOT TESTED
+  clearance_m: 1.9000000000000001

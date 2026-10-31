@@ -31,6 +31,10 @@ setup(
     license='Apache-2.0',
     url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_6',
     entry_points={'console_scripts': [
+        'segment_warehouse_map = turtlebot4.map_segmentation:main',
+        'semantic_map_node = turtlebot4.semantic_map_node:main',
+        'speech_recognition_node = turtlebot4.speech_recognition_node:main',
+        'voice_navigation_node = turtlebot4.voice_navigation_node:main',
         'check_simulation = turtlebot4.diagnostics:main',
         'start_slam = turtlebot4.slam_runner:main',
         'teleop = turtlebot4.teleop:main',

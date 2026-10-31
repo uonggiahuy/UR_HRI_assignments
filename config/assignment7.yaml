@@ -1,0 +1,12 @@
+speech_recognition_node:
+  ros__parameters:
+    whisper_model: base
+    microphone_device: ''
+    vad_threshold: 0.012
+voice_navigation_node:
+  ros__parameters:
+    use_sim_time: true
+    navigation_timeout: 180.0
+semantic_map_node:
+  ros__parameters:
+    use_sim_time: true
