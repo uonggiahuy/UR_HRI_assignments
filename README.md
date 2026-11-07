@@ -7,6 +7,26 @@ qua Nav2 đến chín vùng A–I trong kho. Giữ nguyên chức năng bài 4�
 Repository: [UR_HRI_assignments](https://github.com/uonggiahuy/UR_HRI_assignments),
 nhánh `assignments_7`.
 
+**Bản đồ kho đã chia vùng A–I:**
+
+![Bản đồ kho chia chín vùng ngữ nghĩa A–I và chú thích màu](maps/segmented_map.png)
+
+| Khu vực | Chú thích |
+| --- | --- |
+| A | Khu vực cửa ra vào |
+| B | Kệ linh kiện cảm biến |
+| C | Kệ linh kiện truyền động |
+| D | Kệ linh kiện điều khiển |
+| E | Khu vực đóng gói và xuất kho |
+| F | Khu vực trung tâm |
+| G | Kệ linh kiện nguồn và pin |
+| H | Sảnh vào phòng họp |
+| I | Phòng họp kỹ thuật |
+
+Màu và chữ A–I trên ảnh tương ứng với bảng trên. Dấu cộng đỏ (+) là đích
+điều hướng tiếp cận; vòng tròn là tâm vùng. Đích trên bản đồ không bảo đảm
+đường đi luôn thông thoáng; Nav2 kiểm tra đường đi và vật cản khi chạy.
+
 ## 2. Cài đặt và build
 
 Chạy trong container ROS 2 Humble / Ubuntu 22.04 đã có các dependency của dự án.
