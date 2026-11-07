@@ -32,8 +32,11 @@ def generate_launch_description():
     defaults = dict(
         regions_file=str(share / "maps/regions.yaml"),
         map_file=str(share / "maps/map.yaml"),
-        whisper_model="base",
+        whisper_model="small",
         microphone_device="",
+        recording_mode="manual",
+        language="vi",
+        max_recording_duration="30.0",
         show_markers="true",
         speech_enabled="true",
         navigation_timeout="180.0",
@@ -54,6 +57,11 @@ def generate_launch_description():
             config,
             {
                 "whisper_model": LaunchConfiguration("whisper_model"),
+                "recording_mode": LaunchConfiguration("recording_mode"),
+                "language": LaunchConfiguration("language"),
+                "max_recording_duration": ParameterValue(
+                    LaunchConfiguration("max_recording_duration"), value_type=float
+                ),
                 "microphone_device": ParameterValue(
                     LaunchConfiguration("microphone_device"), value_type=str
                 ),
@@ -94,7 +102,7 @@ def generate_launch_description():
                     on_exit=[
                         EmitEvent(
                             event=Shutdown(
-                                reason="Microphone process exited; cancel voice navigation"
+                                reason="Speech process exited; shutting down Assignment 7"
                             )
                         )
                     ],

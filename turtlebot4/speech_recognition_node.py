@@ -1,20 +1,17 @@
-"""Live microphone capture with bounded silence segmentation and CPU Whisper."""
+"""Enter-controlled microphone capture and Vietnamese CPU Whisper inference."""
 
 from collections import deque
 import os
 from pathlib import Path
-import queue
 import sys
-import threading
-import time
 
 import numpy as np
 
-from turtlebot4.voice_command_parser import TranscriptGate
+from turtlebot4.manual_recording import ManualRecorder, TerminalKeyboard
 
 
 class UtteranceBuffer:
-    """20 ms frames; bounded pre-roll, utterance length and end silence."""
+    """Legacy segmentation API retained for compatibility, unused in manual mode."""
 
     def __init__(
         self, threshold=0.012, silence_frames=35, max_frames=400, min_frames=15
@@ -98,14 +95,16 @@ def main(args=None):
     class Recognizer(Node):
         def __init__(self):
             super().__init__("speech_recognition_node")
-            model = self.declare_parameter("whisper_model", "base").value
+            model = self.declare_parameter("whisper_model", "small").value
             device = self.declare_parameter("microphone_device", "").value
             device = (
                 int(device) if device and str(device).isdigit() else (device or None)
             )
-            threshold = float(self.declare_parameter("vad_threshold", 0.012).value)
-            if not 0.001 <= threshold <= 0.5:
-                raise ValueError("Invalid VAD threshold")
+            mode = self.declare_parameter("recording_mode", "manual").value
+            language = self.declare_parameter("language", "vi").value
+            maximum = float(self.declare_parameter("max_recording_duration", 30.0).value)
+            if mode != "manual" or language != "vi":
+                raise ValueError("Use recording_mode=manual and language=vi")
             inputs = [d for d in sd.query_devices() if d["max_input_channels"] > 0]
             if not inputs:
                 raise RuntimeError(
@@ -117,6 +116,9 @@ def main(args=None):
             self.get_logger().info(
                 f'Microphone: {sd.query_devices(device, "input")["name"]}'
             )
+            self.get_logger().info(
+                f"[WHISPER] Loading multilingual model {model} (CPU INT8)..."
+            )
             self.model = WhisperModel(
                 model, device="cpu", compute_type="int8", cpu_threads=2, num_workers=1
             )
@@ -124,117 +126,57 @@ def main(args=None):
                 raise ValueError(
                     "A multilingual Whisper model is required for Vietnamese"
                 )
-            self.audio = queue.Queue(maxsize=100)
-            self.results = queue.Queue(maxsize=2)
-            self.stop = threading.Event()
-            self.inference = threading.Event()
-            self.processing_since = 0.0
-            self.buffer = UtteranceBuffer(threshold=threshold)
-            self.gate = TranscriptGate()
-            self.last_audio = time.monotonic()
-            self.fatal = None
             self.publisher = self.create_publisher(String, "/recognized_speech", 10)
-            self.stream = sd.InputStream(
-                device=device,
-                samplerate=16000,
-                channels=1,
-                dtype="float32",
-                blocksize=320,
-                callback=self.capture,
+            self.keyboard = TerminalKeyboard()
+            self.recorder = ManualRecorder(
+                stream_factory=lambda callback: sd.InputStream(
+                    device=device, samplerate=16000, channels=1, dtype="float32",
+                    blocksize=320, callback=callback,
+                ),
+                transcribe=self.transcribe,
+                publish=lambda text: self.publisher.publish(String(data=text)),
+                report=lambda text: print(text, flush=True),
+                microphone=sd.query_devices(device, "input")["name"],
+                max_duration=maximum,
             )
-            self.stream.start()
-            self.worker = threading.Thread(target=self.recognize, daemon=True)
-            self.worker.start()
-            self.create_timer(0.1, self.poll)
-            self.get_logger().info(
-                "Listening to live microphone; Vietnamese / CPU INT8"
+            self.create_timer(0.05, self.poll)
+            print(
+                "========================================\n"
+                " ASSIGNMENT 7 - VOICE NAVIGATION\n"
+                "========================================\n\n"
+                f"Microphone: READY ({self.recorder.microphone})\n"
+                f"Whisper model: {model}\nRecording mode: MANUAL\n\n"
+                "[ENTER] Start recording\n[CTRL+C] Exit\n\n"
+                "Status: WAITING FOR INPUT", flush=True,
             )
 
-        def capture(self, indata, frames, timing, status):
-            self.last_audio = time.monotonic()
-            if status:
-                self.fatal = f"Audio stream discontinuity: {status}"
-                return
-            if self.inference.is_set():
-                return
-            try:
-                self.audio.put_nowait(indata[:, 0].copy())
-            except queue.Full:
-                self.fatal = (
-                    "Audio queue overflow: utterance discarded; restart microphone"
-                )
-
-        def recognize(self):
-            while not self.stop.is_set():
-                try:
-                    frame = self.audio.get(timeout=0.2)
-                except queue.Empty:
-                    continue
-                audio = self.buffer.feed(frame)
-                if audio is None:
-                    continue
-                try:
-                    self.inference.set()
-                    self.processing_since = time.monotonic()
-                    self.get_logger().info("Recognizing one live utterance...")
-                    segments, _ = self.model.transcribe(
-                        audio,
-                        language="vi",
-                        beam_size=3,
-                        condition_on_previous_text=False,
-                        temperature=0.0,
-                        vad_filter=False,
-                    )
-                    text = " ".join(
-                        s.text.strip() for s in segments if s.no_speech_prob < 0.6
-                    ).strip()
-                    # Discard queued sound captured during inference: it cannot
-                    # become a delayed mission after a previous utterance.
-                    while not self.audio.empty():
-                        try:
-                            self.audio.get_nowait()
-                        except queue.Empty:
-                            break
-                    self.buffer.reset()
-                    if text and self.gate.accept(text, time.monotonic()):
-                        self.results.put_nowait(text)
-                    elif not text:
-                        self.get_logger().info(
-                            "Empty recognition; no command published"
-                        )
-                except Exception as exc:
-                    self.fatal = f"Recognizer error: {exc}"
-                    return
-                finally:
-                    self.inference.clear()
-                    self.processing_since = 0.0
+        def transcribe(self, audio):
+            segments, info = self.model.transcribe(
+                audio, language="vi", beam_size=3,
+                condition_on_previous_text=False, temperature=0.0, vad_filter=False,
+            )
+            segments = list(segments)
+            accepted = [s for s in segments if s.no_speech_prob < 0.6]
+            print(
+                f"[WHISPER] Inference finished: language={info.language}; "
+                f"segments={len(segments)}; low-confidence rejected={len(segments) - len(accepted)}",
+                flush=True,
+            )
+            return " ".join(s.text.strip() for s in accepted).strip()
 
         def poll(self):
-            if (
-                self.inference.is_set()
-                and time.monotonic() - self.processing_since > 20.0
-            ):
-                raise RuntimeError("Recognizer inference timed out after 20 seconds")
-            if (
-                self.fatal
-                or time.monotonic() - self.last_audio > 3.0
-                or not self.stream.active
-            ):
-                raise RuntimeError(
-                    self.fatal or "Microphone disconnected or audio capture timed out"
-                )
-            try:
-                text = self.results.get_nowait()
-            except queue.Empty:
-                return
-            self.get_logger().info("Recognized Vietnamese (LIVE): " + text)
-            self.publisher.publish(String(data=text))
+            # Drain terminal events before accepting a completed inference. Keys
+            # typed while busy must never become a delayed recording request.
+            was_busy = self.recorder.state != "WAITING"
+            if self.keyboard.enter():
+                self.recorder.enter()
+            self.recorder.poll()
+            if was_busy and self.recorder.state == "WAITING":
+                self.keyboard.discard()
 
         def close(self):
-            self.stop.set()
-            self.stream.stop()
-            self.stream.close()
-            self.worker.join(timeout=5.0)
+            self.keyboard.close()
+            self.recorder.close()
 
     rclpy.init(args=args)
     node = None
