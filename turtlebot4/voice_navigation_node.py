@@ -2,6 +2,7 @@
 
 import json
 import math
+from collections import Counter, deque
 from pathlib import Path
 import queue
 import threading
@@ -30,6 +31,12 @@ from turtlebot4.navigation_diagnostics import (
     wait_for_readiness,
 )
 from turtlebot4.voice_command_parser import TranscriptGate, VoiceCommandParser
+
+
+CALLBACK_SERVICE_BUDGET_SEC = 0.05
+CALLBACK_WAIT_SEC = 0.005
+MAX_CALLBACK_SERVICE_SPINS = 256
+COSTMAP_MAX_AGE_SEC = 3.0
 
 
 def goal_pose(item, stamp):
@@ -108,8 +115,21 @@ class MissionExecutor:
 
 
 class VoiceProbe(NavigationProbe):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, wall_stall_timeout=2.5):
+        # Live Gazebo pauses reached 2.047 s with almost unchanged sim stamps.
+        # Measurement age remains limited to 1 sim second; this bounds a stall
+        # even when simulation time stops or advances extremely slowly.
+        if not math.isfinite(wall_stall_timeout) or not 1.0 <= wall_stall_timeout <= 5.0:
+            raise ValueError("sensor_wall_stall_timeout must be 1..5 seconds")
+        self.wall_stall_timeout = wall_stall_timeout
+        self.callback_counts = Counter()
+        self.scan_intervals = deque(maxlen=128)
+        self.service_diagnostics = {}
+        self.last_guard_wall = None
+        self.last_clock_progress_wall = None
+        self.previous_clock_stamp = None
+        self.clock_consistent = True
+        super().__init__(independent_tf=True)
         self.docked, self.dock_received, self.hazards, self.hazard_received = (
             None,
             0.0,
@@ -136,11 +156,87 @@ class VoiceProbe(NavigationProbe):
         self.navigation_status = msg.status_list
 
     def record(self, key, msg):
+        previous = self.received.get(key)
         super().record(key, msg)
+        self.callback_counts[key] += 1
+        if key == "scan" and previous is not None:
+            self.scan_intervals.append(self.received[key] - previous)
         if key == "clock":
+            stamp = self.clock_samples[-1]
+            if self.previous_clock_stamp is None or stamp > self.previous_clock_stamp:
+                self.last_clock_progress_wall = self.received[key]
+            if self.previous_clock_stamp is not None:
+                self.clock_consistent &= stamp >= self.previous_clock_stamp
+            self.previous_clock_stamp = stamp
             del self.clock_samples[:-200]
         if key in self.costmap_samples:
             del self.costmap_samples[key][:-100]
+
+    def service_callbacks(self):
+        """Give queued sensors a bounded turn before inspecting freshness.
+
+        spin_once executes just one callback: after a worker delay it can deliver
+        a fresh clock while scan/odom are still queued. Sensor caches and mission
+        checks stay on this worker; TF has an independent, thread-safe Buffer.
+        """
+        started = time.monotonic()
+        previous = self.service_diagnostics.get("finished_wall", started)
+        executor = rclpy.get_global_executor()
+        added = executor.add_node(self)
+        calls = 0
+        try:
+            # Start the servicing budget after the first callback: an OS/worker
+            # delay inside that wait must not consume the whole recovery turn.
+            rclpy.spin_once(self, executor=executor, timeout_sec=CALLBACK_WAIT_SEC)
+            calls += 1
+            deadline = time.monotonic() + CALLBACK_SERVICE_BUDGET_SEC
+            while calls < MAX_CALLBACK_SERVICE_SPINS and time.monotonic() < deadline:
+                executor.spin_once(timeout_sec=CALLBACK_WAIT_SEC)
+                calls += 1
+        finally:
+            if added:
+                executor.remove_node(self)
+        self.service_diagnostics = {
+            "spin_calls": calls,
+            "duration_wall": time.monotonic() - started,
+            "gap_wall": started - previous,
+            "finished_wall": time.monotonic(),
+        }
+
+    def timing_diagnostics(self, now=None):
+        now = time.monotonic() if now is None else now
+        sim = self.clock_samples[-1] if self.clock_samples else None
+        stamps = {
+            key: seconds(self.messages[key].header.stamp)
+            if key in self.messages else None for key in ("scan", "odom")
+        }
+        return {
+            "wall": now,
+            "wall_stall_timeout": self.wall_stall_timeout,
+            "callback_age_wall": {key: now - self.received[key]
+                                  if key in self.received else None
+                                  for key in ("scan", "clock", "odom")},
+            "message_stamp": stamps,
+            "simulation_clock": sim,
+            "clock_progress_age_wall": now - self.last_clock_progress_wall
+            if self.last_clock_progress_wall is not None else None,
+            "clock_consistent": self.clock_consistent,
+            "scan_age_sim": sim - stamps["scan"]
+            if sim is not None and stamps["scan"] is not None else None,
+            "scan_interval_wall_last": self.scan_intervals[-1]
+            if self.scan_intervals else None,
+            "scan_interval_wall_max": max(self.scan_intervals, default=None),
+            "callback_counts": dict(self.callback_counts),
+            "executor_service": dict(self.service_diagnostics),
+            "guard_interval_wall": now - self.last_guard_wall
+            if self.last_guard_wall is not None else None,
+        }
+
+    def stale(self, reason, timing):
+        self.get_logger().error(json.dumps({
+            "reason": reason, "timing": timing
+        }))
+        raise RuntimeError(reason)
 
     def dock_cb(self, msg):
         self.docked, self.dock_received = msg.is_docked, time.monotonic()
@@ -152,11 +248,14 @@ class VoiceProbe(NavigationProbe):
 
     def guard(self):
         now = time.monotonic()
-        if self.docked is not False or now - self.dock_received > 2.0:
+        timing = self.timing_diagnostics(now)
+        self.last_guard_wall = now
+        status_limit = max(2.0, self.wall_stall_timeout)
+        if self.docked is not False or now - self.dock_received > status_limit:
             raise RuntimeError(
                 "Robot not verifiably undocked; /dock_status absent or stale"
             )
-        if now - self.hazard_received > 2.0 or any(
+        if now - self.hazard_received > status_limit or any(
             h in (1, 2, 3, 4) for h in self.hazards
         ):
             raise RuntimeError("Robot hazard data absent, stale or unsafe")
@@ -184,21 +283,28 @@ class VoiceProbe(NavigationProbe):
         ):
             raise RuntimeError("Competing velocity publisher")
         for key in ("clock", "scan", "odom", "pose", "global", "local"):
-            limit = 3.0 if key in ("pose", "global", "local") else 1.0
+            limit = COSTMAP_MAX_AGE_SEC if key in ("pose", "global", "local") else self.wall_stall_timeout
+            if key in ("global", "local"):
+                # A permitted pause adds wall time without aging the grid in ROS
+                # time. Keep its existing 3 s sim-age check and bound total wall
+                # silence by that publication window plus one permitted stall.
+                limit += self.wall_stall_timeout
             if key not in self.messages or now - self.received.get(key, 0.0) > limit:
                 # AMCL may be sparse at rest; the inherited timestamp policy below
                 # permits stationary estimates while advancing TF remains required.
                 if key != "pose":
-                    raise RuntimeError(f"Stale {key}")
+                    self.stale(f"Stale {key}", timing)
         sim = self.clock_samples[-1] if self.clock_samples else 0.0
         if (
             len(self.clock_samples) < 5
-            or self.clock_samples[-1] <= self.clock_samples[-5]
+            or not self.clock_consistent
+            or self.last_clock_progress_wall is None
+            or now - self.last_clock_progress_wall > self.wall_stall_timeout
         ):
-            raise RuntimeError("Simulation clock not advancing")
+            self.stale("Simulation clock not advancing", timing)
         for key in ("scan", "odom"):
             if abs(sim - seconds(self.messages[key].header.stamp)) > 1.0:
-                raise RuntimeError(f"Stale {key} measurement")
+                self.stale(f"Stale {key} measurement", timing)
         pose = self.messages.get("pose")
         if pose is None or not covariance_health(pose)["acceptable"]:
             raise RuntimeError("Localization uncertain or uninitialized")
@@ -209,7 +315,10 @@ class VoiceProbe(NavigationProbe):
         ]:
             tf = self.buffer.lookup_transform(parent, child, rclpy.time.Time())
             if abs(sim - seconds(tf.header.stamp)) > 0.6:
-                raise RuntimeError("Localization transform stale")
+                timing["tf"] = {"parent": parent, "child": child,
+                                "stamp": seconds(tf.header.stamp),
+                                "age_sim": sim - seconds(tf.header.stamp)}
+                self.stale("Localization transform stale", timing)
         tf = self.buffer.lookup_transform("map", "base_link", rclpy.time.Time())
         observations = self.odom_observations
         stationary = (
@@ -258,7 +367,9 @@ class VoiceNavigationNode(Node):
         self.jobs = queue.Queue(maxsize=1)
         self.events = self.create_publisher(String, "/assignment7/state", 10)
         self.create_subscription(String, "/recognized_speech", self.recognized, 10)
-        self.probe = VoiceProbe()
+        self.probe = VoiceProbe(float(self.declare_parameter(
+            "sensor_wall_stall_timeout", 2.5
+        ).value))
         self.goal_handle = self.pending = None
         self.worker = threading.Thread(target=self.work, name="assignment7-mission")
         self.worker.start()
@@ -313,7 +424,7 @@ class VoiceNavigationNode(Node):
                 raise TimeoutError("Action response/result deadline exceeded")
             if interruptible:
                 self.check_cancel()
-            rclpy.spin_once(self.probe, timeout_sec=0.03)
+            self.probe.service_callbacks()
             if guard:
                 self.probe.guard()
         result = future.result()
@@ -476,6 +587,7 @@ class VoiceNavigationNode(Node):
                 try:
                     ids = self.jobs.get(timeout=0.1)
                 except queue.Empty:
+                    self.probe.service_callbacks()
                     continue
                 try:
                     self.status("VALIDATING")

@@ -175,7 +175,7 @@ def classify_path_rejection(overlap, fresh=True):
 
 
 class NavigationProbe(Node):
-    def __init__(self, namespace='', registration=None):
+    def __init__(self, namespace='', registration=None, independent_tf=False):
         reference = json.loads(Path(registration).read_text()) if registration else None
         if reference is not None:
             validate_registration(reference)
@@ -194,7 +194,16 @@ class NavigationProbe(Node):
         self.tf_samples = []
         self.odom_observations = deque()
         self.buffer = Buffer(node=self)
-        self.listener = TransformListener(self.buffer, self)
+        # A mission worker may wait on services or validate a large map. An
+        # independent TF-only node keeps its thread-safe Buffer current without
+        # concurrently spinning the probe's Python measurement caches.
+        self.tf_listener_node = (Node(
+            self.get_name() + '_tf_listener', namespace=normalized,
+            context=self.context, use_global_arguments=False,
+            cli_args=['--ros-args', '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'])
+            if independent_tf else None)
+        self.listener = TransformListener(
+            self.buffer, self.tf_listener_node or self, spin_thread=independent_tf)
         self.subscriptions_owned = []
         for key, cls, topic, qos in [
             ('clock', Clock, '/clock', 10),
@@ -212,6 +221,18 @@ class NavigationProbe(Node):
             self.subscriptions_owned.append(self.create_subscription(
                 cls, topic, lambda msg, key=key: self.record(key, msg), qos))
         self.action = ActionClient(self, NavigateToPose, self.topic('navigate_to_pose'))
+
+    def destroy_node(self):
+        if self.tf_listener_node is not None:
+            if not self.listener.executor.shutdown(timeout_sec=2.0):
+                raise RuntimeError('TF listener executor did not stop')
+            self.listener.dedicated_listener_thread.join(timeout=2.0)
+            if self.listener.dedicated_listener_thread.is_alive():
+                raise RuntimeError('TF listener thread did not stop')
+            self.listener.unregister()
+            self.tf_listener_node.destroy_node()
+            self.tf_listener_node = None
+        return super().destroy_node()
 
     def topic(self, name):
         return self.prefix + '/' + name
