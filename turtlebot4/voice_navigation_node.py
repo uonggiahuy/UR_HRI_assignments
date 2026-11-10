@@ -21,7 +21,7 @@ from std_msgs.msg import String
 from std_srvs.srv import Empty
 
 from turtlebot4.diagnostics import seconds
-from turtlebot4.localization_health import covariance_health, pose_time_health, yaw
+from turtlebot4.localization_health import covariance_health, pose_time_health, yaw, MAX_POSE_AGE_SEC
 from turtlebot4.map_segmentation import load_regions
 from turtlebot4.navigation_diagnostics import (
     NavigationProbe,
@@ -153,6 +153,30 @@ class VoiceProbe(NavigationProbe):
 
     def action_status(self, msg):
         self.navigation_status = msg.status_list
+
+    def maintain_active_pose(self):
+        """Keep real AMCL measurements current while an action may resume motion.
+
+        AMCL gates updates on net displacement. Oscillation or a Nav2 wait can
+        leave an old pose before motion resumes. Request actual scan processing
+        once per old estimate, asynchronously, without extending its deadline.
+        """
+        pose = self.messages.get("pose")
+        if pose is None or not self.clock_samples:
+            return
+        stamp = seconds(pose.header.stamp)
+        if self.clock_samples[-1] - stamp < MAX_POSE_AGE_SEC / 2:
+            return
+        pending = getattr(self, "moving_pose_update", None)
+        if pending is not None and not pending.done():
+            return
+        if stamp == getattr(self, "moving_pose_requested_stamp", None):
+            return
+        client = self.service_clients.get((Empty, "/request_nomotion_update"))
+        if client is None or not client.service_is_ready():
+            return  # The unchanged guard terminates if no fresh estimate arrives.
+        self.moving_pose_requested_stamp = stamp
+        self.moving_pose_update = client.call_async(Empty.Request())
 
     def record(self, key, msg):
         previous = self.received.get(key)
@@ -337,6 +361,9 @@ class VoiceProbe(NavigationProbe):
         )
         if not pose_timing["acceptable"]:
             timing["localization_timestamp"] = pose_timing
+            timing["stationary_observed"] = stationary
+            twist = self.messages["odom"].twist.twist
+            timing["odom_velocity"] = [twist.linear.x, twist.linear.y, twist.angular.z]
             self.stale("AMCL timestamp inconsistent with current localization", timing)
         for key in ("global", "local"):
             validate_costmap_freshness(self.messages[key], sim)
@@ -424,6 +451,7 @@ class VoiceNavigationNode(Node):
                 self.check_cancel()
             self.probe.service_callbacks()
             if guard:
+                self.probe.maintain_active_pose()
                 self.probe.guard()
         result = future.result()
         if result is None:
