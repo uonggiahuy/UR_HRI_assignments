@@ -36,7 +36,6 @@ from turtlebot4.voice_command_parser import TranscriptGate, VoiceCommandParser
 CALLBACK_SERVICE_BUDGET_SEC = 0.05
 CALLBACK_WAIT_SEC = 0.005
 MAX_CALLBACK_SERVICE_SPINS = 256
-COSTMAP_MAX_AGE_SEC = 3.0
 
 
 def goal_pose(item, stamp):
@@ -215,7 +214,7 @@ class VoiceProbe(NavigationProbe):
             "wall_stall_timeout": self.wall_stall_timeout,
             "callback_age_wall": {key: now - self.received[key]
                                   if key in self.received else None
-                                  for key in ("scan", "clock", "odom")},
+                                  for key in ("scan", "clock", "odom", "global", "local")},
             "message_stamp": stamps,
             "simulation_clock": sim,
             "clock_progress_age_wall": now - self.last_clock_progress_wall
@@ -282,18 +281,14 @@ class VoiceProbe(NavigationProbe):
             for p in self.get_publishers_info_by_topic("/cmd_vel")
         ):
             raise RuntimeError("Competing velocity publisher")
-        for key in ("clock", "scan", "odom", "pose", "global", "local"):
-            limit = COSTMAP_MAX_AGE_SEC if key in ("pose", "global", "local") else self.wall_stall_timeout
-            if key in ("global", "local"):
-                # A permitted pause adds wall time without aging the grid in ROS
-                # time. Keep its existing 3 s sim-age check and bound total wall
-                # silence by that publication window plus one permitted stall.
-                limit += self.wall_stall_timeout
-            if key not in self.messages or now - self.received.get(key, 0.0) > limit:
-                # AMCL may be sparse at rest; the inherited timestamp policy below
-                # permits stationary estimates while advancing TF remains required.
-                if key != "pose":
-                    self.stale(f"Stale {key}", timing)
+        for key in ("clock", "scan", "odom", "global", "local"):
+            # Costmaps age in ROS time below. Several short Gazebo pauses can
+            # span one grid publication without aging the grid in simulation.
+            # The independent clock/scan/odom wall guards still bound stalls.
+            wall_stale = (key in ("clock", "scan", "odom")
+                          and now - self.received.get(key, 0.0) > self.wall_stall_timeout)
+            if key not in self.messages or wall_stale:
+                self.stale(f"Stale {key}", timing)
         sim = self.clock_samples[-1] if self.clock_samples else 0.0
         if (
             len(self.clock_samples) < 5
@@ -306,8 +301,10 @@ class VoiceProbe(NavigationProbe):
             if abs(sim - seconds(self.messages[key].header.stamp)) > 1.0:
                 self.stale(f"Stale {key} measurement", timing)
         pose = self.messages.get("pose")
-        if pose is None or not covariance_health(pose)["acceptable"]:
-            raise RuntimeError("Localization uncertain or uninitialized")
+        covariance = covariance_health(pose) if pose is not None else {"acceptable": False}
+        timing["localization_covariance"] = covariance
+        if not covariance["acceptable"]:
+            self.stale("Localization uncertain or uninitialized", timing)
         for parent, child in [
             ("map", "odom"),
             ("odom", "base_link"),
@@ -326,7 +323,7 @@ class VoiceProbe(NavigationProbe):
             and observations[-1][0] - observations[0][0] >= 2.0
             and all(stopped for _, stopped in observations)
         )
-        timing = pose_time_health(
+        pose_timing = pose_time_health(
             pose,
             sim,
             self.messages["scan"],
@@ -338,8 +335,9 @@ class VoiceProbe(NavigationProbe):
             ),
             stationary,
         )
-        if not timing["acceptable"]:
-            raise RuntimeError("AMCL timestamp inconsistent with current localization")
+        if not pose_timing["acceptable"]:
+            timing["localization_timestamp"] = pose_timing
+            self.stale("AMCL timestamp inconsistent with current localization", timing)
         for key in ("global", "local"):
             validate_costmap_freshness(self.messages[key], sim)
 

@@ -126,8 +126,9 @@ def test_missing_scan_still_terminates_with_timing_evidence(
     (2.6, 2.6, 'Stale clock'),
     (.01, 2.6, 'Simulation clock not advancing'),
 ])
+@pytest.mark.parametrize('costmap_phase_wall', [2.0, 8.0])
 def test_simulation_pause_is_bounded_and_localization_remains_required(
-    clock_age, progress_age, reason
+    clock_age, progress_age, reason, costmap_phase_wall
 ):
     from collections import Counter, deque
 
@@ -149,7 +150,9 @@ def test_simulation_pause_is_bounded_and_localization_remains_required(
         get_logger=lambda: SimpleNamespace(error=lambda _: None),
     )
     # Measured global publications were ~2 s apart despite a 1 Hz setting.
-    probe.received['global'] = probe.received['local'] = now - clock_age - 2.0
+    # Multiple short pauses may occur between publications; ROS-time grid age
+    # remains 30 ms. Wall silence must not outrank the clock/sensor guards.
+    probe.received['global'] = probe.received['local'] = now - clock_age - costmap_phase_wall
     probe.timing_diagnostics = lambda t: VoiceProbe.timing_diagnostics(probe, t)
     probe.stale = lambda reason, timing: VoiceProbe.stale(probe, reason, timing)
     with pytest.raises(RuntimeError, match=reason):
