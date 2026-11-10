@@ -47,9 +47,17 @@ kết nối micro của host. Trong **mỗi terminal mới**, chạy:
 cd /root/ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
+source src/turtlebot4/scripts/simulation_environment.bash
 ```
 
 ## 3. Cách chạy
+
+Script môi trường giới hạn Ignition và Cyclone DDS vào loopback cho mô phỏng
+trên cùng máy, tránh lỗi discovery khi có Wi-Fi/VPN/nhiều card mạng. Chạy trong
+**mọi terminal mô phỏng**, kể cả RViz và Assignment 7; không dùng cho robot thật
+hoặc ROS phân tán. Giữ nguyên `IGN_IP`/`CYCLONEDDS_URI` nếu đã đặt riêng; khi
+chẩn đoán cấu hình cũ, mở shell mới và kiểm tra hai biến này. NVIDIA, webcam,
+micro và môi trường Whisper không bị thay đổi.
 
 **Terminal 1 — Gazebo**, giữ chạy:
 
