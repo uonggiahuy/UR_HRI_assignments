@@ -21,16 +21,26 @@ from turtlebot4.gesture_logic import LABELS
 
 
 class RobotBehavior(Node):
+    NODE_NAME = 'robot_behavior_node'
+    SIGNAL_TOPIC = '/detected_gesture'
+    STATE_TOPIC = '/assignment6/state'
+    EXTRA_DEFAULTS = {}
+
+    def make_behavior(self):
+        return Behavior(Limits(**{k: self.o[k] for k in Limits.__dataclass_fields__}))
+
     def __init__(self):
-        super().__init__('robot_behavior_node')
-        self.o = {k: self.declare_parameter(k, v).value for k, v in dict(
+        super().__init__(self.NODE_NAME)
+        defaults = dict(
             cmd_topic='/cmd_vel', signal_timeout=.7, sensor_timeout=1.,
             speed=.06, angular_speed=.25, distance=.12, radius=.35,
             greeting_angle=.35, selection_timeout=8., segment_timeout=65.,
-            position_tolerance=.06).items()}
+            position_tolerance=.06)
+        defaults.update(self.EXTRA_DEFAULTS)
+        self.o = {k: self.declare_parameter(k, v).value for k, v in defaults.items()}
         if not .1 <= self.o['signal_timeout'] <= 2. or not .1 <= self.o['sensor_timeout'] <= 2.:
             raise ValueError('Watchdog timeout outside .1–2 seconds')
-        self.behavior = Behavior(Limits(**{k: self.o[k] for k in Limits.__dataclass_fields__}))
+        self.behavior = self.make_behavior()
         self.seen = {}
         self.pose = None
         self.velocity = (0., 0.)
@@ -49,8 +59,8 @@ class RobotBehavior(Node):
         self.progress_time = 0.
         self.settling_started = self.stationary_since = None
         self.publisher = self.create_publisher(Twist, self.o['cmd_topic'], qos_profile_sensor_data)
-        self.status = self.create_publisher(String, '/assignment6/state', 1)
-        self.create_subscription(String, '/detected_gesture', self.gesture, 1)
+        self.status = self.create_publisher(String, self.STATE_TOPIC, 1)
+        self.create_subscription(String, self.SIGNAL_TOPIC, self.gesture, 1)
         for kind, topic, callback in [
             (Odometry, '/odom', self.odom), (LaserScan, '/scan', self.lidar),
             (ClockMessage, '/clock', self.clock), (DockStatus, '/dock_status', self.dock),
@@ -151,7 +161,7 @@ class RobotBehavior(Node):
         if any(p.node_name != 'motion_control' for p in downstream):
             self.readiness_reason = 'Conflicting downstream velocity publisher'
             return False
-        if len(self.get_publishers_info_by_topic('/detected_gesture')) != 1:
+        if len(self.get_publishers_info_by_topic(self.SIGNAL_TOPIC)) != 1:
             self.readiness_reason = 'Need exactly one gesture publisher'
             return False
         ready = any(p.node_name == 'motion_control' for p in self.get_subscriptions_info_by_topic(self.o['cmd_topic']))
@@ -212,12 +222,12 @@ class RobotBehavior(Node):
         safe = self.safe()
         b = self.behavior
         if b.state == 'SETTLING':
-            if not safe or now-self.settling_started > 3.:
+            if not safe or now-self.settling_started > self.o.get('settling_timeout', 3.):
                 b.abort('Final stationary verification failed')
-            elif max(abs(v) for v in self.velocity) < .01:
+            elif max(abs(v) for v in self.velocity) < self.o.get('stop_tolerance', .01):
                 if self.stationary_since is None:
                     self.stationary_since = now
-                if now-self.stationary_since >= .3:
+                if now-self.stationary_since >= self.o.get('settling_duration', .3):
                     b.abort('Completed; odometry and stationary stop verified', idle=True)
             else:
                 self.stationary_since = None

@@ -1,160 +1,117 @@
-# Assignment 7 — Điều hướng TurtleBot 4 bằng giọng nói
+# Bài 8 — Điều khiển TurtleBot 4 bằng biểu cảm khuôn mặt
 
 ## 1. Giới thiệu
 
-Nhận lệnh tiếng Việt bằng micro và Whisper `small` đa ngôn ngữ (CPU INT8), sau đó điều hướng
-qua Nav2 đến chín vùng A–I trong kho. Giữ nguyên chức năng bài 4–6.
-Repository: [UR_HRI_assignments](https://github.com/uonggiahuy/UR_HRI_assignments),
-nhánh `assignments_7`.
-
-**Bản đồ kho đã chia vùng A–I:**
-
-![Bản đồ kho chia chín vùng ngữ nghĩa A–I và chú thích màu](maps/segmented_map.png)
-
-| Khu vực | Chú thích |
-| --- | --- |
-| A | Khu vực cửa ra vào |
-| B | Kệ linh kiện cảm biến |
-| C | Kệ linh kiện truyền động |
-| D | Kệ linh kiện điều khiển |
-| E | Khu vực đóng gói và xuất kho |
-| F | Khu vực trung tâm |
-| G | Kệ linh kiện nguồn và pin |
-| H | Sảnh vào phòng họp |
-| I | Phòng họp kỹ thuật |
-
-Màu và chữ A–I trên ảnh tương ứng với bảng trên. Dấu cộng đỏ (+) là đích
-điều hướng tiếp cận; vòng tròn là tâm vùng. Đích trên bản đồ không bảo đảm
-đường đi luôn thông thoáng; Nav2 kiểm tra đường đi và vật cản khi chạy.
+Webcam thật nhận dạng sáu biểu cảm bằng FER trên CPU, hiển thị khung mặt,
+độ tin cậy, tốc độ xử lý, hành động và trạng thái an toàn. Đây là dự đoán
+**biểu cảm nhìn thấy**, không phải kết luận về cảm xúc thật của con người.
+Chỉ dùng mô phỏng TurtleBot 4 Standard trong **đúng world Bài 6**
+`worlds/assignment6_open.sdf`, giữ nguyên tệp; không cần bản đồ hay điều hướng.
 
 ## 2. Cài đặt và build
 
-Chạy trong container ROS 2 Humble / Ubuntu 22.04 đã có các dependency của dự án.
-Từ host, mở mỗi terminal bằng `docker exec -it ros_humble_env bash`.
+Từ máy chủ, mở hai terminal vào container ROS hiện có:
+
+```bash
+docker exec -it ros_humble_env bash
+```
+
+Trong container, chạy một lần, khi webcam chưa bị chương trình khác sử dụng:
 
 ```bash
 cd /root/ros2_ws
 source /opt/ros/humble/setup.bash
-bash src/turtlebot4/scripts/prepare_assignment7_runtime.sh
+bash src/turtlebot4/scripts/prepare_assignment8_runtime.sh
 colcon build --symlink-install --packages-select turtlebot4
 source install/setup.bash
 ```
 
-Script cài môi trường Whisper riêng; lần đầu tải model cần mạng. Container cần
-kết nối micro của host. Trong **mỗi terminal mới**, chạy:
+Môi trường FER riêng ở `~/.cache/turtlebot4/emotion-venv`; không thay môi trường
+Whisper, MediaPipe hay Python hệ thống. Webcam cần được cấp vào container ở
+`/dev/video0`; cửa sổ cần kết nối màn hình X11 sẵn có.
+
+## 3. Cách chạy
+
+**Terminal 1 — giữ chạy Gazebo và một robot bằng quy trình mô phỏng Bài 6:**
 
 ```bash
 cd /root/ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 source src/turtlebot4/scripts/simulation_environment.bash
+ros2 launch turtlebot4 turtlebot4.launch.py world:=assignment6_open model:=standard rviz:=false
 ```
 
-## 3. Cách chạy
-
-Script môi trường giới hạn Ignition và Cyclone DDS vào loopback cho mô phỏng
-trên cùng máy, tránh lỗi discovery khi có Wi-Fi/VPN/nhiều card mạng. Chạy trong
-**mọi terminal mô phỏng**, kể cả RViz và Assignment 7; không dùng cho robot thật
-hoặc ROS phân tán. Giữ nguyên `IGN_IP`/`CYCLONEDDS_URI` nếu đã đặt riêng; khi
-chẩn đoán cấu hình cũ, mở shell mới và kiểm tra hai biến này. NVIDIA, webcam,
-micro và môi trường Whisper không bị thay đổi.
-
-**Terminal 1 — Gazebo**, giữ chạy:
+**Terminal 2 — chờ robot xuất hiện, undock một lần rồi chạy Bài 8:**
 
 ```bash
-ros2 launch turtlebot4 turtlebot4.launch.py world:=warehouse model:=standard rviz:=false
+cd /root/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+source src/turtlebot4/scripts/simulation_environment.bash
+ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}'
+ros2 launch turtlebot4 assignment8.launch.py
 ```
 
-**Terminal 2 — Map Server và AMCL**, giữ chạy:
+Chờ undock trả về `SUCCEEDED`. Nếu robot đã undock thì bỏ qua lệnh đó.
+Launch Bài 8 chỉ mở nhận dạng và bộ điều khiển, không mở thêm Gazebo/robot.
+Không chạy bộ điều khiển Bài 6, Bài 5/7, Nav2 hoặc teleop cùng lúc.
+
+Nhìn thẳng webcam với **Neutral** ổn định để chuẩn bị. Giữ biểu cảm tiếp theo
+ít nhất bốn lần suy luận có độ tin cậy từ 0,65. Mỗi biểu cảm chỉ kích hoạt
+một chuyển động; sau khi robot dừng, trở về Neutral rồi mới chọn biểu cảm khác.
+Neutral trong lúc chạy hủy hành động và kiểm tra robot đã đứng yên.
+Mất mặt quá 0,7 giây, nhiều mặt, mất webcam hoặc dữ liệu an toàn không hợp lệ
+sẽ ngăn/dừng chuyển động. Nếu vừa dừng do lỗi, trở về Neutral để chuẩn bị lại.
+
+Tham số tùy chọn: `camera_device:=/dev/video0`, `emotion_model:=fer`,
+`confidence_threshold:=0.65`, `show_camera:=true`, `use_sim_time:=true`.
+Giới hạn chuyển động và thời gian nằm trong `config/assignment8.yaml`.
+Không hạ các điều kiện an toàn để ép robot chạy.
+
+## 4. Các biểu cảm và hành động
+
+| Biểu cảm | Hành động mặc định |
+|---|---|
+| Happy | Cung trái nhẹ, dài 0,25 m, bán kính 0,50 m |
+| Sad | Cung phải nhẹ, dài 0,25 m, bán kính 0,50 m |
+| Neutral | Dừng, giữ đứng yên |
+| Angry | Lùi 0,10 m nếu đủ khoảng trống phía sau |
+| Surprise | Quay trái tại chỗ khoảng 360°, đo bằng odometry |
+| Fear | Tiến 0,10 m |
+
+Vận tốc tiến/lùi tối đa 0,06 m/s, quay tại chỗ 0,25 rad/s. LiDAR phải đủ
+360° và toàn bộ vùng quét phải có khoảng trống; dữ liệu không biết sẽ bị từ chối.
+Robot vẫn chịu các bảo vệ va chạm và giới hạn lùi của Create 3.
+
+## 5. Kiểm tra và dừng chương trình
+
+Trong terminal phụ đã source cùng môi trường:
 
 ```bash
-ros2 run turtlebot4 start_localization
+ros2 topic echo /detected_emotion
+ros2 topic echo /assignment8/state
+ros2 topic info /cmd_vel --verbose
 ```
 
-**Terminal 3 — RViz**, giữ chạy:
+Dừng các lệnh theo dõi bằng Ctrl+C. Kiểm tra `ready`, `readiness_reason` và
+`reason` nếu robot không nhận lệnh. Không coi việc xuất hiện `/cmd_vel` là
+bằng chứng robot đã thực hiện hành động; cần quan sát Gazebo và odometry.
+Bộ nhận dạng có thể nhầm hoặc không nhận ra một số biểu cảm, tùy ánh sáng/góc mặt.
+
+Nhấn **q/Esc** trong cửa sổ webcam hoặc **Ctrl+C ở Terminal 2** để đóng Bài 8
+và gửi lệnh dừng; sau đó **Ctrl+C ở Terminal 1** để dừng mô phỏng.
+
+Kiểm thử tự động dùng dữ liệu giả lập, tách biệt với kiểm chứng webcam thật:
 
 ```bash
-rviz2 -d "$(ros2 pkg prefix turtlebot4)/share/turtlebot4/rviz/assignment7.rviz" \
-  --ros-args -r __node:=assignment7_rviz -p use_sim_time:=true
+cd /root/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+source src/turtlebot4/scripts/simulation_environment.bash
+source /root/.cache/turtlebot4/tf2-0.25.24/install/setup.bash
+colcon test --packages-select turtlebot4 --event-handlers console_direct+
+colcon test-result --test-result-base build/turtlebot4 --verbose
 ```
 
-Trước khi mở RViz, nếu robot còn dock, kiểm tra phía sau trống rồi chạy một lần:
-
-```bash
-ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}' --feedback
-ros2 topic echo /dock_status --once
-```
-
-Đợi undock `SUCCEEDED`, dock status `false`. Trong RViz chọn **2D Pose Estimate**,
-đặt đúng vị trí và hướng **hiện tại**; kiểm tra LiDAR khớp map. Không mở thêm
-RViz trùng lặp. Sau mỗi lần restart Gazebo phải định vị lại trong cùng world.
-
-**Terminal 4 — kiểm tra định vị rồi chạy Nav2**, giữ lệnh cuối chạy:
-
-```bash
-ros2 run turtlebot4 prepare_navigation --timeout 45
-ros2 run turtlebot4 check_localization --timeout 20 --json
-ros2 run turtlebot4 start_navigation --timeout 45
-```
-
-Chỉ tiếp tục khi kiểm tra thành công. Dừng teleop, gesture và waypoint trước
-khi dùng giọng nói; không chạy SLAM cùng AMCL.
-
-**Terminal 5 — Assignment 7**, giữ chạy trong terminal tương tác:
-
-```bash
-ros2 launch turtlebot4 assignment7.launch.py
-```
-
-## 4. Sử dụng giọng nói
-
-1. Đợi `Microphone: READY` và `Status: WAITING FOR INPUT` ở Terminal 5.
-2. Nhấn **Enter** để bắt đầu ghi âm.
-3. Nói một lệnh tiếng Việt.
-4. Nhấn **Enter** lần nữa để dừng và gửi toàn bộ đoạn âm thanh cho Whisper.
-5. Đợi `[WHISPER] Recognized: ...` và `[ROS] Published: /recognized_speech`.
-6. Quan sát robot và `/assignment7/state`; đợi nhiệm vụ hoàn thành trước lệnh mới.
-7. Khi thấy `[READY]`, có thể ghi câu tiếp theo. Enter trong lúc nhận dạng bị bỏ qua.
-
-Ví dụ: “Đi đến khu vực F”, “Đi đến khu nguồn”, “Đi đến phòng họp”,
-“Đi từ khu G đến khu H”, “Dừng lại”. Lệnh hủy được nhận cả khi đang điều hướng.
-Giới hạn mặc định 30 giây; đoạn quá dài, rỗng hoặc im lặng bị loại.
-Có thể chọn micro và giới hạn khi launch:
-
-```bash
-ros2 launch turtlebot4 assignment7.launch.py microphone_device:=0 max_recording_duration:=20.0
-```
-
-Model mặc định `small` đã nhận đúng câu “Đi đến khu vực F” khi thử micro;
-chưa nghiệm thu điều hướng bằng giọng nói với Nav2. Nếu cần model nhẹ hơn,
-thêm `whisper_model:=base` vào lệnh launch.
-
-Micro chỉ mở khi bắt đầu ghi; trạng thái chờ giữa các câu không hủy nhiệm vụ.
-
-## 5. Kiểm tra và xử lý lỗi
-
-Liệt kê micro và kiểm tra runtime (một lần):
-
-```bash
-bash src/turtlebot4/scripts/prepare_assignment7_runtime.sh
-```
-
-Quan sát bằng terminal phụ:
-
-```bash
-ros2 topic echo /recognized_speech
-ros2 topic echo /assignment7/state
-```
-
-Không có micro: kiểm tra kết nối audio host/container. Không thấy transcript:
-xem số mẫu, peak/RMS và lý do lỗi `[AUDIO]`/`[WHISPER]` ở Terminal 5.
-Lỗi terminal tương tác: dùng `docker exec -it`, không chạy launch qua pipe/nền.
-Chỉ kiểm thử văn bản ngoại tuyến, không mở micro hoặc chờ Enter:
-
-```bash
-ros2 launch turtlebot4 assignment7.launch.py test_mode:=offline speech_enabled:=false
-```
-
-Dừng an toàn: nói “Dừng lại”, đợi `CANCELED` và robot đứng yên; Ctrl+C Terminal 5,
-rồi Terminal 4, 2, 3 và cuối cùng 1. Nếu nhận dạng lỗi khi robot đang chạy,
-Ctrl+C Terminal 5 để yêu cầu hủy nhiệm vụ; xác nhận robot dừng.
+Dừng mô phỏng và các chương trình Bài 8 trước khi chạy toàn bộ bộ kiểm thử.

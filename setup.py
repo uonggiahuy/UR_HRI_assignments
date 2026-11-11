@@ -31,6 +31,8 @@ setup(
     license='Apache-2.0',
     url='https://github.com/uonggiahuy/UR_HRI_assignments/tree/assignments_6',
     entry_points={'console_scripts': [
+        'emotion_recognition_node = turtlebot4.emotion_recognition_node:main',
+        'emotion_behavior_node = turtlebot4.emotion_behavior_node:main',
         'segment_warehouse_map = turtlebot4.map_segmentation:main',
         'semantic_map_node = turtlebot4.semantic_map_node:main',
         'speech_recognition_node = turtlebot4.speech_recognition_node:main',
