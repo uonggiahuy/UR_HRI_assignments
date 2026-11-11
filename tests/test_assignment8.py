@@ -185,6 +185,10 @@ def test_protocol_exactly_once_neutral_cancellation(controller):
     assert n.behavior.state == 'EXECUTING'
     packet(n, 3)
     assert n.behavior.state == 'SETTLING' and commands[-1] == (0., 0.)
+    n.stationary_since = time.monotonic()-.4
+    n.tick()
+    assert n.behavior.state == 'IDLE'
+    assert n.behavior.reason == 'Neutral canceled; stationary stop verified'
 
 
 @pytest.mark.parametrize('changes', [dict(camera_ok=False), dict(primary_face=False, control_ok=False), dict(label='Disgust'), dict(stamp=0.), dict(confidence=.1), dict(control_ok=False)])

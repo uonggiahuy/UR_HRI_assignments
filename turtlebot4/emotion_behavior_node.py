@@ -91,6 +91,13 @@ class EmotionBehaviorNode(RobotBehavior):
             self.behavior.abort('Invalid expression packet')
             self.command(0., 0.)
 
+    def tick(self):
+        neutral_cancel = (self.behavior.state == 'SETTLING'
+                          and self.behavior.reason == 'Neutral stop')
+        super().tick()
+        if neutral_cancel and self.behavior.state == 'IDLE':
+            self.behavior.reason = 'Neutral canceled; stationary stop verified'
+
     def command(self, linear, angular, force=False):
         # Ramp starts/changes; cancellation always sends zero immediately.
         now = time.monotonic()
