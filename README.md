@@ -78,21 +78,35 @@ Không hạ các điều kiện an toàn để ép robot chạy.
 
 ### Dùng ảnh hiển thị trên điện thoại (webcam vẫn là nguồn ảnh)
 
-Thay lệnh Bài 8 ở Terminal 2 bằng:
+**Terminal 1:** giữ Gazebo Bài 6 chạy như trên. **Terminal 2:** chạy các lệnh
+sau trong container; bỏ qua lệnh undock nếu robot đã rời dock:
 
 ```bash
+cd /root/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+source src/turtlebot4/scripts/simulation_environment.bash
+ros2 action send_goal /undock irobot_create_msgs/action/Undock '{}'
 ros2 launch turtlebot4 assignment8.launch.py phone_mode:=true
 ```
+
+Chờ undock trả `SUCCEEDED` và robot đứng yên. Nếu đang chạy chế độ webcam thường,
+nhấn Ctrl+C ở Terminal 2 trước khi khởi động chế độ điện thoại. Nhấp vào cửa sổ
+webcam để cửa sổ nhận các phím Space/R/S; không gõ các phím này trong terminal.
 
 1. Đưa ảnh khuôn mặt trên điện thoại vào trước webcam. Giữ điện thoại cố định,
    tránh phản chiếu; chỉ để một khuôn mặt trong vùng chọn.
 2. Trong cửa sổ webcam, **kéo chuột trái khoanh vùng màn hình điện thoại**.
    Mặt người cầm nằm ngoài vùng này sẽ không tham gia nhận dạng.
-3. Chờ dòng **Qualified: press Space** rồi nhấn **Space** để chạy đúng một lần.
+3. Chờ dòng **Qualified: press Space**, trạng thái **Ready** và robot đứng yên,
+   rồi nhấn **Space** để chạy đúng một lần.
    Không cần đổi ảnh sang Neutral trước khi chạy. Nhãn điều khiển vẫn do FER dự đoán.
 4. Giữ điện thoại trong vùng đã chọn trong suốt chuyển động. Nhấn **S** để dừng.
    Khi robot đã dừng, nhấn **R**, chờ đủ điều kiện rồi **Space** nếu muốn chạy lại.
    Giữ nguyên ảnh hoặc giữ phím Space không tự lặp hành động.
+5. Nếu đổi vị trí điện thoại, kéo lại vùng chọn. Nếu đổi ảnh trong cùng vùng,
+   nhấn **R**, chờ ảnh mới đạt điều kiện rồi **Space**. Nhấn **q/Esc** để đóng
+   cửa sổ và bộ điều khiển; sau đó Ctrl+C ở Terminal 1 để dừng Gazebo.
 
 Chế độ điện thoại dùng ngưỡng demo **0,40**, chênh lệch hai nhãn cao nhất ít nhất
 **0,10**, và **6 lần suy luận liên tiếp** đạt điều kiện. Điểm hiển thị là điểm thật
