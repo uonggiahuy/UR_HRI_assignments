@@ -8,6 +8,7 @@ from rclpy.signals import SignalHandlerOptions
 from turtlebot4.robot_behavior_node import RobotBehavior
 from turtlebot4.emotion_behavior_logic import EmotionBehavior, EmotionLimits
 from turtlebot4.emotion_logic import LABELS
+from turtlebot4.emotion_phone import score_margin
 
 
 class EmotionBehaviorNode(RobotBehavior):
@@ -17,11 +18,12 @@ class EmotionBehaviorNode(RobotBehavior):
     EXTRA_DEFAULTS = dict(distance=.10, radius=.50, segment_timeout=40., curve_distance=.25, rotation_target=2*math.pi, clearance=.40,
                           distance_tolerance=.005, angle_tolerance=.025,
                           confidence_threshold=.65, stop_tolerance=.01,
-                          settling_duration=.3, settling_timeout=3.)
+                          settling_duration=.3, settling_timeout=3., phone_mode=False, minimum_margin=0.0)
 
     def make_behavior(self):
         limits = {k: self.o[k] for k in EmotionLimits.__dataclass_fields__}
-        if (not 0 < self.o['confidence_threshold'] <= 1
+        if (not 0 <= self.o['minimum_margin'] <= .5
+                or not 0 < self.o['confidence_threshold'] <= 1
                 or not .001 <= self.o['stop_tolerance'] <= .01
                 or not .3 <= self.o['settling_duration'] <= 1.
                 or not 2. <= self.o['settling_timeout'] <= 5.):
@@ -61,6 +63,7 @@ class EmotionBehaviorNode(RobotBehavior):
                     or not -.1 <= time.time()-d['stamp'] <= self.o['signal_timeout']
                     or d['label'] not in (*LABELS, 'None')
                     or any(type(d[k]) is not bool for k in ('event', 'control_ok', 'camera_ok', 'primary_face'))
+                    or any(type(d.get(k, False)) is not bool for k in ('manual_rearm', 'operator_stop', 'phone_mode'))
                     or not math.isfinite(d['confidence']) or not 0 <= d['confidence'] <= 1):
                 raise ValueError('Malformed/stale expression packet')
             if d['session'] != self.session:
@@ -70,6 +73,14 @@ class EmotionBehaviorNode(RobotBehavior):
                 return
             self.sequence = d['sequence']
             self.seen['signal'] = time.monotonic()
+            if d.get('operator_stop', False):
+                moving = self.behavior.state == 'EXECUTING'
+                self.behavior.abort('Operator stop')
+                if moving:
+                    self.behavior.state, self.behavior.reason = 'SETTLING', 'Neutral stop'
+                    self.settling_started, self.stationary_since = time.monotonic(), None
+                self.command(0., 0.)
+                return
             self.control_ok = d['control_ok'] and d['camera_ok']
             if not d['primary_face'] and d['event']:
                 raise ValueError('Movement event requires an unambiguous primary face')
@@ -78,7 +89,22 @@ class EmotionBehaviorNode(RobotBehavior):
             elif d['event']:
                 if d['label'] == 'None' or d['confidence'] < self.o['confidence_threshold']:
                     raise ValueError('Unqualified expression event')
+                if self.o['minimum_margin'] > 0:
+                    scores = d.get('scores', {})
+                    if (score_margin(scores) < self.o['minimum_margin']
+                            or max(scores, key=scores.get).capitalize() != d['label']
+                            or abs(scores[d['label'].lower()]-d['confidence']) > .001):
+                        raise ValueError('Ambiguous/inconsistent model scores')
                 ready = self.safe() and all(math.isfinite(v) and abs(v) < .02 for v in self.velocity)
+                manual = d.get('manual_rearm', False)
+                if manual:
+                    if (not self.o['phone_mode'] or not d.get('phone_mode', False)
+                            or not ready or self.behavior.state not in ('IDLE', 'STOPPED')):
+                        raise ValueError('Phone request requires stationary, ready robot')
+                    self.behavior.abort('Operator armed phone image', idle=True)
+                    self.behavior.armed = True
+                elif self.o['phone_mode'] and d['label'] != 'Neutral':
+                    raise ValueError('Phone motion requires explicit operator request')
                 was_executing = self.behavior.state == 'EXECUTING'
                 self.behavior.expression(d['label'], True, time.monotonic(), ready)
                 if was_executing and d['label'] == 'Neutral':

@@ -1,5 +1,7 @@
 emotion_recognition_node:
   ros__parameters:
+    phone_mode: false          # launch phone_mode:=true for phone-screen photos
+    minimum_margin: 0.0
     camera_device: /dev/video0
     emotion_model: fer
     show_camera: true
@@ -15,6 +17,8 @@ emotion_recognition_node:
     face_selection_policy: reject_multiple
 emotion_behavior_node:
   ros__parameters:
+    phone_mode: false
+    minimum_margin: 0.0
     cmd_topic: /cmd_vel
     confidence_threshold: 0.65
     signal_timeout: 0.7

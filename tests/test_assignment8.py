@@ -266,3 +266,49 @@ def test_low_confidence_visible_face_is_not_a_missing_face_or_motion_event():
     # Retain neutral rearm while a visible face transitions through uncertain
     # expressions; confidence and stability still gate every motion event.
     assert stable(f, 'Sad', 5.)['event']
+
+
+@pytest.mark.parametrize('label,score', [('Sad', .52), ('Fear', .44), ('Angry', .44)])
+def test_phone_demo_accepts_reported_scores_only_with_clear_margin(label, score):
+    from turtlebot4.emotion_phone import qualification_reason
+    scores = {label.lower(): score, 'neutral': .20, 'happy': .12}
+    assert qualification_reason(label, score, scores, 6, .40, 6, .10) == ''
+    assert 'Confidence' in qualification_reason(label, score, scores, 6, .65, 6, .10)
+    assert 'Stabilizing' in qualification_reason(label, score, scores, 5, .40, 6, .10)
+    scores['neutral'] = score-.02
+    assert 'Ambiguous' in qualification_reason(label, score, scores, 6, .40, 6, .10)
+
+
+def test_phone_roi_normalizes_drag_and_rejects_tiny_selection():
+    from turtlebot4.emotion_phone import normalized_roi
+    assert normalized_roi((500, 400), (100, 100), 640, 480) == (100/640, 100/480, 500/640, 400/480)
+    assert normalized_roi((-10, -10), (700, 500), 640, 480) == (0., 0., 1., 1.)
+    assert normalized_roi((10, 10), (30, 30), 640, 480) is None
+
+
+def test_phone_manual_request_uses_real_label_and_avoids_neutral_requirement(controller):
+    n, commands = controller
+    n.o.update(phone_mode=True, confidence_threshold=.4, minimum_margin=.10)
+    packet(n, 1, event=False)
+    packet(n, 2, label='Fear', confidence=.44, scores={'fear': .44, 'neutral': .20}, phone_mode=True, manual_rearm=True)
+    assert n.behavior.state == 'EXECUTING' and n.behavior.selected == 'Fear'
+    packet(n, 2, label='Sad', confidence=.52, scores={'sad': .52, 'neutral': .20}, phone_mode=True, manual_rearm=True)
+    assert n.behavior.selected == 'Fear'  # replay cannot change movement
+    packet(n, 3, event=False, operator_stop=True)
+    assert n.behavior.state == 'SETTLING' and commands[-1] == (0., 0.)
+
+
+@pytest.mark.parametrize('fault', ['ambiguous', 'not_manual', 'stale_sensor', 'moving', 'wrong_score', 'wrong_mode'])
+def test_phone_requests_preserve_safety_checks(controller, fault):
+    n, commands = controller
+    n.o.update(phone_mode=True, confidence_threshold=.4, minimum_margin=.10)
+    packet(n, 1, event=False)
+    d = dict(label='Angry', confidence=.44, scores={'angry': .44, 'neutral': .2}, phone_mode=True, manual_rearm=True)
+    if fault == 'ambiguous': d['scores']['neutral'] = .42
+    if fault == 'not_manual': d['manual_rearm'] = False
+    if fault == 'stale_sensor': n.seen['odom'] -= 5
+    if fault == 'moving': n.velocity = (.05, 0.)
+    if fault == 'wrong_score': d['scores']['angry'] = .6
+    if fault == 'wrong_mode': n.o['phone_mode'] = False
+    packet(n, 2, **d)
+    assert n.behavior.state != 'EXECUTING' and commands[-1] == (0., 0.)
